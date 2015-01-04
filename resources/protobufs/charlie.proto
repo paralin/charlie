@@ -1,0 +1,8 @@
+enum EMsgType {
+    
+}
+
+message CMsgHeader {
+    required EMsgType type = 1;
+    optional 
+}
