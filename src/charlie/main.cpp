@@ -1,10 +1,9 @@
 #include <iostream>
+#include <Logging.h>
 #include <charlie/System.h>
 
 int main( int argc, const char* argv[] ) {
-#ifdef CHARLIE_DEBUG
-  std::cout << "Starting up" << std::endl;
-#endif
+  CLOG("Starting up...");
   System *system = new System();
   int r = system->main(argc, argv);
   delete system;

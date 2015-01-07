@@ -28,3 +28,43 @@ When the system first connects to CNC it requests an update to this table.
 Updates can also be pushed out at will from the CNC
 
 When the core detects an update to a component it requests a download for it, updates, etc.
+
+# TIME SYNC ERRORS
+
+If the server responds saying the timestamp is too old or invalid, the
+client should try to maintain its own internal clock from internet
+sources for the time and re-attempt connection. If impossible to fix the
+problem the client will enter a hibernation state in which it will wait
+for another re-attempt command from the server. This is a rescue state
+where perhaps if numerous clients have time sync problems I can allow
+the server to be more lax with timestamps in the future.
+
+# POTENTIAL VULNS
+
+Need some way to verify the initial command module before loading it.
+This is hard because it might change.
+
+# CORE MODULE SEQUENCE
+
+The core module has no functionality that can be swapped out at a later
+time (without some gymnatics). Sure, there could be an update module
+that kills the process and launches an update process, but this would be
+something developed down the line.
+
+  1. Load saved data (could have a limited version of the proto message,
+     this should be OK)
+  2. Generate missing required data (like initial module table)
+  3. If the management module doesn't exist drop it from the embedded
+     library
+  4. Load the management module and init it
+
+# MANAGEMENT MODULE SEQUENCE
+
+Here is the order of steps taken by the management module
+
+  1. Load saved data (if any)
+  2. Generate missing data (including identity information)
+  3. Connect to server
+  4. Send a CMsgClientRegister with identity and machine info object
+  5. Handle any errors returned by server
+  6. Send a CMsgRequestModuleTable
