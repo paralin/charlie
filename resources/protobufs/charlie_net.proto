@@ -4,6 +4,12 @@ enum EMsgType
   NONE = 0;
   //S+C: Ping
   PING = 1;
+  //CMsgClientRegister
+  CLIENT_REGISTER = 2;
+  //CMsgClientRegistered
+  CLIENT_REGISTERED = 3;
+  //Validation error
+  VALIDATION_ERROR = 9000;
 }
 
 enum EBodyEncryptionType

@@ -9,5 +9,5 @@ make:
 	touch make
 compile:
 	cd build && make -j4
-run: cmake compile
+run: all
 	cd build && ./charlie
