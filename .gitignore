@@ -48,4 +48,4 @@ Session.vim
 
 build
 cmake
-
+make
