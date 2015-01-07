@@ -1,0 +1,5 @@
+#pragma once
+
+#include <stdlib.h>
+
+int apply_xor(char* input, int inputLen, const char* key, int keyLen);

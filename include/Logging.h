@@ -7,6 +7,11 @@
   ( \
     (std::cout << msg << std::endl) \
   )
+#define CERR(msg) \
+  ( \
+    (std::cerr << msg << std::endl) \
+  )
 #else
 #define CLOG(msg) ;
+#define CERR(msg) ;
 #endif

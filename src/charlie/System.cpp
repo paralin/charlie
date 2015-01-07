@@ -4,6 +4,7 @@
 #include <charlie/System.h>
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
+#include <charlie/xor.h>
 #include <Logging.h>
 #define PRINT_KEYS
 
@@ -58,6 +59,12 @@ int System::main(int argc, const char* argv[])
     // Print the encrypted message as a base64 string
     char* b64String = base64Encode(encMsg, encMsgLen);
     printf("Encrypted message: %s\n", b64String);
+
+    apply_xor(b64String, strlen(b64String), "what's up", strlen("what's up"));
+
+    printf("XOR applied %s\n", b64String);
+
+    apply_xor(b64String, strlen(b64String), "what's up", strlen("what's up"));
 
     // Decrypt the message with the second one
     if((decMsgLen = crypto2.rsaDecrypt(encMsg, (size_t)encMsgLen, ek, ekl, iv, ivl, (unsigned char**)&decMsg)) == -1) {
