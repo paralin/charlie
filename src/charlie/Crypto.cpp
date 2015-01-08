@@ -9,10 +9,6 @@ Crypto::Crypto() {
     localKeypair  = NULL;
     remotePubKey  = NULL;
 
-    #ifdef PSUEDO_CLIENT
-        genTestClientKey();
-    #endif
-
     init();
 }
 
@@ -173,10 +169,41 @@ int Crypto::getLocalPriKey(unsigned char **priKey) {
     return priKeyLen;
 }
 
+int Crypto::setLocalPriKey(unsigned char* priKey, size_t priKeyLen) {
+    BIO *bio = BIO_new(BIO_s_mem());
+    if(BIO_write(bio, priKey, priKeyLen) != (int)priKeyLen) {
+        return FAILURE;
+    }
+
+    RSA *_pubKey = (RSA*)malloc(sizeof(RSA));
+    if(_pubKey == NULL) return FAILURE;
+
+    PEM_read_bio_PrivateKey(bio, &localKeypair, NULL, NULL);
+
+    BIO_free_all(bio);
+
+    return SUCCESS;
+}
+
+int Crypto::setLocalPubKey(unsigned char* pubKey, size_t pubKeyLen) {
+    BIO *bio = BIO_new(BIO_s_mem());
+    if(BIO_write(bio, pubKey, pubKeyLen) != (int)pubKeyLen) {
+        return FAILURE;
+    }
+
+    RSA *_pubKey = (RSA*)malloc(sizeof(RSA));
+    if(_pubKey == NULL) return FAILURE;
+
+    PEM_read_bio_PUBKEY(bio, &localKeypair, NULL, NULL);
+
+    BIO_free_all(bio);
+
+    return SUCCESS;
+}
+
 int Crypto::init() {
     // Initalize contexts
     rsaEncryptCtx = (EVP_CIPHER_CTX*)malloc(sizeof(EVP_CIPHER_CTX));
-
     rsaDecryptCtx = (EVP_CIPHER_CTX*)malloc(sizeof(EVP_CIPHER_CTX));
 
     // Always a good idea to check if malloc failed
@@ -186,10 +213,13 @@ int Crypto::init() {
 
     // Init these here to make valgrind happy
     EVP_CIPHER_CTX_init(rsaEncryptCtx);
-
     EVP_CIPHER_CTX_init(rsaDecryptCtx);
 
-    // Init RSA
+
+    return SUCCESS;
+}
+
+int Crypto::genLocalKeyPair() {
     EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
 
     if(EVP_PKEY_keygen_init(ctx) <= 0) {
@@ -206,26 +236,4 @@ int Crypto::init() {
     }
 
     EVP_PKEY_CTX_free(ctx);
-
-    return SUCCESS;
-}
-
-int Crypto::genTestClientKey() {
-    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-
-    if(EVP_PKEY_keygen_init(ctx) <= 0) {
-        return FAILURE;
-    }
-
-    if(EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, RSA_KEYLEN) <= 0) {
-        return FAILURE;
-    }
-
-    if(EVP_PKEY_keygen(ctx, &remotePubKey) <= 0) {
-        return FAILURE;
-    }
-
-    EVP_PKEY_CTX_free(ctx);
-
-    return SUCCESS;
 }

@@ -5,9 +5,9 @@ project(charlie)
 
 set(CMAKE_BUILD_TYPE Debug)
 
-set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
+set(Boost_USE_STATIC_RUNTIME ON)
 find_package(Boost REQUIRED COMPONENTS thread system log filesystem)
 find_package(Protobuf REQUIRED)
 find_package(GLIB REQUIRED COMPONENTS gmodule)
@@ -16,8 +16,10 @@ find_package(OpenSSL REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
 include_directories("include")
 
-set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} dl)
+set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} dl)
 set(CFLAGS "-std=c++0x")
+
+file(GLOB proto_SRC "src/proto/*.cc")
 
 # Build embed tool
 add_executable(embed "src/embed/main.cpp")
@@ -42,6 +44,6 @@ endforeach()
 
 # Build charlie
 file(GLOB charlie_SRC "src/charlie/*.cpp")
-add_executable(charlie testplugin_data.c ${charlie_SRC})
+add_executable(charlie testplugin_data.c ${charlie_SRC} ${proto_SRC})
 #add_dependencies(charlie embed)
 target_link_libraries(charlie ${LIBS})

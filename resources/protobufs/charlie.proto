@@ -1,0 +1,53 @@
+package charlie;
+
+enum EMsgType
+{
+  //Unknown
+  NO_TYPE = 0;
+  //S+C: Ping
+  PING = 1;
+  //CMsgClientRegister
+  CLIENT_REGISTER = 2;
+  //CMsgClientRegistered
+  CLIENT_REGISTERED = 3;
+  //Validation error
+  VALIDATION_ERROR = 9000;
+}
+
+enum EBodyEncryptionType
+{
+  //No body encryption
+  NO_ENCRYPTION = 0;
+  //Encrypted with pkey
+  SIGNED = 1;
+  //XOR(XOR(timestamp) serverpubkey)
+  XOR_TIMESTAMP = 2;
+}
+
+message CMsgHeader
+{
+  optional EMsgType type = 1;
+  optional int64 timestamp = 2; //Possible to be zero length in which case it's just a keepalive ping optional int64 length = 3; optional EBodyEncryptionType encryption = 4;
+}
+
+message CMsgContainer
+{
+  //Timestamp from header signed with server key
+  optional bytes signed_timestamp = 1;
+  //Body
+  optional bytes body = 2;
+  optional EBodyEncryptionType body_encryption = 3;
+  //Hash of the decrypted body signed
+  optional bytes signed_body_hash = 4;
+}
+
+message CSaveContainer
+{
+  optional CSaveIdentity my_identity = 1;
+}
+
+message CSaveIdentity
+{
+  optional bytes private_key = 1;
+  optional bytes public_key = 2;
+}

@@ -37,10 +37,19 @@ public:
 
     int setRemotePubKey(unsigned char *pubKey, size_t pubKeyLen);
 
+    int setLocalPubKey(unsigned char *pubKey, size_t pubKeyLen);
+
+    int setLocalPriKey(unsigned char *priKey, size_t priKeyLen);
+
     int getLocalPubKey(unsigned char **pubKey);
 
     int getLocalPriKey(unsigned char **priKey);
 
+    int setLocalPubKey(unsigned char **pubKey, size_t pubKeyLen);
+
+    int setLocalPriKey(unsigned char **priKey, size_t priKeyLen);
+
+    int genLocalKeyPair();
 
 private:
     static EVP_PKEY *localKeypair;
@@ -51,7 +60,6 @@ private:
     EVP_CIPHER_CTX *rsaDecryptCtx;
 
     int init();
-    int genTestClientKey();
 };
 
 #endif

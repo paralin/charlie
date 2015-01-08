@@ -5,6 +5,7 @@
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
 #include <charlie/xor.h>
+#include <proto/charlie.pb.h>
 #include <Logging.h>
 #define PRINT_KEYS
 
@@ -19,6 +20,9 @@ System::~System(void)
 
 int System::main(int argc, const char* argv[])
 {
+  charlie::CMsgHeader header;
+  header.set_timestamp(50);
+
   Crypto crypto;
   Crypto crypto2;
 

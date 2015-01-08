@@ -44,6 +44,11 @@ the server to be more lax with timestamps in the future.
 Need some way to verify the initial command module before loading it.
 This is hard because it might change.
 
+# SAVE FILE
+
+Identity and various other things stored in a save file next to the
+core. Save file is XOR shifted by the hard coded public key.
+
 # CORE MODULE SEQUENCE
 
 The core module has no functionality that can be swapped out at a later
