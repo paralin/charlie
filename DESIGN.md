@@ -47,7 +47,7 @@ This is hard because it might change.
 # SAVE FILE
 
 Identity and various other things stored in a save file next to the
-core. Save file is XOR shifted by the hard coded public key.
+core. The filename is based on the machine fingerprint.
 
 # CORE MODULE SEQUENCE
 

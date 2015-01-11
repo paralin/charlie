@@ -1,15 +1,7 @@
-#include <stdio.h>
-#include <iostream>
-#include <string.h>
 #include <charlie/System.h>
-#include <charlie/Crypto.h>
-#include <charlie/base64.h>
-#include <charlie/xor.h>
-#include <proto/charlie.pb.h>
-#include <Logging.h>
-#define PRINT_KEYS
-
+#include <charlie/machine_id.h>
 using namespace std;
+
 System::System(void)
 {
 }
@@ -18,8 +10,25 @@ System::~System(void)
 {
 }
 
-int System::main(int argc, const char* argv[])
+void System::loadRootPath(const char* arvg)
 {
+  std::string pth1 (arvg);
+  std::string pth2;
+
+  if(boost::starts_with(pth1, "./"))
+    pth2 = pth1.substr(2);
+  else
+    pth2 = pth1;
+  fs::path full_path( fs::initial_path<fs::path>() );
+  full_path = fs::system_complete( fs::path( pth2 ) );
+
+  exePath = full_path;
+  CLOG("Path to exe:  " << exePath);
+  rootPath = full_path.remove_filename()/"/";
+  CLOG("Path to root: " << rootPath);
+}
+
+int testEncryption() {
   charlie::CMsgHeader header;
   header.set_timestamp(50);
 
@@ -91,4 +100,16 @@ int System::main(int argc, const char* argv[])
   }
 
   return 0;
+}
+
+int System::loadConfigFile()
+{
+  const char* hostname = getMachineName();
+  return SUCCESS;
+}
+
+int System::main(int argc, const char* argv[])
+{
+  loadRootPath(argv[0]);
+  loadConfigFile();
 }
