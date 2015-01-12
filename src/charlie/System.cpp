@@ -144,31 +144,36 @@ void System::loadDefaultConfig()
   serializeConfig();
 }
 
+void System::generateIdentity()
+{
+  CLOG("Generating identity...");
+  charlie::CSaveIdentity * identity = config.mutable_identity();
+  if(crypto->genLocalKeyPair() != SUCCESS)
+  {
+    CERR("Unable to generate local key pair, continuing anyway...");
+  }
+  unsigned char* pkey;
+  int pkeyLen = crypto->getLocalPriKey(&pkey);
+  unsigned char* pubkey;
+  int pubkeyLen = crypto->getLocalPubKey(&pubkey);
+  if(pkeyLen == FAILURE || pubkeyLen == FAILURE)
+  {
+    CERR("Unable to retrieve pub/pri key, continuing anyway...");
+  }
+  identity->set_private_key(pkey, pkeyLen);
+  identity->set_public_key(pubkey, pubkeyLen);
+  CLOG("==== GENERATED KEYS ====");
+  CLOG(pkey);
+  CLOG(pubkey);
+  CLOG("========================");
+}
+
 void System::validateConfig()
 {
   CLOG("Validating config...");
   if(!config.has_identity() || !config.identity().has_private_key() || !config.identity().has_public_key())
   {
-      CLOG("Generating identity...");
-      charlie::CSaveIdentity * identity = config.mutable_identity();
-      if(crypto->genLocalKeyPair() != SUCCESS)
-      {
-        CERR("Unable to generate local key pair, continuing anyway...");
-      }
-      unsigned char* pkey;
-      int pkeyLen = crypto->getLocalPriKey(&pkey);
-      unsigned char* pubkey;
-      int pubkeyLen = crypto->getLocalPubKey(&pubkey);
-      if(pkeyLen == FAILURE || pubkeyLen == FAILURE)
-      {
-        CERR("Unable to retrieve pub/pri key, continuing anyway...");
-      }
-      identity->set_private_key(pkey, pkeyLen);
-      identity->set_public_key(pubkey, pubkeyLen);
-      CLOG("==== GENERATED KEYS ====");
-      CLOG(pkey);
-      CLOG(pubkey);
-      CLOG("========================");
+    generateIdentity();
   }
   CLOG("Config validation complete.");
 }
@@ -198,7 +203,7 @@ void System::saveConfig()
   char* toSave = (char*)malloc(sizeof(char)*configDataSize);
   strncpy(toSave, configData, configDataSize);
   apply_xor(toSave, configDataSize, sysInfo.system_id, strlen(sysInfo.system_id));
-  CLOG("Config filename: "<<sysInfo.config_filename);
+  CLOG("Saving config file to "<<sysInfo.config_filename);
   ofstream configFile (sysInfo.config_filename, ios::out|ios::binary);
   if(configFile.is_open()){
     configFile.write(toSave, configDataSize);
@@ -261,7 +266,9 @@ int System::main(int argc, const char* argv[])
   }
   if(loadIdentityToCrypto() != SUCCESS)
   {
-    CERR("Can't load the identity to crypto!");
+    CERR("Can't load the identity to crypto! Regenerating identity...");
+    generateIdentity();
+    saveConfig();
   }else{
     CLOG("Loaded identity to crypto.");
   }

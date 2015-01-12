@@ -41,6 +41,7 @@ class System {
     void     serializeConfig();
     void     deserializeConfig();
     void     saveConfig();
+    void     generateIdentity();
     int      loadIdentityToCrypto();
 
     char*    configData;
