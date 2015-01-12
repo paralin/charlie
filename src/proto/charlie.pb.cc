@@ -80,7 +80,7 @@ void protobuf_AssignDesc_charlie_2eproto() {
       sizeof(CMsgContainer));
   CSaveContainer_descriptor_ = file->message_type(2);
   static const int CSaveContainer_offsets_[1] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CSaveContainer, my_identity_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CSaveContainer, identity_),
   };
   CSaveContainer_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -158,15 +158,15 @@ void protobuf_AddDesc_charlie_2eproto() {
     "tamp\030\002 \001(\003\"\210\001\n\rCMsgContainer\022\030\n\020signed_t"
     "imestamp\030\001 \001(\014\022\014\n\004body\030\002 \001(\014\0225\n\017body_enc"
     "ryption\030\003 \001(\0162\034.charlie.EBodyEncryptionT"
-    "ype\022\030\n\020signed_body_hash\030\004 \001(\014\"=\n\016CSaveCo"
-    "ntainer\022+\n\013my_identity\030\001 \001(\0132\026.charlie.C"
-    "SaveIdentity\"8\n\rCSaveIdentity\022\023\n\013private"
-    "_key\030\001 \001(\014\022\022\n\npublic_key\030\002 \001(\014*d\n\010EMsgTy"
-    "pe\022\013\n\007NO_TYPE\020\000\022\010\n\004PING\020\001\022\023\n\017CLIENT_REGI"
-    "STER\020\002\022\025\n\021CLIENT_REGISTERED\020\003\022\025\n\020VALIDAT"
-    "ION_ERROR\020\250F*G\n\023EBodyEncryptionType\022\021\n\rN"
-    "O_ENCRYPTION\020\000\022\n\n\006SIGNED\020\001\022\021\n\rXOR_TIMEST"
-    "AMP\020\002", 525);
+    "ype\022\030\n\020signed_body_hash\030\004 \001(\014\":\n\016CSaveCo"
+    "ntainer\022(\n\010identity\030\001 \001(\0132\026.charlie.CSav"
+    "eIdentity\"8\n\rCSaveIdentity\022\023\n\013private_ke"
+    "y\030\001 \001(\014\022\022\n\npublic_key\030\002 \001(\014*d\n\010EMsgType\022"
+    "\013\n\007NO_TYPE\020\000\022\010\n\004PING\020\001\022\023\n\017CLIENT_REGISTE"
+    "R\020\002\022\025\n\021CLIENT_REGISTERED\020\003\022\025\n\020VALIDATION"
+    "_ERROR\020\250F*G\n\023EBodyEncryptionType\022\021\n\rNO_E"
+    "NCRYPTION\020\000\022\n\n\006SIGNED\020\001\022\021\n\rXOR_TIMESTAMP"
+    "\020\002", 522);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "charlie.proto", &protobuf_RegisterTypes);
   CMsgHeader::default_instance_ = new CMsgHeader();
@@ -834,7 +834,7 @@ void CMsgContainer::Swap(CMsgContainer* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int CSaveContainer::kMyIdentityFieldNumber;
+const int CSaveContainer::kIdentityFieldNumber;
 #endif  // !_MSC_VER
 
 CSaveContainer::CSaveContainer()
@@ -843,7 +843,7 @@ CSaveContainer::CSaveContainer()
 }
 
 void CSaveContainer::InitAsDefaultInstance() {
-  my_identity_ = const_cast< ::charlie::CSaveIdentity*>(&::charlie::CSaveIdentity::default_instance());
+  identity_ = const_cast< ::charlie::CSaveIdentity*>(&::charlie::CSaveIdentity::default_instance());
 }
 
 CSaveContainer::CSaveContainer(const CSaveContainer& from)
@@ -854,7 +854,7 @@ CSaveContainer::CSaveContainer(const CSaveContainer& from)
 
 void CSaveContainer::SharedCtor() {
   _cached_size_ = 0;
-  my_identity_ = NULL;
+  identity_ = NULL;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -864,7 +864,7 @@ CSaveContainer::~CSaveContainer() {
 
 void CSaveContainer::SharedDtor() {
   if (this != default_instance_) {
-    delete my_identity_;
+    delete identity_;
   }
 }
 
@@ -891,8 +891,8 @@ CSaveContainer* CSaveContainer::New() const {
 
 void CSaveContainer::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (has_my_identity()) {
-      if (my_identity_ != NULL) my_identity_->::charlie::CSaveIdentity::Clear();
+    if (has_identity()) {
+      if (identity_ != NULL) identity_->::charlie::CSaveIdentity::Clear();
     }
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -905,12 +905,12 @@ bool CSaveContainer::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // optional .charlie.CSaveIdentity my_identity = 1;
+      // optional .charlie.CSaveIdentity identity = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
-               input, mutable_my_identity()));
+               input, mutable_identity()));
         } else {
           goto handle_uninterpreted;
         }
@@ -936,10 +936,10 @@ bool CSaveContainer::MergePartialFromCodedStream(
 
 void CSaveContainer::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // optional .charlie.CSaveIdentity my_identity = 1;
-  if (has_my_identity()) {
+  // optional .charlie.CSaveIdentity identity = 1;
+  if (has_identity()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      1, this->my_identity(), output);
+      1, this->identity(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -950,11 +950,11 @@ void CSaveContainer::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* CSaveContainer::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // optional .charlie.CSaveIdentity my_identity = 1;
-  if (has_my_identity()) {
+  // optional .charlie.CSaveIdentity identity = 1;
+  if (has_identity()) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
-        1, this->my_identity(), target);
+        1, this->identity(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -968,11 +968,11 @@ int CSaveContainer::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // optional .charlie.CSaveIdentity my_identity = 1;
-    if (has_my_identity()) {
+    // optional .charlie.CSaveIdentity identity = 1;
+    if (has_identity()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
-          this->my_identity());
+          this->identity());
     }
 
   }
@@ -1002,8 +1002,8 @@ void CSaveContainer::MergeFrom(const ::google::protobuf::Message& from) {
 void CSaveContainer::MergeFrom(const CSaveContainer& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_my_identity()) {
-      mutable_my_identity()->::charlie::CSaveIdentity::MergeFrom(from.my_identity());
+    if (from.has_identity()) {
+      mutable_identity()->::charlie::CSaveIdentity::MergeFrom(from.identity());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -1028,7 +1028,7 @@ bool CSaveContainer::IsInitialized() const {
 
 void CSaveContainer::Swap(CSaveContainer* other) {
   if (other != this) {
-    std::swap(my_identity_, other->my_identity_);
+    std::swap(identity_, other->identity_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

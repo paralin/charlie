@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef NDEBUG
 #define DO_CHARLIE_LOG
+#endif
 
 #ifdef DO_CHARLIE_LOG
 #define CLOG(msg) \

@@ -227,7 +227,7 @@ u16 getVolumeHash()
 
 #else // !DARWIN
 
- static void getCpuid( u32* p, u32 ax )
+ void getCpuid( u32* p, u32 ax )
  {
     __asm __volatile
     (   "movl %%ebx, %%esi\n\t"
@@ -253,3 +253,53 @@ u16 getVolumeHash()
 #endif // !DARWIN
 
 #endif
+
+u16* computeSystemUniqueId()
+{
+   static u16 id[5];
+   static bool computed = false;
+
+   if ( computed ) return id;
+
+   // produce a number that uniquely identifies this system.
+   id[0] = getCpuHash();
+   id[1] = getVolumeHash();
+   getMacHash( id[2], id[3] );
+
+   // fifth block is some checkdigits
+   id[4] = 0;
+   for ( u32 i = 0; i < 4; i++ )
+      id[4] += id[i];
+
+   smear( id );
+
+   computed = true;
+   return id;
+}
+
+const char* getSystemUniqueId()
+{
+   // get the name of the computer
+   std::string buf(getMachineName());
+
+   u16* id = computeSystemUniqueId();
+   for ( u32 i = 0; i < 5; i++ )
+   {
+      char num[16];
+      snprintf( num, 16, "%x", id[i] );
+      buf.append("-");
+      switch( strlen( num ))
+      {
+      case 1: buf.append("000"); break;
+      case 2: buf.append("00");  break;
+      case 3: buf.append("0");   break;
+      }
+      buf.append(num);
+   }
+
+   std::transform(buf.begin(), buf.end(), buf.begin(), ::toupper);
+
+   char * cstr = new char [buf.length()+1];
+   std::strcpy (cstr, buf.c_str());
+   return cstr;
+}

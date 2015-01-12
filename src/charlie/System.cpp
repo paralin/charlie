@@ -4,10 +4,16 @@ using namespace std;
 
 System::System(void)
 {
+  crypto = new Crypto();
 }
 
 System::~System(void)
 {
+  free((char*)sysInfo.system_id);
+  free((char*)sysInfo.b64_system_id);
+  free((char*)sysInfo.config_filename);
+  free((char*)sysInfo.exe_path);
+  free((char*)sysInfo.root_path);
 }
 
 void System::loadRootPath(const char* arvg)
@@ -22,10 +28,16 @@ void System::loadRootPath(const char* arvg)
   fs::path full_path( fs::initial_path<fs::path>() );
   full_path = fs::system_complete( fs::path( pth2 ) );
 
-  exePath = full_path;
-  CLOG("Path to exe:  " << exePath);
-  rootPath = full_path.remove_filename()/"/";
-  CLOG("Path to root: " << rootPath);
+  std::string exePath = full_path.string();
+  char * cexePath = new char [exePath.length()+1];
+  std::strcpy (cexePath, exePath.c_str());
+  sysInfo.exe_path = (const char*)cexePath;
+  CLOG("Path to exe:  " << sysInfo.exe_path);
+  std::string rootPath = (full_path.remove_filename()/"/").string();
+  char * crootPath = new char [rootPath.length()+1];
+  std::strcpy (crootPath, rootPath.c_str());
+  sysInfo.root_path = (const char*)crootPath;
+  CLOG("Path to root: " << sysInfo.root_path);
 }
 
 int testEncryption() {
@@ -104,12 +116,154 @@ int testEncryption() {
 
 int System::loadConfigFile()
 {
-  const char* hostname = getMachineName();
+  CLOG("Loading config file "<<sysInfo.config_filename<<".");
+  if(!boost::filesystem::exists(sysInfo.config_filename))
+    return -1;
+  ifstream configFile;
+  streampos size;
+  configFile.open (sysInfo.config_filename, ios::in|ios::binary|ios::ate);
+  if(configFile.is_open()){
+    size = configFile.tellg();
+    if(configDataSize != 0) {free(configData);configDataSize=0;}
+    configData = new char[size];
+    configFile.seekg(0, ios::beg);
+    configFile.read(configData, size);
+    configFile.close();
+    CLOG("Loaded config file, "<<size<<" length.");
+    apply_xor(configData, size, sysInfo.system_id, strlen(sysInfo.system_id));
+    configDataSize = (int)size;
+    return SUCCESS;
+  } else
+    return -1;
+}
+
+void System::loadDefaultConfig()
+{
+  CLOG("Loading default config...");
+  validateConfig();
+  serializeConfig();
+}
+
+void System::validateConfig()
+{
+  CLOG("Validating config...");
+  if(!config.has_identity() || !config.identity().has_private_key() || !config.identity().has_public_key())
+  {
+      CLOG("Generating identity...");
+      charlie::CSaveIdentity * identity = config.mutable_identity();
+      if(crypto->genLocalKeyPair() != SUCCESS)
+      {
+        CERR("Unable to generate local key pair, continuing anyway...");
+      }
+      unsigned char* pkey;
+      int pkeyLen = crypto->getLocalPriKey(&pkey);
+      unsigned char* pubkey;
+      int pubkeyLen = crypto->getLocalPubKey(&pubkey);
+      if(pkeyLen == FAILURE || pubkeyLen == FAILURE)
+      {
+        CERR("Unable to retrieve pub/pri key, continuing anyway...");
+      }
+      identity->set_private_key(pkey, pkeyLen);
+      identity->set_public_key(pubkey, pubkeyLen);
+      CLOG("==== GENERATED KEYS ====");
+      CLOG(pkey);
+      CLOG(pubkey);
+      CLOG("========================");
+  }
+  CLOG("Config validation complete.");
+}
+
+void System::serializeConfig()
+{
+  if(configDataSize != 0) {free(configData);configDataSize=0;}
+  configDataSize = config.ByteSize();
+  configData = (char*)malloc(sizeof(char)*configDataSize);
+  if(!config.SerializeToArray(configData, configDataSize))
+    CERR("Unable to serialize config to array.");
+}
+
+void System::deserializeConfig()
+{
+  if(!config.ParseFromArray(configData, configDataSize))
+    CERR("Unable to parse config from array.");
+}
+
+void System::saveConfig()
+{
+  if(configDataSize == 0)
+  {
+    CERR("Not saving an empty configData buffer.");
+    return;
+  }
+  char* toSave = (char*)malloc(sizeof(char)*configDataSize);
+  strncpy(toSave, configData, configDataSize);
+  apply_xor(toSave, configDataSize, sysInfo.system_id, strlen(sysInfo.system_id));
+  CLOG("Config filename: "<<sysInfo.config_filename);
+  ofstream configFile (sysInfo.config_filename, ios::out|ios::binary);
+  if(configFile.is_open()){
+    configFile.write(toSave, configDataSize);
+  }else{
+    CERR("Unable to open config file for writing.");
+  }
+  configFile.close();
+  free(toSave);
+}
+
+void System::loadSysInfo()
+{
+  sysInfo.system_id = getSystemUniqueId();
+  CLOG("SystemID: "<<sysInfo.system_id);
+  sysInfo.b64_system_id = base64Encode((const unsigned char*)sysInfo.system_id, strlen(sysInfo.system_id));
+  CLOG("ESystemID: "<<sysInfo.b64_system_id);
+  sysInfo.cpu_hash = getCpuHash();
+  CLOG("CPU Hash: "<<sysInfo.cpu_hash);
+  u16 filenameLen = sysInfo.cpu_hash%10;
+  if(filenameLen < 4) filenameLen = 4;
+  std::string filename (sysInfo.b64_system_id);
+  filename = filename.substr(0, filenameLen);
+  CLOG("Filename: "<<filename);
+  char * cstr = new char [filename.length()+1];
+  std::strcpy (cstr, filename.c_str());
+  sysInfo.config_filename = (const char*)cstr;
+}
+
+int System::loadIdentityToCrypto()
+{
+  const std::string pkey = config.identity().private_key();
+  char * cstr = new char [pkey.length()+1];
+  std::strcpy (cstr, pkey.c_str());
+  int r1 = crypto->setLocalPriKey((unsigned char*)cstr, pkey.length()+1);
+  free(cstr);
+
+  const std::string pubkey = config.identity().public_key();
+  char * pcstr = new char [pubkey.length()+1];
+  std::strcpy (pcstr, pubkey.c_str());
+  int r2 = crypto->setLocalPubKey((unsigned char*)pcstr, pubkey.length()+1);
+  free(pcstr);
+
+  if(r1 != SUCCESS || r2 != SUCCESS) return FAILURE;
   return SUCCESS;
 }
 
 int System::main(int argc, const char* argv[])
 {
   loadRootPath(argv[0]);
-  loadConfigFile();
+  loadSysInfo();
+  if(loadConfigFile() != SUCCESS)
+  {
+    CLOG("Can't load config file, building new config...");
+    loadDefaultConfig();
+    saveConfig();
+  }else
+  {
+    deserializeConfig();
+    validateConfig();
+  }
+  if(loadIdentityToCrypto() != SUCCESS)
+  {
+    CERR("Can't load the identity to crypto!");
+  }else{
+    CLOG("Loaded identity to crypto.");
+  }
+  return 0;
 }

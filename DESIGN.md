@@ -49,6 +49,8 @@ This is hard because it might change.
 Identity and various other things stored in a save file next to the
 core. The filename is based on the machine fingerprint.
 
+The filename is XOR shifted by the system id.
+
 # CORE MODULE SEQUENCE
 
 The core module has no functionality that can be swapped out at a later

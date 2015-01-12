@@ -43,7 +43,7 @@ message CMsgContainer
 
 message CSaveContainer
 {
-  optional CSaveIdentity my_identity = 1;
+  optional CSaveIdentity identity = 1;
 }
 
 message CSaveIdentity

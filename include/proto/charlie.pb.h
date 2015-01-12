@@ -356,23 +356,23 @@ class CSaveContainer : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // optional .charlie.CSaveIdentity my_identity = 1;
-  inline bool has_my_identity() const;
-  inline void clear_my_identity();
-  static const int kMyIdentityFieldNumber = 1;
-  inline const ::charlie::CSaveIdentity& my_identity() const;
-  inline ::charlie::CSaveIdentity* mutable_my_identity();
-  inline ::charlie::CSaveIdentity* release_my_identity();
-  inline void set_allocated_my_identity(::charlie::CSaveIdentity* my_identity);
+  // optional .charlie.CSaveIdentity identity = 1;
+  inline bool has_identity() const;
+  inline void clear_identity();
+  static const int kIdentityFieldNumber = 1;
+  inline const ::charlie::CSaveIdentity& identity() const;
+  inline ::charlie::CSaveIdentity* mutable_identity();
+  inline ::charlie::CSaveIdentity* release_identity();
+  inline void set_allocated_identity(::charlie::CSaveIdentity* identity);
 
   // @@protoc_insertion_point(class_scope:charlie.CSaveContainer)
  private:
-  inline void set_has_my_identity();
-  inline void clear_has_my_identity();
+  inline void set_has_identity();
+  inline void clear_has_identity();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::charlie::CSaveIdentity* my_identity_;
+  ::charlie::CSaveIdentity* identity_;
 
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
@@ -779,41 +779,41 @@ inline void CMsgContainer::set_allocated_signed_body_hash(::std::string* signed_
 
 // CSaveContainer
 
-// optional .charlie.CSaveIdentity my_identity = 1;
-inline bool CSaveContainer::has_my_identity() const {
+// optional .charlie.CSaveIdentity identity = 1;
+inline bool CSaveContainer::has_identity() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void CSaveContainer::set_has_my_identity() {
+inline void CSaveContainer::set_has_identity() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void CSaveContainer::clear_has_my_identity() {
+inline void CSaveContainer::clear_has_identity() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void CSaveContainer::clear_my_identity() {
-  if (my_identity_ != NULL) my_identity_->::charlie::CSaveIdentity::Clear();
-  clear_has_my_identity();
+inline void CSaveContainer::clear_identity() {
+  if (identity_ != NULL) identity_->::charlie::CSaveIdentity::Clear();
+  clear_has_identity();
 }
-inline const ::charlie::CSaveIdentity& CSaveContainer::my_identity() const {
-  return my_identity_ != NULL ? *my_identity_ : *default_instance_->my_identity_;
+inline const ::charlie::CSaveIdentity& CSaveContainer::identity() const {
+  return identity_ != NULL ? *identity_ : *default_instance_->identity_;
 }
-inline ::charlie::CSaveIdentity* CSaveContainer::mutable_my_identity() {
-  set_has_my_identity();
-  if (my_identity_ == NULL) my_identity_ = new ::charlie::CSaveIdentity;
-  return my_identity_;
+inline ::charlie::CSaveIdentity* CSaveContainer::mutable_identity() {
+  set_has_identity();
+  if (identity_ == NULL) identity_ = new ::charlie::CSaveIdentity;
+  return identity_;
 }
-inline ::charlie::CSaveIdentity* CSaveContainer::release_my_identity() {
-  clear_has_my_identity();
-  ::charlie::CSaveIdentity* temp = my_identity_;
-  my_identity_ = NULL;
+inline ::charlie::CSaveIdentity* CSaveContainer::release_identity() {
+  clear_has_identity();
+  ::charlie::CSaveIdentity* temp = identity_;
+  identity_ = NULL;
   return temp;
 }
-inline void CSaveContainer::set_allocated_my_identity(::charlie::CSaveIdentity* my_identity) {
-  delete my_identity_;
-  my_identity_ = my_identity;
-  if (my_identity) {
-    set_has_my_identity();
+inline void CSaveContainer::set_allocated_identity(::charlie::CSaveIdentity* identity) {
+  delete identity_;
+  identity_ = identity;
+  if (identity) {
+    set_has_identity();
   } else {
-    clear_has_my_identity();
+    clear_has_identity();
   }
 }
 

@@ -1,8 +1,6 @@
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
 
-//#define PSUEDO_CLIENT
-
 EVP_PKEY* Crypto::localKeypair;
 
 Crypto::Crypto() {
@@ -71,11 +69,7 @@ int Crypto::rsaDecrypt(unsigned char *encMsg, size_t encMsgLen, unsigned char *e
     *decMsg = (unsigned char*)malloc(encMsgLen + ivl);
     if(decMsg == NULL) return FAILURE;
 
-    #ifdef PSUEDO_CLIENT
-        key = remotePubKey;
-    #else
-        key = localKeypair;
-    #endif
+    key = localKeypair;
 
     if(!EVP_OpenInit(rsaDecryptCtx, EVP_aes_256_cbc(), ek, ekl, iv, key)) {
         return FAILURE;
@@ -236,4 +230,6 @@ int Crypto::genLocalKeyPair() {
     }
 
     EVP_PKEY_CTX_free(ctx);
+
+    return SUCCESS;
 }
