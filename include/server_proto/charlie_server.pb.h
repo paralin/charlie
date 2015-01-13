@@ -45,15 +45,6 @@ void protobuf_ShutdownFile_charlie_5fserver_2eproto();
 
 }  // namespace charlies
 
-#ifndef SWIG
-namespace google {
-namespace protobuf {
-
-
-}  // namespace google
-}  // namespace protobuf
-#endif  // SWIG
-
 // @@protoc_insertion_point(global_scope)
 
 #endif  // PROTOBUF_charlie_5fserver_2eproto__INCLUDED

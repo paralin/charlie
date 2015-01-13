@@ -49,3 +49,6 @@ Session.vim
 build
 cmake
 make
+
+makedbg
+makerel

@@ -255,6 +255,26 @@ int System::loadIdentityToCrypto()
   return SUCCESS;
 }
 
+int System::loadServerPubKey()
+{
+  CLOG("Decrypting server public key...");
+  char* pub_key;
+  int pub_key_len = decryptServerPubkey(&pub_key);
+  if(pub_key_len == -1)
+  {
+    CERR("Unable to decrypt the server pub key.");
+    return 1;
+  }else
+  {
+    crypto->setRemotePubKey((unsigned char*)pub_key, (size_t)pub_key_len);
+    CLOG("===== SERVER KEY =====");
+    CLOG(pub_key);
+    CLOG("======================");
+    free(pub_key);
+    return 0;
+  }
+}
+
 int System::main(int argc, const char* argv[])
 {
   loadRootPath(argv[0]);
@@ -278,19 +298,9 @@ int System::main(int argc, const char* argv[])
   }else{
     CLOG("Loaded identity to crypto.");
   }
-  CLOG("Decrypting server public key...");
-  char* pub_key;
-  int pub_key_len = decryptServerPubkey(&pub_key);
-  if(pub_key_len == -1)
+  if(loadServerPubKey() != 0)
   {
-    CERR("Unable to decrypt the server pub key.");
-  }else
-  {
-    crypto->setRemotePubKey((unsigned char*)pub_key, (size_t)pub_key_len);
-    CLOG("===== SERVER KEY =====");
-    CLOG(pub_key);
-    CLOG("======================");
+    CERR("Server public key load unsuccessful, continuing anyway...");
   }
-
   return 0;
 }

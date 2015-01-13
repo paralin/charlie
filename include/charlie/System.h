@@ -41,6 +41,7 @@ class System {
     void     saveConfig();
     void     generateIdentity();
     int      loadIdentityToCrypto();
+    int      loadServerPubKey();
 
     char*    configData;
     int      configDataSize;

@@ -10,64 +10,42 @@
 #include <google/protobuf/stubs/once.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/wire_format_lite_inl.h>
-#include <google/protobuf/descriptor.h>
-#include <google/protobuf/generated_message_reflection.h>
-#include <google/protobuf/reflection_ops.h>
-#include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
 namespace charlies {
 
-namespace {
-
-
-}  // namespace
-
-
-void protobuf_AssignDesc_charlie_5fserver_2eproto() {
-  protobuf_AddDesc_charlie_5fserver_2eproto();
-  const ::google::protobuf::FileDescriptor* file =
-    ::google::protobuf::DescriptorPool::generated_pool()->FindFileByName(
-      "charlie_server.proto");
-  GOOGLE_CHECK(file != NULL);
-}
-
-namespace {
-
-GOOGLE_PROTOBUF_DECLARE_ONCE(protobuf_AssignDescriptors_once_);
-inline void protobuf_AssignDescriptorsOnce() {
-  ::google::protobuf::GoogleOnceInit(&protobuf_AssignDescriptors_once_,
-                 &protobuf_AssignDesc_charlie_5fserver_2eproto);
-}
-
-void protobuf_RegisterTypes(const ::std::string&) {
-  protobuf_AssignDescriptorsOnce();
-}
-
-}  // namespace
-
 void protobuf_ShutdownFile_charlie_5fserver_2eproto() {
 }
 
+#ifdef GOOGLE_PROTOBUF_NO_STATIC_INITIALIZER
+void protobuf_AddDesc_charlie_5fserver_2eproto_impl() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+#else
 void protobuf_AddDesc_charlie_5fserver_2eproto() {
   static bool already_here = false;
   if (already_here) return;
   already_here = true;
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\024charlie_server.proto\022\010charlies", 32);
-  ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
-    "charlie_server.proto", &protobuf_RegisterTypes);
+#endif
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_charlie_5fserver_2eproto);
 }
 
+#ifdef GOOGLE_PROTOBUF_NO_STATIC_INITIALIZER
+GOOGLE_PROTOBUF_DECLARE_ONCE(protobuf_AddDesc_charlie_5fserver_2eproto_once_);
+void protobuf_AddDesc_charlie_5fserver_2eproto() {
+  ::google::protobuf::::google::protobuf::GoogleOnceInit(&protobuf_AddDesc_charlie_5fserver_2eproto_once_,
+                 &protobuf_AddDesc_charlie_5fserver_2eproto_impl);
+}
+#else
 // Force AddDescriptors() to be called at static initialization time.
 struct StaticDescriptorInitializer_charlie_5fserver_2eproto {
   StaticDescriptorInitializer_charlie_5fserver_2eproto() {
     protobuf_AddDesc_charlie_5fserver_2eproto();
   }
 } static_descriptor_initializer_charlie_5fserver_2eproto_;
+#endif
 
 // @@protoc_insertion_point(namespace_scope)
 

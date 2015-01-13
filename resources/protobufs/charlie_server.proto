@@ -1,3 +1,3 @@
 //Server specific stuff
 package charlies;
-
+option optimize_for = LITE_RUNTIME;
