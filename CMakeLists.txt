@@ -22,7 +22,7 @@ file(GLOB server_proto_SRC "src/server_proto/*.cc")
 
 # Build server identity tool
 add_executable(genidentity
-  "src/sidentity/main.cpp"
+  "src/genidentity/main.cpp"
   "src/charlie/Crypto.cpp"
   "src/proto/charlie.pb.cc"
   "src/charlie/xor.cpp"

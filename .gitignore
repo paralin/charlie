@@ -47,8 +47,6 @@ Session.vim
 .directory
 
 build
-cmake
 make
-
 makedbg
 makerel
