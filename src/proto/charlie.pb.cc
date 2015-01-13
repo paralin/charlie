@@ -29,9 +29,12 @@ const ::google::protobuf::internal::GeneratedMessageReflection*
 const ::google::protobuf::Descriptor* CSaveContainer_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   CSaveContainer_reflection_ = NULL;
-const ::google::protobuf::Descriptor* CSaveIdentity_descriptor_ = NULL;
+const ::google::protobuf::Descriptor* CIdentity_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
-  CSaveIdentity_reflection_ = NULL;
+  CIdentity_reflection_ = NULL;
+const ::google::protobuf::Descriptor* CModule_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  CModule_reflection_ = NULL;
 const ::google::protobuf::EnumDescriptor* EMsgType_descriptor_ = NULL;
 const ::google::protobuf::EnumDescriptor* EBodyEncryptionType_descriptor_ = NULL;
 
@@ -93,22 +96,38 @@ void protobuf_AssignDesc_charlie_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(CSaveContainer));
-  CSaveIdentity_descriptor_ = file->message_type(3);
-  static const int CSaveIdentity_offsets_[2] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CSaveIdentity, private_key_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CSaveIdentity, public_key_),
+  CIdentity_descriptor_ = file->message_type(3);
+  static const int CIdentity_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CIdentity, private_key_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CIdentity, public_key_),
   };
-  CSaveIdentity_reflection_ =
+  CIdentity_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
-      CSaveIdentity_descriptor_,
-      CSaveIdentity::default_instance_,
-      CSaveIdentity_offsets_,
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CSaveIdentity, _has_bits_[0]),
-      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CSaveIdentity, _unknown_fields_),
+      CIdentity_descriptor_,
+      CIdentity::default_instance_,
+      CIdentity_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CIdentity, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CIdentity, _unknown_fields_),
       -1,
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
-      sizeof(CSaveIdentity));
+      sizeof(CIdentity));
+  CModule_descriptor_ = file->message_type(4);
+  static const int CModule_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CModule, id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CModule, signature_),
+  };
+  CModule_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      CModule_descriptor_,
+      CModule::default_instance_,
+      CModule_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CModule, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(CModule, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(CModule));
   EMsgType_descriptor_ = file->enum_type(0);
   EBodyEncryptionType_descriptor_ = file->enum_type(1);
 }
@@ -130,7 +149,9 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     CSaveContainer_descriptor_, &CSaveContainer::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
-    CSaveIdentity_descriptor_, &CSaveIdentity::default_instance());
+    CIdentity_descriptor_, &CIdentity::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    CModule_descriptor_, &CModule::default_instance());
 }
 
 }  // namespace
@@ -142,8 +163,10 @@ void protobuf_ShutdownFile_charlie_2eproto() {
   delete CMsgContainer_reflection_;
   delete CSaveContainer::default_instance_;
   delete CSaveContainer_reflection_;
-  delete CSaveIdentity::default_instance_;
-  delete CSaveIdentity_reflection_;
+  delete CIdentity::default_instance_;
+  delete CIdentity_reflection_;
+  delete CModule::default_instance_;
+  delete CModule_reflection_;
 }
 
 void protobuf_AddDesc_charlie_2eproto() {
@@ -158,25 +181,27 @@ void protobuf_AddDesc_charlie_2eproto() {
     "tamp\030\002 \001(\003\"\210\001\n\rCMsgContainer\022\030\n\020signed_t"
     "imestamp\030\001 \001(\014\022\014\n\004body\030\002 \001(\014\0225\n\017body_enc"
     "ryption\030\003 \001(\0162\034.charlie.EBodyEncryptionT"
-    "ype\022\030\n\020signed_body_hash\030\004 \001(\014\":\n\016CSaveCo"
-    "ntainer\022(\n\010identity\030\001 \001(\0132\026.charlie.CSav"
-    "eIdentity\"8\n\rCSaveIdentity\022\023\n\013private_ke"
-    "y\030\001 \001(\014\022\022\n\npublic_key\030\002 \001(\014*d\n\010EMsgType\022"
-    "\013\n\007NO_TYPE\020\000\022\010\n\004PING\020\001\022\023\n\017CLIENT_REGISTE"
-    "R\020\002\022\025\n\021CLIENT_REGISTERED\020\003\022\025\n\020VALIDATION"
-    "_ERROR\020\250F*G\n\023EBodyEncryptionType\022\021\n\rNO_E"
-    "NCRYPTION\020\000\022\n\n\006SIGNED\020\001\022\021\n\rXOR_TIMESTAMP"
-    "\020\002", 522);
+    "ype\022\030\n\020signed_body_hash\030\004 \001(\014\"6\n\016CSaveCo"
+    "ntainer\022$\n\010identity\030\001 \001(\0132\022.charlie.CIde"
+    "ntity\"4\n\tCIdentity\022\023\n\013private_key\030\001 \001(\014\022"
+    "\022\n\npublic_key\030\002 \001(\014\"(\n\007CModule\022\n\n\002id\030\001 \001"
+    "(\r\022\021\n\tsignature\030\002 \001(\014*d\n\010EMsgType\022\013\n\007NO_"
+    "TYPE\020\000\022\010\n\004PING\020\001\022\023\n\017CLIENT_REGISTER\020\002\022\025\n"
+    "\021CLIENT_REGISTERED\020\003\022\025\n\020VALIDATION_ERROR"
+    "\020\250F*G\n\023EBodyEncryptionType\022\021\n\rNO_ENCRYPT"
+    "ION\020\000\022\n\n\006SIGNED\020\001\022\021\n\rXOR_TIMESTAMP\020\002", 556);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "charlie.proto", &protobuf_RegisterTypes);
   CMsgHeader::default_instance_ = new CMsgHeader();
   CMsgContainer::default_instance_ = new CMsgContainer();
   CSaveContainer::default_instance_ = new CSaveContainer();
-  CSaveIdentity::default_instance_ = new CSaveIdentity();
+  CIdentity::default_instance_ = new CIdentity();
+  CModule::default_instance_ = new CModule();
   CMsgHeader::default_instance_->InitAsDefaultInstance();
   CMsgContainer::default_instance_->InitAsDefaultInstance();
   CSaveContainer::default_instance_->InitAsDefaultInstance();
-  CSaveIdentity::default_instance_->InitAsDefaultInstance();
+  CIdentity::default_instance_->InitAsDefaultInstance();
+  CModule::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_charlie_2eproto);
 }
 
@@ -843,7 +868,7 @@ CSaveContainer::CSaveContainer()
 }
 
 void CSaveContainer::InitAsDefaultInstance() {
-  identity_ = const_cast< ::charlie::CSaveIdentity*>(&::charlie::CSaveIdentity::default_instance());
+  identity_ = const_cast< ::charlie::CIdentity*>(&::charlie::CIdentity::default_instance());
 }
 
 CSaveContainer::CSaveContainer(const CSaveContainer& from)
@@ -892,7 +917,7 @@ CSaveContainer* CSaveContainer::New() const {
 void CSaveContainer::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (has_identity()) {
-      if (identity_ != NULL) identity_->::charlie::CSaveIdentity::Clear();
+      if (identity_ != NULL) identity_->::charlie::CIdentity::Clear();
     }
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -905,7 +930,7 @@ bool CSaveContainer::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // optional .charlie.CSaveIdentity identity = 1;
+      // optional .charlie.CIdentity identity = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
@@ -936,7 +961,7 @@ bool CSaveContainer::MergePartialFromCodedStream(
 
 void CSaveContainer::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // optional .charlie.CSaveIdentity identity = 1;
+  // optional .charlie.CIdentity identity = 1;
   if (has_identity()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->identity(), output);
@@ -950,7 +975,7 @@ void CSaveContainer::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* CSaveContainer::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // optional .charlie.CSaveIdentity identity = 1;
+  // optional .charlie.CIdentity identity = 1;
   if (has_identity()) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -968,7 +993,7 @@ int CSaveContainer::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // optional .charlie.CSaveIdentity identity = 1;
+    // optional .charlie.CIdentity identity = 1;
     if (has_identity()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
@@ -1003,7 +1028,7 @@ void CSaveContainer::MergeFrom(const CSaveContainer& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_identity()) {
-      mutable_identity()->::charlie::CSaveIdentity::MergeFrom(from.identity());
+      mutable_identity()->::charlie::CIdentity::MergeFrom(from.identity());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -1047,36 +1072,36 @@ void CSaveContainer::Swap(CSaveContainer* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
-const int CSaveIdentity::kPrivateKeyFieldNumber;
-const int CSaveIdentity::kPublicKeyFieldNumber;
+const int CIdentity::kPrivateKeyFieldNumber;
+const int CIdentity::kPublicKeyFieldNumber;
 #endif  // !_MSC_VER
 
-CSaveIdentity::CSaveIdentity()
+CIdentity::CIdentity()
   : ::google::protobuf::Message() {
   SharedCtor();
 }
 
-void CSaveIdentity::InitAsDefaultInstance() {
+void CIdentity::InitAsDefaultInstance() {
 }
 
-CSaveIdentity::CSaveIdentity(const CSaveIdentity& from)
+CIdentity::CIdentity(const CIdentity& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
 }
 
-void CSaveIdentity::SharedCtor() {
+void CIdentity::SharedCtor() {
   _cached_size_ = 0;
   private_key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   public_key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
-CSaveIdentity::~CSaveIdentity() {
+CIdentity::~CIdentity() {
   SharedDtor();
 }
 
-void CSaveIdentity::SharedDtor() {
+void CIdentity::SharedDtor() {
   if (private_key_ != &::google::protobuf::internal::kEmptyString) {
     delete private_key_;
   }
@@ -1087,28 +1112,28 @@ void CSaveIdentity::SharedDtor() {
   }
 }
 
-void CSaveIdentity::SetCachedSize(int size) const {
+void CIdentity::SetCachedSize(int size) const {
   GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
   _cached_size_ = size;
   GOOGLE_SAFE_CONCURRENT_WRITES_END();
 }
-const ::google::protobuf::Descriptor* CSaveIdentity::descriptor() {
+const ::google::protobuf::Descriptor* CIdentity::descriptor() {
   protobuf_AssignDescriptorsOnce();
-  return CSaveIdentity_descriptor_;
+  return CIdentity_descriptor_;
 }
 
-const CSaveIdentity& CSaveIdentity::default_instance() {
+const CIdentity& CIdentity::default_instance() {
   if (default_instance_ == NULL) protobuf_AddDesc_charlie_2eproto();
   return *default_instance_;
 }
 
-CSaveIdentity* CSaveIdentity::default_instance_ = NULL;
+CIdentity* CIdentity::default_instance_ = NULL;
 
-CSaveIdentity* CSaveIdentity::New() const {
-  return new CSaveIdentity;
+CIdentity* CIdentity::New() const {
+  return new CIdentity;
 }
 
-void CSaveIdentity::Clear() {
+void CIdentity::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (has_private_key()) {
       if (private_key_ != &::google::protobuf::internal::kEmptyString) {
@@ -1125,7 +1150,7 @@ void CSaveIdentity::Clear() {
   mutable_unknown_fields()->Clear();
 }
 
-bool CSaveIdentity::MergePartialFromCodedStream(
+bool CIdentity::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) return false
   ::google::protobuf::uint32 tag;
@@ -1174,7 +1199,7 @@ bool CSaveIdentity::MergePartialFromCodedStream(
 #undef DO_
 }
 
-void CSaveIdentity::SerializeWithCachedSizes(
+void CIdentity::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // optional bytes private_key = 1;
   if (has_private_key()) {
@@ -1194,7 +1219,7 @@ void CSaveIdentity::SerializeWithCachedSizes(
   }
 }
 
-::google::protobuf::uint8* CSaveIdentity::SerializeWithCachedSizesToArray(
+::google::protobuf::uint8* CIdentity::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
   // optional bytes private_key = 1;
   if (has_private_key()) {
@@ -1217,7 +1242,7 @@ void CSaveIdentity::SerializeWithCachedSizes(
   return target;
 }
 
-int CSaveIdentity::ByteSize() const {
+int CIdentity::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
@@ -1247,10 +1272,10 @@ int CSaveIdentity::ByteSize() const {
   return total_size;
 }
 
-void CSaveIdentity::MergeFrom(const ::google::protobuf::Message& from) {
+void CIdentity::MergeFrom(const ::google::protobuf::Message& from) {
   GOOGLE_CHECK_NE(&from, this);
-  const CSaveIdentity* source =
-    ::google::protobuf::internal::dynamic_cast_if_available<const CSaveIdentity*>(
+  const CIdentity* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const CIdentity*>(
       &from);
   if (source == NULL) {
     ::google::protobuf::internal::ReflectionOps::Merge(from, this);
@@ -1259,7 +1284,7 @@ void CSaveIdentity::MergeFrom(const ::google::protobuf::Message& from) {
   }
 }
 
-void CSaveIdentity::MergeFrom(const CSaveIdentity& from) {
+void CIdentity::MergeFrom(const CIdentity& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_private_key()) {
@@ -1272,24 +1297,24 @@ void CSaveIdentity::MergeFrom(const CSaveIdentity& from) {
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
 
-void CSaveIdentity::CopyFrom(const ::google::protobuf::Message& from) {
+void CIdentity::CopyFrom(const ::google::protobuf::Message& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-void CSaveIdentity::CopyFrom(const CSaveIdentity& from) {
+void CIdentity::CopyFrom(const CIdentity& from) {
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool CSaveIdentity::IsInitialized() const {
+bool CIdentity::IsInitialized() const {
 
   return true;
 }
 
-void CSaveIdentity::Swap(CSaveIdentity* other) {
+void CIdentity::Swap(CIdentity* other) {
   if (other != this) {
     std::swap(private_key_, other->private_key_);
     std::swap(public_key_, other->public_key_);
@@ -1299,11 +1324,267 @@ void CSaveIdentity::Swap(CSaveIdentity* other) {
   }
 }
 
-::google::protobuf::Metadata CSaveIdentity::GetMetadata() const {
+::google::protobuf::Metadata CIdentity::GetMetadata() const {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::Metadata metadata;
-  metadata.descriptor = CSaveIdentity_descriptor_;
-  metadata.reflection = CSaveIdentity_reflection_;
+  metadata.descriptor = CIdentity_descriptor_;
+  metadata.reflection = CIdentity_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int CModule::kIdFieldNumber;
+const int CModule::kSignatureFieldNumber;
+#endif  // !_MSC_VER
+
+CModule::CModule()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void CModule::InitAsDefaultInstance() {
+}
+
+CModule::CModule(const CModule& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void CModule::SharedCtor() {
+  _cached_size_ = 0;
+  id_ = 0u;
+  signature_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+CModule::~CModule() {
+  SharedDtor();
+}
+
+void CModule::SharedDtor() {
+  if (signature_ != &::google::protobuf::internal::kEmptyString) {
+    delete signature_;
+  }
+  if (this != default_instance_) {
+  }
+}
+
+void CModule::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* CModule::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return CModule_descriptor_;
+}
+
+const CModule& CModule::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_charlie_2eproto();
+  return *default_instance_;
+}
+
+CModule* CModule::default_instance_ = NULL;
+
+CModule* CModule::New() const {
+  return new CModule;
+}
+
+void CModule::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    id_ = 0u;
+    if (has_signature()) {
+      if (signature_ != &::google::protobuf::internal::kEmptyString) {
+        signature_->clear();
+      }
+    }
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool CModule::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // optional uint32 id = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &id_)));
+          set_has_id();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(18)) goto parse_signature;
+        break;
+      }
+
+      // optional bytes signature = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_signature:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadBytes(
+                input, this->mutable_signature()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void CModule::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // optional uint32 id = 1;
+  if (has_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->id(), output);
+  }
+
+  // optional bytes signature = 2;
+  if (has_signature()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBytes(
+      2, this->signature(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* CModule::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // optional uint32 id = 1;
+  if (has_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->id(), target);
+  }
+
+  // optional bytes signature = 2;
+  if (has_signature()) {
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteBytesToArray(
+        2, this->signature(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int CModule::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // optional uint32 id = 1;
+    if (has_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->id());
+    }
+
+    // optional bytes signature = 2;
+    if (has_signature()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::BytesSize(
+          this->signature());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void CModule::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const CModule* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const CModule*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void CModule::MergeFrom(const CModule& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_id()) {
+      set_id(from.id());
+    }
+    if (from.has_signature()) {
+      set_signature(from.signature());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void CModule::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void CModule::CopyFrom(const CModule& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool CModule::IsInitialized() const {
+
+  return true;
+}
+
+void CModule::Swap(CModule* other) {
+  if (other != this) {
+    std::swap(id_, other->id_);
+    std::swap(signature_, other->signature_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata CModule::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = CModule_descriptor_;
+  metadata.reflection = CModule_reflection_;
   return metadata;
 }
 

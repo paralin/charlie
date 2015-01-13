@@ -1,21 +1,23 @@
-#include <Plugin.h>
+#include <Module.h>
 
-namespace plugins
+namespace modules
 {
-  class AwesomePlugin : public Plugin
+  namespace testplugin
   {
-    public:
-      std::string toString()
-      {
-        return std::string("Coming from plugin");
-      }
-  };
+    class TestPlugin : public modules::Module
+    {
+      public:
+        std::string toString()
+        {
+          return std::string("Coming from plugin");
+        }
+    };
+  }
 }
-
 extern "C"
 {
-  G_MODULE_EXPORT plugins::Plugin* construct()
+  G_MODULE_EXPORT modules::Module* construct()
   {
-    return new plugins::AwesomePlugin();
+    return new modules::testplugin::TestPlugin();
   }
 }

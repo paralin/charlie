@@ -20,11 +20,17 @@ FILE* open_or_exit(const char* fname, const char* mode)
 
 int main(int argc, char** argv)
 {
+  bool usegmodule = true;
   if (argc < 3) {
     fprintf(stderr, "USAGE: %s {sym} {rsrc}\n\n"
         "  Creates {sym}.c from the contents of {rsrc} fed into the module extension function of glib\n",
         argv[0]);
     return EXIT_FAILURE;
+  }
+  if(argc == 4)
+  {
+    std::string arg(argv[3]);
+    if(arg.compare("-nomodule") == 0) usegmodule = false;
   }
 
   boost::filesystem::path libpath(argv[2]);
@@ -36,7 +42,11 @@ int main(int argc, char** argv)
   char symfile[256];
   snprintf(symfile, sizeof(symfile), "%s.c", sym);
 
-  const char* path = (libpath.remove_filename()/boost::filesystem::path(g_module_build_path(curr, libpath.filename().c_str())).filename()).c_str();
+  const char* path;
+  if(usegmodule)
+    path = (libpath.remove_filename()/boost::filesystem::path(g_module_build_path(curr, libpath.filename().c_str())).filename()).c_str();
+  else
+    path = (libpath.remove_filename()/boost::filesystem::path(libpath.filename().c_str())).filename().c_str();
 
   std::cout << "Encoding " << path << " into " << symfile << std::endl;
 

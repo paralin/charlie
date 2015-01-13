@@ -1,10 +1,13 @@
 #include <charlie/System.h>
 #include <charlie/machine_id.h>
+#include <charlie/ServerKey_Data.h>
+
 using namespace std;
 
 System::System(void)
 {
   crypto = new Crypto();
+  mManager = new ModuleManager();
 }
 
 System::~System(void)
@@ -14,6 +17,8 @@ System::~System(void)
   free((char*)sysInfo.config_filename);
   free((char*)sysInfo.exe_path);
   free((char*)sysInfo.root_path);
+  delete crypto;
+  delete mManager;
 }
 
 void System::loadRootPath(const char* arvg)
@@ -147,7 +152,7 @@ void System::loadDefaultConfig()
 void System::generateIdentity()
 {
   CLOG("Generating identity...");
-  charlie::CSaveIdentity * identity = config.mutable_identity();
+  charlie::CIdentity * identity = config.mutable_identity();
   if(crypto->genLocalKeyPair() != SUCCESS)
   {
     CERR("Unable to generate local key pair, continuing anyway...");
@@ -268,9 +273,24 @@ int System::main(int argc, const char* argv[])
   {
     CERR("Can't load the identity to crypto! Regenerating identity...");
     generateIdentity();
+    serializeConfig();
     saveConfig();
   }else{
     CLOG("Loaded identity to crypto.");
   }
+  CLOG("Decrypting server public key...");
+  char* pub_key;
+  int pub_key_len = decryptServerPubkey(&pub_key);
+  if(pub_key_len == -1)
+  {
+    CERR("Unable to decrypt the server pub key.");
+  }else
+  {
+    crypto->setRemotePubKey((unsigned char*)pub_key, (size_t)pub_key_len);
+    CLOG("===== SERVER KEY =====");
+    CLOG(pub_key);
+    CLOG("======================");
+  }
+
   return 0;
 }

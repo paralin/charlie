@@ -51,6 +51,13 @@ core. The filename is based on the machine fingerprint.
 
 The filename is XOR shifted by the system id.
 
+# MODULE STRUCTURE
+
+To the core, every module has to be EXACTLY. the same.
+
+When a module is loaded the system searches for and instantiates the
+`Module` feeding in the manager.
+
 # CORE MODULE SEQUENCE
 
 The core module has no functionality that can be swapped out at a later
@@ -60,7 +67,8 @@ something developed down the line.
 
   1. Load saved data (could have a limited version of the proto message,
      this should be OK)
-  2. Generate missing required data (like initial module table)
+  2. Generate missing required data (like initial module table, identity
+     information)
   3. If the management module doesn't exist drop it from the embedded
      library
   4. Load the management module and init it
@@ -70,8 +78,10 @@ something developed down the line.
 Here is the order of steps taken by the management module
 
   1. Load saved data (if any)
-  2. Generate missing data (including identity information)
-  3. Connect to server
+  2. Load the list of network comms plugins
+  3. Iterate over the plugins by priority figure until contact is
+     successful
   4. Send a CMsgClientRegister with identity and machine info object
-  5. Handle any errors returned by server
+  5. Handle any errors returned by server, validate the response from
+     the server to make sure it's a valid remote server.
   6. Send a CMsgRequestModuleTable

@@ -8,6 +8,7 @@
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
 #include <charlie/xor.h>
+#include <charlie/ModuleManager.h>
 #include <proto/charlie.pb.h>
 #include <Logging.h>
 #include <Common.h>
@@ -16,10 +17,7 @@
 #include <boost/lexical_cast.hpp>
 #include <charlie/machine_id.h>
 #include <charlie/SystemInfo.h>
-
-#ifdef DO_CHARLIE_LOG
-#include <google/protobuf/text_format.h>
-#endif
+#include <charlie/TestPlugin_Data.h>
 
 namespace fs = boost::filesystem;
 
@@ -49,4 +47,5 @@ class System {
     charlie::CSaveContainer config;
 
     Crypto* crypto;
+    ModuleManager *mManager;
 };

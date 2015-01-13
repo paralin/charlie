@@ -1,3 +1,4 @@
+//Server and client messages
 package charlie;
 
 enum EMsgType
@@ -43,11 +44,18 @@ message CMsgContainer
 
 message CSaveContainer
 {
-  optional CSaveIdentity identity = 1;
+  optional CIdentity identity = 1;
 }
 
-message CSaveIdentity
+message CIdentity
 {
   optional bytes private_key = 1;
   optional bytes public_key = 2;
+}
+
+message CModule
+{
+  //ID is the std::hash of the name str
+  optional uint32 id = 1;
+  optional bytes signature = 2;
 }

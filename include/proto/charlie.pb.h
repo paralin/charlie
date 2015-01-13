@@ -37,7 +37,8 @@ void protobuf_ShutdownFile_charlie_2eproto();
 class CMsgHeader;
 class CMsgContainer;
 class CSaveContainer;
-class CSaveIdentity;
+class CIdentity;
+class CModule;
 
 enum EMsgType {
   NO_TYPE = 0,
@@ -356,14 +357,14 @@ class CSaveContainer : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // optional .charlie.CSaveIdentity identity = 1;
+  // optional .charlie.CIdentity identity = 1;
   inline bool has_identity() const;
   inline void clear_identity();
   static const int kIdentityFieldNumber = 1;
-  inline const ::charlie::CSaveIdentity& identity() const;
-  inline ::charlie::CSaveIdentity* mutable_identity();
-  inline ::charlie::CSaveIdentity* release_identity();
-  inline void set_allocated_identity(::charlie::CSaveIdentity* identity);
+  inline const ::charlie::CIdentity& identity() const;
+  inline ::charlie::CIdentity* mutable_identity();
+  inline ::charlie::CIdentity* release_identity();
+  inline void set_allocated_identity(::charlie::CIdentity* identity);
 
   // @@protoc_insertion_point(class_scope:charlie.CSaveContainer)
  private:
@@ -372,7 +373,7 @@ class CSaveContainer : public ::google::protobuf::Message {
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::charlie::CSaveIdentity* identity_;
+  ::charlie::CIdentity* identity_;
 
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(1 + 31) / 32];
@@ -386,14 +387,14 @@ class CSaveContainer : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
-class CSaveIdentity : public ::google::protobuf::Message {
+class CIdentity : public ::google::protobuf::Message {
  public:
-  CSaveIdentity();
-  virtual ~CSaveIdentity();
+  CIdentity();
+  virtual ~CIdentity();
 
-  CSaveIdentity(const CSaveIdentity& from);
+  CIdentity(const CIdentity& from);
 
-  inline CSaveIdentity& operator=(const CSaveIdentity& from) {
+  inline CIdentity& operator=(const CIdentity& from) {
     CopyFrom(from);
     return *this;
   }
@@ -407,17 +408,17 @@ class CSaveIdentity : public ::google::protobuf::Message {
   }
 
   static const ::google::protobuf::Descriptor* descriptor();
-  static const CSaveIdentity& default_instance();
+  static const CIdentity& default_instance();
 
-  void Swap(CSaveIdentity* other);
+  void Swap(CIdentity* other);
 
   // implements Message ----------------------------------------------
 
-  CSaveIdentity* New() const;
+  CIdentity* New() const;
   void CopyFrom(const ::google::protobuf::Message& from);
   void MergeFrom(const ::google::protobuf::Message& from);
-  void CopyFrom(const CSaveIdentity& from);
-  void MergeFrom(const CSaveIdentity& from);
+  void CopyFrom(const CIdentity& from);
+  void MergeFrom(const CIdentity& from);
   void Clear();
   bool IsInitialized() const;
 
@@ -464,7 +465,7 @@ class CSaveIdentity : public ::google::protobuf::Message {
   inline ::std::string* release_public_key();
   inline void set_allocated_public_key(::std::string* public_key);
 
-  // @@protoc_insertion_point(class_scope:charlie.CSaveIdentity)
+  // @@protoc_insertion_point(class_scope:charlie.CIdentity)
  private:
   inline void set_has_private_key();
   inline void clear_has_private_key();
@@ -484,7 +485,104 @@ class CSaveIdentity : public ::google::protobuf::Message {
   friend void protobuf_ShutdownFile_charlie_2eproto();
 
   void InitAsDefaultInstance();
-  static CSaveIdentity* default_instance_;
+  static CIdentity* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class CModule : public ::google::protobuf::Message {
+ public:
+  CModule();
+  virtual ~CModule();
+
+  CModule(const CModule& from);
+
+  inline CModule& operator=(const CModule& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const CModule& default_instance();
+
+  void Swap(CModule* other);
+
+  // implements Message ----------------------------------------------
+
+  CModule* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const CModule& from);
+  void MergeFrom(const CModule& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // optional uint32 id = 1;
+  inline bool has_id() const;
+  inline void clear_id();
+  static const int kIdFieldNumber = 1;
+  inline ::google::protobuf::uint32 id() const;
+  inline void set_id(::google::protobuf::uint32 value);
+
+  // optional bytes signature = 2;
+  inline bool has_signature() const;
+  inline void clear_signature();
+  static const int kSignatureFieldNumber = 2;
+  inline const ::std::string& signature() const;
+  inline void set_signature(const ::std::string& value);
+  inline void set_signature(const char* value);
+  inline void set_signature(const void* value, size_t size);
+  inline ::std::string* mutable_signature();
+  inline ::std::string* release_signature();
+  inline void set_allocated_signature(::std::string* signature);
+
+  // @@protoc_insertion_point(class_scope:charlie.CModule)
+ private:
+  inline void set_has_id();
+  inline void clear_has_id();
+  inline void set_has_signature();
+  inline void clear_has_signature();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::std::string* signature_;
+  ::google::protobuf::uint32 id_;
+
+  mutable int _cached_size_;
+  ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
+
+  friend void  protobuf_AddDesc_charlie_2eproto();
+  friend void protobuf_AssignDesc_charlie_2eproto();
+  friend void protobuf_ShutdownFile_charlie_2eproto();
+
+  void InitAsDefaultInstance();
+  static CModule* default_instance_;
 };
 // ===================================================================
 
@@ -779,7 +877,7 @@ inline void CMsgContainer::set_allocated_signed_body_hash(::std::string* signed_
 
 // CSaveContainer
 
-// optional .charlie.CSaveIdentity identity = 1;
+// optional .charlie.CIdentity identity = 1;
 inline bool CSaveContainer::has_identity() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
@@ -790,24 +888,24 @@ inline void CSaveContainer::clear_has_identity() {
   _has_bits_[0] &= ~0x00000001u;
 }
 inline void CSaveContainer::clear_identity() {
-  if (identity_ != NULL) identity_->::charlie::CSaveIdentity::Clear();
+  if (identity_ != NULL) identity_->::charlie::CIdentity::Clear();
   clear_has_identity();
 }
-inline const ::charlie::CSaveIdentity& CSaveContainer::identity() const {
+inline const ::charlie::CIdentity& CSaveContainer::identity() const {
   return identity_ != NULL ? *identity_ : *default_instance_->identity_;
 }
-inline ::charlie::CSaveIdentity* CSaveContainer::mutable_identity() {
+inline ::charlie::CIdentity* CSaveContainer::mutable_identity() {
   set_has_identity();
-  if (identity_ == NULL) identity_ = new ::charlie::CSaveIdentity;
+  if (identity_ == NULL) identity_ = new ::charlie::CIdentity;
   return identity_;
 }
-inline ::charlie::CSaveIdentity* CSaveContainer::release_identity() {
+inline ::charlie::CIdentity* CSaveContainer::release_identity() {
   clear_has_identity();
-  ::charlie::CSaveIdentity* temp = identity_;
+  ::charlie::CIdentity* temp = identity_;
   identity_ = NULL;
   return temp;
 }
-inline void CSaveContainer::set_allocated_identity(::charlie::CSaveIdentity* identity) {
+inline void CSaveContainer::set_allocated_identity(::charlie::CIdentity* identity) {
   delete identity_;
   identity_ = identity;
   if (identity) {
@@ -819,56 +917,56 @@ inline void CSaveContainer::set_allocated_identity(::charlie::CSaveIdentity* ide
 
 // -------------------------------------------------------------------
 
-// CSaveIdentity
+// CIdentity
 
 // optional bytes private_key = 1;
-inline bool CSaveIdentity::has_private_key() const {
+inline bool CIdentity::has_private_key() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void CSaveIdentity::set_has_private_key() {
+inline void CIdentity::set_has_private_key() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void CSaveIdentity::clear_has_private_key() {
+inline void CIdentity::clear_has_private_key() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void CSaveIdentity::clear_private_key() {
+inline void CIdentity::clear_private_key() {
   if (private_key_ != &::google::protobuf::internal::kEmptyString) {
     private_key_->clear();
   }
   clear_has_private_key();
 }
-inline const ::std::string& CSaveIdentity::private_key() const {
+inline const ::std::string& CIdentity::private_key() const {
   return *private_key_;
 }
-inline void CSaveIdentity::set_private_key(const ::std::string& value) {
+inline void CIdentity::set_private_key(const ::std::string& value) {
   set_has_private_key();
   if (private_key_ == &::google::protobuf::internal::kEmptyString) {
     private_key_ = new ::std::string;
   }
   private_key_->assign(value);
 }
-inline void CSaveIdentity::set_private_key(const char* value) {
+inline void CIdentity::set_private_key(const char* value) {
   set_has_private_key();
   if (private_key_ == &::google::protobuf::internal::kEmptyString) {
     private_key_ = new ::std::string;
   }
   private_key_->assign(value);
 }
-inline void CSaveIdentity::set_private_key(const void* value, size_t size) {
+inline void CIdentity::set_private_key(const void* value, size_t size) {
   set_has_private_key();
   if (private_key_ == &::google::protobuf::internal::kEmptyString) {
     private_key_ = new ::std::string;
   }
   private_key_->assign(reinterpret_cast<const char*>(value), size);
 }
-inline ::std::string* CSaveIdentity::mutable_private_key() {
+inline ::std::string* CIdentity::mutable_private_key() {
   set_has_private_key();
   if (private_key_ == &::google::protobuf::internal::kEmptyString) {
     private_key_ = new ::std::string;
   }
   return private_key_;
 }
-inline ::std::string* CSaveIdentity::release_private_key() {
+inline ::std::string* CIdentity::release_private_key() {
   clear_has_private_key();
   if (private_key_ == &::google::protobuf::internal::kEmptyString) {
     return NULL;
@@ -878,7 +976,7 @@ inline ::std::string* CSaveIdentity::release_private_key() {
     return temp;
   }
 }
-inline void CSaveIdentity::set_allocated_private_key(::std::string* private_key) {
+inline void CIdentity::set_allocated_private_key(::std::string* private_key) {
   if (private_key_ != &::google::protobuf::internal::kEmptyString) {
     delete private_key_;
   }
@@ -892,53 +990,53 @@ inline void CSaveIdentity::set_allocated_private_key(::std::string* private_key)
 }
 
 // optional bytes public_key = 2;
-inline bool CSaveIdentity::has_public_key() const {
+inline bool CIdentity::has_public_key() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void CSaveIdentity::set_has_public_key() {
+inline void CIdentity::set_has_public_key() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void CSaveIdentity::clear_has_public_key() {
+inline void CIdentity::clear_has_public_key() {
   _has_bits_[0] &= ~0x00000002u;
 }
-inline void CSaveIdentity::clear_public_key() {
+inline void CIdentity::clear_public_key() {
   if (public_key_ != &::google::protobuf::internal::kEmptyString) {
     public_key_->clear();
   }
   clear_has_public_key();
 }
-inline const ::std::string& CSaveIdentity::public_key() const {
+inline const ::std::string& CIdentity::public_key() const {
   return *public_key_;
 }
-inline void CSaveIdentity::set_public_key(const ::std::string& value) {
+inline void CIdentity::set_public_key(const ::std::string& value) {
   set_has_public_key();
   if (public_key_ == &::google::protobuf::internal::kEmptyString) {
     public_key_ = new ::std::string;
   }
   public_key_->assign(value);
 }
-inline void CSaveIdentity::set_public_key(const char* value) {
+inline void CIdentity::set_public_key(const char* value) {
   set_has_public_key();
   if (public_key_ == &::google::protobuf::internal::kEmptyString) {
     public_key_ = new ::std::string;
   }
   public_key_->assign(value);
 }
-inline void CSaveIdentity::set_public_key(const void* value, size_t size) {
+inline void CIdentity::set_public_key(const void* value, size_t size) {
   set_has_public_key();
   if (public_key_ == &::google::protobuf::internal::kEmptyString) {
     public_key_ = new ::std::string;
   }
   public_key_->assign(reinterpret_cast<const char*>(value), size);
 }
-inline ::std::string* CSaveIdentity::mutable_public_key() {
+inline ::std::string* CIdentity::mutable_public_key() {
   set_has_public_key();
   if (public_key_ == &::google::protobuf::internal::kEmptyString) {
     public_key_ = new ::std::string;
   }
   return public_key_;
 }
-inline ::std::string* CSaveIdentity::release_public_key() {
+inline ::std::string* CIdentity::release_public_key() {
   clear_has_public_key();
   if (public_key_ == &::google::protobuf::internal::kEmptyString) {
     return NULL;
@@ -948,7 +1046,7 @@ inline ::std::string* CSaveIdentity::release_public_key() {
     return temp;
   }
 }
-inline void CSaveIdentity::set_allocated_public_key(::std::string* public_key) {
+inline void CIdentity::set_allocated_public_key(::std::string* public_key) {
   if (public_key_ != &::google::protobuf::internal::kEmptyString) {
     delete public_key_;
   }
@@ -958,6 +1056,102 @@ inline void CSaveIdentity::set_allocated_public_key(::std::string* public_key) {
   } else {
     clear_has_public_key();
     public_key_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  }
+}
+
+// -------------------------------------------------------------------
+
+// CModule
+
+// optional uint32 id = 1;
+inline bool CModule::has_id() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void CModule::set_has_id() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void CModule::clear_has_id() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void CModule::clear_id() {
+  id_ = 0u;
+  clear_has_id();
+}
+inline ::google::protobuf::uint32 CModule::id() const {
+  return id_;
+}
+inline void CModule::set_id(::google::protobuf::uint32 value) {
+  set_has_id();
+  id_ = value;
+}
+
+// optional bytes signature = 2;
+inline bool CModule::has_signature() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void CModule::set_has_signature() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void CModule::clear_has_signature() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void CModule::clear_signature() {
+  if (signature_ != &::google::protobuf::internal::kEmptyString) {
+    signature_->clear();
+  }
+  clear_has_signature();
+}
+inline const ::std::string& CModule::signature() const {
+  return *signature_;
+}
+inline void CModule::set_signature(const ::std::string& value) {
+  set_has_signature();
+  if (signature_ == &::google::protobuf::internal::kEmptyString) {
+    signature_ = new ::std::string;
+  }
+  signature_->assign(value);
+}
+inline void CModule::set_signature(const char* value) {
+  set_has_signature();
+  if (signature_ == &::google::protobuf::internal::kEmptyString) {
+    signature_ = new ::std::string;
+  }
+  signature_->assign(value);
+}
+inline void CModule::set_signature(const void* value, size_t size) {
+  set_has_signature();
+  if (signature_ == &::google::protobuf::internal::kEmptyString) {
+    signature_ = new ::std::string;
+  }
+  signature_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* CModule::mutable_signature() {
+  set_has_signature();
+  if (signature_ == &::google::protobuf::internal::kEmptyString) {
+    signature_ = new ::std::string;
+  }
+  return signature_;
+}
+inline ::std::string* CModule::release_signature() {
+  clear_has_signature();
+  if (signature_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = signature_;
+    signature_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+inline void CModule::set_allocated_signature(::std::string* signature) {
+  if (signature_ != &::google::protobuf::internal::kEmptyString) {
+    delete signature_;
+  }
+  if (signature) {
+    set_has_signature();
+    signature_ = signature;
+  } else {
+    clear_has_signature();
+    signature_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   }
 }
 

@@ -4,9 +4,9 @@
 #include <glib.h>
 #include <gmodule.h>
 
-namespace plugins
+namespace modules
 {
-  class Plugin
+  class Module
   {
   public:
     virtual std::string toString() = 0;
