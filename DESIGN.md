@@ -51,6 +51,12 @@ core. The filename is based on the machine fingerprint.
 
 The filename is XOR shifted by the system id.
 
+# INITIAL MANAGEMENT MODULE
+
+At least one management module is required at all times to bootstrap the
+system. The executable comes with the binary of the initial management
+module built in along with a matching initial module table.
+
 # MODULE STRUCTURE
 
 To the core, every module has to be EXACTLY. the same.
