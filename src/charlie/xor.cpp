@@ -9,7 +9,7 @@ int apply_xor(char* toEncrypt, int encryptLen, const char* key, int keyLen) {
   int keyi = keyLen-1;
   for (int i = 0; i < encryptLen; i++)
   {
-    toEncrypt[i] = toEncrypt[i] ^ (key[keyi]*(keyi/keyLen%10));
+    toEncrypt[i] = toEncrypt[i] ^ key[keyi];
     if(keyi>=keyLen-1) { inc = false; }
     else if(keyi == 0) { inc = true;  }
     if(inc) keyi++;

@@ -17,6 +17,7 @@
 #include <glib.h>
 #include <gmodule.h>
 #include <stdio.h>
+#include <boost/regex.hpp>
 
 //#define PRINT_VERBOSE
 
@@ -43,7 +44,12 @@ struct EmbedCommand : public GenericOptions {
   bool usegmodule_;
 };
 
-typedef boost::variant<GenIdentCommand, GenPubkeyCommand, EmbedCommand> Command;
+struct ProtoCleanCommand : public GenericOptions {
+  std::string output_;
+  std::string input_;
+};
+
+typedef boost::variant<GenIdentCommand, GenPubkeyCommand, EmbedCommand, ProtoCleanCommand> Command;
 
 Command ParseOptions(int argc, const char *argv[])
 {
@@ -172,13 +178,44 @@ Command ParseOptions(int argc, const char *argv[])
     }
     return comm;
   }
+  else if (cmd == "protoclean")
+  {
+    po::options_description geni_desc("protoclean options");
+    geni_desc.add_options()
+      ("input", po::value<std::string>(), "Path to file to clean")
+      ("output", po::value<std::string>(), "Output file");
+
+    std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+    opts.erase(opts.begin());
+
+    // Parse again...
+    po::store(po::command_line_parser(opts).options(geni_desc).run(), vm);
+
+    ProtoCleanCommand comm;
+    comm.cmdid = 3;
+    try
+    {
+      comm.output_ = vm["output"].as<std::string>();
+      comm.input_ = vm["input"].as<std::string>();
+    }
+    catch (const std::exception& e)
+    {
+      std::cout << "Charlie Utility App" << std::endl
+        << "./cutils protoclean --output [file] --input [file]" << std::endl << std::endl
+        << global << std::endl
+        << geni_desc << std::endl
+        << "protoclean: Clean a protobuf file of any info." << std::endl;
+      throw e;
+    }
+    return comm;
+  }
 
   // unrecognised command
   std::cout << "Charlie Utility App" << std::endl
     << "./cutils --xorkey [key] [command] [args]" << std::endl
     << global << std::endl
     << "Note: subargs and command are positional" << std::endl
-    << "Commands: genident, genpubkey, embed" << std::endl;
+    << "Commands: genident, genpubkey, embed, protoclean" << std::endl;
   throw po::invalid_option_value(cmd);
 }
 
@@ -359,6 +396,52 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
   }
 }
 
+int protoCleanFile(ProtoCleanCommand* comm, fs::path *full_path)
+{
+  std::ifstream t(comm->input_.c_str());
+  if(t.is_open())
+  {
+    boost::regex expression("(::std::string )([a-zA-Z]+)(::GetTypeName\\(\\) const {)");
+
+    std::stringstream buffer;
+    std::string    line;
+    int i=-1;
+    bool nextGetName = false;
+    while(std::getline(t, line))
+    {
+      i++;
+      boost::cmatch what;
+      if(i == 0 && boost::starts_with(line, "//"))
+      {
+        buffer << "#define __FILE__ \"\"\n";
+      }
+      else if(nextGetName)
+      {
+        buffer<<"    return \"\";\n";
+        nextGetName = false;
+        continue;
+      }
+      else if(boost::regex_match(line.c_str(), what, expression))
+      {
+        CLOG("REPN: "<<i<<" "<<line);
+        nextGetName = true;
+      }
+      buffer << line << "\n";
+    }
+
+    //Write output
+    std::ofstream of;
+    of.open(comm->output_.c_str(), std::ios::out);
+    of << buffer.str();
+    of.close();
+  }else
+  {
+    CERR("Unable to open "<<comm->input_<<"...");
+    return -1;
+  }
+  return 0;
+}
+
 int main(int argc, const char** argv)
 {
   std::string pth1 (argv[0]);
@@ -383,11 +466,14 @@ int main(int argc, const char** argv)
     return 1;
   }
   GenericOptions* opt = (GenericOptions*)(&comm);
+  CLOG(opt->cmdid);
   if(opt->cmdid == 0)
     return generateIdentity(&boost::get<GenIdentCommand>(comm), &full_path);
   else if(opt->cmdid == 1)
     return generatePubKey(&boost::get<GenPubkeyCommand>(comm), &full_path);
   else if(opt->cmdid == 2)
     return generateEmbedFile(&boost::get<EmbedCommand>(comm), &full_path);
+  else if(opt->cmdid == 3)
+    return protoCleanFile(&boost::get<ProtoCleanCommand>(comm), &full_path);
   return 1;
 }

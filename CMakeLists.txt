@@ -6,7 +6,7 @@ project(charlie)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-find_package(Boost REQUIRED COMPONENTS filesystem system program_options)
+find_package(Boost REQUIRED COMPONENTS filesystem system program_options regex)
 find_package(Protobuf REQUIRED)
 find_package(GLIB REQUIRED COMPONENTS gmodule)
 find_package(OpenSSL REQUIRED)
@@ -15,12 +15,9 @@ include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUD
 include_directories("include")
 
 set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} dl)
-add_definitions("-std=c++11")
+# add_definitions("-std=c++11 -D__FILE__ \"file\"")
 
 set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -Os -fvisibility=hidden -s")
-
-file(GLOB proto_SRC "src/protogen/*.cc")
-file(GLOB server_proto_SRC "src/server_protogen/*.cc")
 
 # Build compile tool
 add_executable(cutils
@@ -30,6 +27,22 @@ add_executable(cutils
   "src/charlie/Crypto.cpp"
   )
 target_link_libraries(cutils ${LIBS})
+
+# Redact files
+set(proto_SRC charlie.pb.redacted.cc)
+
+set(REDACT_CH_PTH "${PROJECT_SOURCE_DIR}/src/protogen/charlie.pb.cc")
+if(EXISTS ${REDACT_CH_PTH})
+  MESSAGE( STATUS "Will redact charlie proto files." )
+  file(COPY "${PROJECT_SOURCE_DIR}/src/protogen/charlie.pb.h" DESTINATION ${CMAKE_BINARY_DIR})
+  add_custom_command(
+    OUTPUT charlie.pb.redacted.cc
+    COMMAND cutils
+    ARGS protoclean --input ${REDACT_CH_PTH} --output charlie.pb.redacted.cc
+    DEPENDS cutils
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+endif()
 
 # Build test plugin
 file(GLOB testplugin_SRC "src/testplugin/*.cpp")
