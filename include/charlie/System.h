@@ -9,7 +9,7 @@
 #include <charlie/base64.h>
 #include <charlie/xor.h>
 #include <charlie/ModuleManager.h>
-#include <proto/charlie.pb.h>
+#include <protogen/charlie.pb.h>
 #include <Logging.h>
 #include <Common.h>
 #include <boost/filesystem.hpp>

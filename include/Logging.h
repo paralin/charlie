@@ -1,5 +1,9 @@
 #pragma once
 
+#include <string>
+#include <ostream>
+#include <iostream>
+
 #ifndef NDEBUG
 #define DO_CHARLIE_LOG
 #endif

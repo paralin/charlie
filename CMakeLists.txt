@@ -14,16 +14,18 @@ find_package(OpenSSL REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
 include_directories("include")
 
-set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} dl)
-set(CFLAGS "-std=c++0x")
+set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} dl)
+add_definitions("-std=c++11")
 
-file(GLOB proto_SRC "src/proto/*.cc")
-file(GLOB server_proto_SRC "src/server_proto/*.cc")
+set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -Os -fvisibility=hidden -s")
+
+file(GLOB proto_SRC "src/protogen/*.cc")
+file(GLOB server_proto_SRC "src/server_protogen/*.cc")
 
 # Build compile tool
 add_executable(cutils
   "src/cutils/main.cpp"
-  "src/proto/charlie.pb.cc"
+  "src/protogen/charlie.pb.cc"
   "src/charlie/xor.cpp"
   "src/charlie/Crypto.cpp"
   )
@@ -32,6 +34,7 @@ target_link_libraries(cutils ${LIBS})
 # Build test plugin
 file(GLOB testplugin_SRC "src/testplugin/*.cpp")
 add_library(testplugin SHARED ${testplugin_SRC})
+set_target_properties(testplugin PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 
 # Set the list of libraries to compile embed code
 set(embed_libraries testplugin)
@@ -67,7 +70,7 @@ foreach(to_embed_lib IN LISTS embed_libraries)
   add_custom_command(
     OUTPUT ${to_embed_lib}_data.c
     COMMAND cutils
-    ARGS embed --output ${to_embed_lib}_data.c --input "${CMAKE_BINARY_DIR}/${to_embed_lib}" --usegmodule
+    ARGS embed --output ${to_embed_lib}_data.c --input "${CMAKE_BINARY_DIR}/${to_embed_lib}" --xorkey destroid --usegmodule
     DEPENDS ${to_embed_lib} cutils
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
@@ -85,6 +88,7 @@ add_custom_command(
 # Build charlie
 file(GLOB charlie_SRC "src/charlie/*.cpp")
 add_executable(charlie testplugin_data.c server_pubkey_data.c ${charlie_SRC} ${proto_SRC})
+set_target_properties(charlie PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 
 #add_dependencies(charlie embed)
 target_link_libraries(charlie ${LIBS})

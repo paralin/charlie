@@ -1,6 +1,7 @@
+option optimize_for = LITE_RUNTIME;
+
 //Server and client messages
 package charlie;
-//option optimize_for = LITE_RUNTIME;
 
 enum EMsgType
 {

@@ -2,7 +2,7 @@
 
 #include <Common.h>
 #include <Module.h>
-#include <proto/charlie.pb.h>
+#include <protogen/charlie.pb.h>
 
 class ModuleInstance
 {

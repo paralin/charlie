@@ -1,5 +1,5 @@
-all: makedbg compile
-release: makerel compile
+all: proto makedbg compile
+release: proto makerel compile
 
 clean:
 	-rm -rf build makerel makedbg
@@ -17,3 +17,13 @@ compile:
 	cd build && make -j4
 run: all
 	cd build && ./charlie
+proto:
+	-rm -rf ./include/protogen/ ./include/server_protogen/ ./src/protogen/ ./src/server_protogen/
+	-mkdir ./src/protogen/
+	-mkdir ./src/server_protogen/
+	-mkdir ./include/server_protogen/
+	-mkdir ./include/protogen/
+	cd src/proto && protoc -I=`pwd` --cpp_out=../protogen/ `pwd`/charlie.proto
+	cd src/proto && protoc -I=`pwd` --cpp_out=../server_protogen/ `pwd`/charlie_server.proto
+	cp ./src/protogen/*.h ./include/protogen/
+	cp ./src/server_protogen/*.h ./include/server_protogen/

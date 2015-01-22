@@ -1,7 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include <string.h>
-#include <proto/charlie.pb.h>
+#include <protogen/charlie.pb.h>
 #include <charlie/xor.h>
 
 extern "C" const char server_pubkey_data[];

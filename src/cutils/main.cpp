@@ -3,7 +3,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
-#include <proto/charlie.pb.h>
+#include <protogen/charlie.pb.h>
 #include <iostream>
 #include <fstream>
 #include <charlie/xor.h>

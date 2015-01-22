@@ -13,8 +13,6 @@ namespace modules
   public:
     // Provide a pointer to the requested dependency
     virtual int injectDependency (u32 id, void* dep);
-    // Release the pointer to the depenency as it is about to be unloaded
-    virtual int releaseDependency(u32 id);
   };
 }
 
