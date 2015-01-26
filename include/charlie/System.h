@@ -17,7 +17,8 @@
 #include <boost/lexical_cast.hpp>
 #include <charlie/machine_id.h>
 #include <charlie/SystemInfo.h>
-#include <charlie/TestPlugin_Data.h>
+#include <charlie/ModuleTable_Data.h>
+#include <charlie/ManagerModule_Data.h>
 
 namespace fs = boost::filesystem;
 
@@ -28,9 +29,9 @@ class System {
 
     int main(int argc, const char* argv[]);
 
-  private:
     SystemInfo sysInfo;
 
+  private:
     void     loadRootPath(const char* arvg0);
     void     loadSysInfo();
     int      loadConfigFile();
@@ -42,11 +43,15 @@ class System {
     void     generateIdentity();
     int      loadIdentityToCrypto();
     int      loadServerPubKey();
+    void     loadDefaultModuleTable();
 
+    ModuleManager *mManager;
+
+  public:
+    charlie::CSaveContainer config;
     char*    configData;
     int      configDataSize;
-    charlie::CSaveContainer config;
+    charlie::CModuleTable modTable;
 
     Crypto* crypto;
-    ModuleManager *mManager;
 };

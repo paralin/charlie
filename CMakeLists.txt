@@ -13,6 +13,7 @@ find_package(OpenSSL REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
 include_directories("include")
+include_directories("${PROJECT_SOURCE_DIR}/deps/rapidjson/include/")
 
 set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} dl)
 # add_definitions("-std=c++11 -D__FILE__ \"file\"")
@@ -44,13 +45,13 @@ if(EXISTS ${REDACT_CH_PTH})
     )
 endif()
 
-# Build test plugin
-file(GLOB testplugin_SRC "src/testplugin/*.cpp")
-add_library(testplugin SHARED ${testplugin_SRC})
-set_target_properties(testplugin PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
+# Build manager
+file(GLOB manager_SRC "src/modules/manager/*.cpp")
+add_library(manager SHARED ${manager_SRC})
+set_target_properties(manager PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 
 # Set the list of libraries to compile embed code
-set(embed_libraries testplugin)
+set(embed_libraries manager)
 
 # Copy server identity file
 if(EXISTS "${PROJECT_SOURCE_DIR}/resources/identity/server_identity")
@@ -78,6 +79,15 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
 
+MESSAGE( STATUS "Planning to generate the initial module table..." )
+add_custom_command(
+  OUTPUT init_mtable
+  COMMAND cutils
+  ARGS genmodtable --xorkey ittybittytitty --output init_mtable --sign --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json
+  DEPENDS cutils server_identity
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  )
+
 # Compile the data into c files (use with plugin_data.c dependency)
 foreach(to_embed_lib IN LISTS embed_libraries)
   add_custom_command(
@@ -98,9 +108,18 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
 
+# Compile initial module table into c file
+add_custom_command(
+  OUTPUT init_modtable_data.c
+  COMMAND cutils
+  ARGS embed --output init_modtable_data.c --input "${CMAKE_BINARY_DIR}/init_mtable"
+  DEPENDS init_mtable cutils
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  )
+
 # Build charlie
 file(GLOB charlie_SRC "src/charlie/*.cpp")
-add_executable(charlie testplugin_data.c server_pubkey_data.c ${charlie_SRC} ${proto_SRC})
+add_executable(charlie manager_data.c server_pubkey_data.c init_modtable_data.c ${charlie_SRC} ${proto_SRC})
 set_target_properties(charlie PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 
 #add_dependencies(charlie embed)

@@ -17,20 +17,45 @@ enum EMsgType
   VALIDATION_ERROR = 9000;
 }
 
+// Expected usage:
+//   client->server - use SIGNED_CLIENT_PRI
+//   server->client - use SIGNED_SERVER_PRI
+// Others exist, but are not used (yet)
 enum EBodyEncryptionType
 {
   //No body encryption
   NO_ENCRYPTION = 0;
-  //Encrypted with pkey
-  SIGNED = 1;
-  //XOR(XOR(timestamp) serverpubkey)
-  XOR_TIMESTAMP = 2;
+  //Encrypted with server private key
+  SIGNED_SERVER_PRI = 1;
+  //Encrypted with client's public key
+  SIGNED_CLIENT_PUB = 2;
+  //Encrypted with the client's private key
+  SIGNED_CLIENT_PRI = 3;
+  //Encrypted with the server's public key
+  SIGNED_SERVER_PUB = 4;
+}
+
+//Some data EVP public key signed
+message CRSABuffer
+{
+  optional bytes data = 1;
+  optional bytes ek = 2;
+  optional bytes iv = 3;
+}
+
+//Some data signed with a private key
+message CSignedBuffer
+{
+  optional bytes data = 1;
+  optional bytes sig  = 2;
 }
 
 message CMsgHeader
 {
   optional EMsgType type = 1;
-  optional int64 timestamp = 2; //Possible to be zero length in which case it's just a keepalive ping optional int64 length = 3; optional EBodyEncryptionType encryption = 4;
+  optional int64 timestamp = 2; //Possible to be zero length in which case it's just a keepalive ping
+  optional int64 length = 3;
+  optional EBodyEncryptionType encryption = 4;
 }
 
 message CMsgContainer
@@ -46,7 +71,9 @@ message CMsgContainer
 
 message CSaveContainer
 {
-  optional CIdentity identity = 1;
+  optional CIdentity identity  = 1;
+  //Module table encrypted with server pubkey
+  optional CSignedBuffer emodtable = 2;
 }
 
 message CIdentity
@@ -55,9 +82,17 @@ message CIdentity
   optional bytes public_key = 2;
 }
 
+message CModuleTable
+{
+  repeated CModule modules = 1;
+}
+
 message CModule
 {
   //ID is the std::hash of the name str
   optional uint32 id = 1;
-  optional bytes signature = 2;
+  //does it have a main function to be run on a separate thread?
+  optional bool   mainfcn = 2;
+  //is this THE manager module? system refuses to start without loading this first
+  optional bool   initial = 3;
 }

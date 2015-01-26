@@ -1,2 +1,5 @@
 #pragma once
-#define CHARLIE_DEBUG
+
+#include <IntTypes.h>
+
+#define MANAGER_MODULE_ID \(u32\)706246331661018

@@ -18,6 +18,9 @@
 #include <gmodule.h>
 #include <stdio.h>
 #include <boost/regex.hpp>
+#include <boost/functional/hash.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
 
 //#define PRINT_VERBOSE
 
@@ -38,6 +41,14 @@ struct GenPubkeyCommand : public GenericOptions {
   std::string identity_;
 };
 
+struct GenModtableCommand : public GenericOptions {
+  std::string output_;
+  std::string json_;
+  bool        sign_;
+  std::string identity_;
+  std::string identxor_;
+};
+
 struct EmbedCommand : public GenericOptions {
   std::string output_;
   std::string input_;
@@ -49,7 +60,11 @@ struct ProtoCleanCommand : public GenericOptions {
   std::string input_;
 };
 
-typedef boost::variant<GenIdentCommand, GenPubkeyCommand, EmbedCommand, ProtoCleanCommand> Command;
+struct HashStrCommand : public GenericOptions {
+  std::string str_;
+};
+
+typedef boost::variant<GenIdentCommand, GenPubkeyCommand, EmbedCommand, ProtoCleanCommand, HashStrCommand, GenModtableCommand> Command;
 
 Command ParseOptions(int argc, const char *argv[])
 {
@@ -96,7 +111,7 @@ Command ParseOptions(int argc, const char *argv[])
     try
     {
       comm.output_ = vm["output"].as<std::string>();
-      if(vm.count("xorkey"))
+      if(vm.count("xorkey") > 0)
         comm.xorkey_ = vm["xorkey"].as<std::string>();
     }
     catch (const std::exception& e)
@@ -128,7 +143,7 @@ Command ParseOptions(int argc, const char *argv[])
     try
     {
       comm.output_ = vm["output"].as<std::string>();
-      if(vm.count("xorkey"))
+      if(vm.count("xorkey") > 0)
         comm.xorkey_ = vm["xorkey"].as<std::string>();
       comm.identity_ = vm["identity"].as<std::string>();
     }
@@ -164,7 +179,7 @@ Command ParseOptions(int argc, const char *argv[])
       comm.output_ = vm["output"].as<std::string>();
       comm.input_ = vm["input"].as<std::string>();
       comm.usegmodule_ = vm.count("usegmodule")>0;
-      if(vm.count("xorkey"))
+      if(vm.count("xorkey")>0)
         comm.xorkey_ = vm["xorkey"].as<std::string>();
     }
     catch (const std::exception& e)
@@ -209,13 +224,85 @@ Command ParseOptions(int argc, const char *argv[])
     }
     return comm;
   }
+  else if (cmd == "hashstr")
+  {
+    po::options_description geni_desc("protoclean options");
+    geni_desc.add_options()
+      ("str", po::value<std::string>(), "String to hash");
+
+    std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+    opts.erase(opts.begin());
+
+    // Parse again...
+    po::store(po::command_line_parser(opts).options(geni_desc).run(), vm);
+
+    HashStrCommand comm;
+    comm.cmdid = 4;
+    try
+    {
+      comm.str_ = vm["str"].as<std::string>();
+    }
+    catch (const std::exception& e)
+    {
+      std::cout << "Charlie Utility App" << std::endl
+        << "./cutils hashstr --str [string]" << std::endl << std::endl
+        << global << std::endl
+        << geni_desc << std::endl
+        << "hashstr: Test std::hash to integer." << std::endl;
+      throw e;
+    }
+    return comm;
+  }
+  else if (cmd == "genmodtable")
+  {
+    po::options_description geni_desc("genmodtable options");
+    geni_desc.add_options()
+      ("sign", "Sign the data in a CSignedBuffer.")
+      ("identity", po::value<std::string>(), "Identity for CSignedBuffer")
+      ("identxor", po::value<std::string>(), "XOR key for identity file")
+      ("output", po::value<std::string>(), "File to write the module table to")
+      ("json", po::value<std::string>(), "Input json file for the module table.");
+
+    std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+    opts.erase(opts.begin());
+
+    // Parse again...
+    po::store(po::command_line_parser(opts).options(geni_desc).run(), vm);
+
+    GenModtableCommand comm;
+    comm.cmdid = 5;
+    try
+    {
+      comm.json_ = vm["json"].as<std::string>();
+      comm.output_ = vm["output"].as<std::string>();
+      comm.sign_ = false;
+      if(vm.count("sign") > 0){
+        comm.sign_ = true;
+        comm.identity_ = vm["identity"].as<std::string>();
+        if(vm.count("identxor") > 0)
+          comm.identxor_ = vm["identxor"].as<std::string>();
+      }
+      if(vm.count("xorkey")>0)
+        comm.xorkey_ = vm["xorkey"].as<std::string>();
+    }
+    catch (const std::exception& e)
+    {
+      std::cout << "Charlie Utility App" << std::endl
+        << "./cutils --xorkey [key] genmodtable --json [file] --output [file]" << std::endl << std::endl
+        << global << std::endl
+        << geni_desc << std::endl
+        << "genmodtable: Serialize a JSON module table to protobuf." << std::endl;
+      throw e;
+    }
+    return comm;
+  }
 
   // unrecognised command
   std::cout << "Charlie Utility App" << std::endl
     << "./cutils --xorkey [key] [command] [args]" << std::endl
     << global << std::endl
     << "Note: subargs and command are positional" << std::endl
-    << "Commands: genident, genpubkey, embed, protoclean" << std::endl;
+    << "Commands: genident, genpubkey, embed, protoclean, hashstr, genmodtable" << std::endl;
   throw po::invalid_option_value(cmd);
 }
 
@@ -249,7 +336,7 @@ int generateIdentity(GenIdentCommand* comm, fs::path *full_path)
   if(!ident.SerializeToArray(out, outSize))
     CERR("Unable to serialize data to array.");
 
-  if(comm->xorkey_.length())
+  if(comm->xorkey_.length()>0)
   {
     CLOG("Applying XOR key \""<<comm->xorkey_<<"\"...");
     apply_xor(out, outSize, comm->xorkey_.c_str(), comm->xorkey_.length());
@@ -297,7 +384,7 @@ int generateEmbedFile(EmbedCommand* comm, fs::path *full_path)
     return -1;
   }
 
-  if(comm->xorkey_.length())
+  if(comm->xorkey_.length()>0)
   {
     CLOG("Applying XOR key \""<<comm->xorkey_<<"\"...");
     apply_xor(memblock, size, comm->xorkey_.c_str(), comm->xorkey_.length());
@@ -329,6 +416,7 @@ int generateEmbedFile(EmbedCommand* comm, fs::path *full_path)
   return 0;
 }
 
+
 int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
 {
   std::string output;
@@ -350,7 +438,7 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
     inFile.seekg (0, std::ios::beg);
     inFile.read (memblock, size);
     inFile.close();
-    if(comm->xorkey_.length())
+    if(comm->xorkey_.length()>0)
     {
       CLOG("Applying XOR key \""<<comm->xorkey_<<"\"...");
       apply_xor(memblock, size, comm->xorkey_.c_str(), comm->xorkey_.length());
@@ -376,7 +464,7 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
       return 1;
     }
 
-    if(comm->xorkey_.length())
+    if(comm->xorkey_.length()>0)
     {
       CLOG("Applying XOR key \""<<comm->xorkey_<<"\"...");
       apply_xor(memblock, outbufsize, comm->xorkey_.c_str(), comm->xorkey_.length());
@@ -394,6 +482,15 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
     CLOG("Unable to open "<<input_path.c_str()<<"...");
     return -1;
   }
+}
+
+int hashStrTest(HashStrCommand* comm, fs::path *full_path)
+{
+  boost::hash<std::string> hash_fn;
+  std::size_t str_hash = hash_fn(comm->str_);
+
+  std::cout << str_hash << std::endl;
+  return 0;
 }
 
 int protoCleanFile(ProtoCleanCommand* comm, fs::path *full_path)
@@ -442,6 +539,193 @@ int protoCleanFile(ProtoCleanCommand* comm, fs::path *full_path)
   return 0;
 }
 
+Crypto * loadCrypto(std::string *infile, std::string *identxor)
+{
+  //Load the identity
+  Crypto * crypt = new Crypto();
+
+  std::ifstream inFile (infile->c_str(), std::ios::in|std::ios::binary|std::ios::ate);
+  if(inFile.is_open())
+  {
+    std::streampos size;
+    char* memblock;
+    size = inFile.tellg();
+    memblock = new char [size];
+    inFile.seekg (0, std::ios::beg);
+    inFile.read (memblock, size);
+    inFile.close();
+
+    CLOG("Loaded identity file...");
+
+    if(identxor->length()>0)
+    {
+      CLOG("Applying XOR key \""<<identxor->c_str()<<"\"...");
+      apply_xor(memblock, size, identxor->c_str(), identxor->length());
+    }
+
+    charlie::CIdentity ident;
+    if(!ident.ParseFromArray(memblock, size))
+    {
+      CLOG("Unable to parse the identity.");
+      free(memblock);
+      return NULL;
+    }
+
+    if(!ident.has_private_key())
+    {
+      CERR("Identity doesn't have a private key.");
+      free(memblock);
+      return NULL;
+    }
+
+    std::string* pkey = ident.mutable_private_key();
+
+    if(!crypt->setLocalPriKey((unsigned char*)pkey->c_str(), pkey->length()) == SUCCESS)
+    {
+      CERR("Private key is invalid.");
+      free(memblock);
+      return NULL;
+    }
+
+    free(memblock);
+    return crypt;
+  }else
+  {
+    CLOG("Can't open file "<<infile->c_str()<<"...");
+    return NULL;
+  }
+}
+
+int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
+{
+  fs::path output_path((*full_path)/comm->output_);
+
+  CLOG("Loading json input file...");
+  fs::path input_path((*full_path)/comm->json_);
+  output_path = fs::path((*full_path)/comm->output_);
+  std::ifstream inFile (input_path.c_str(), std::ios::in);
+  if(inFile.is_open())
+  {
+    std::stringstream buffer;
+    buffer << inFile.rdbuf();
+    inFile.close();
+
+    CLOG("Parsing json...");
+
+    //Parse json
+    rapidjson::Document d;
+    if(d.Parse(buffer.str().c_str()).HasParseError())
+    {
+      CERR("Unable to parse json input.");
+      CLOG(buffer.str());
+      return -1;
+    }
+
+    if(!d.IsObject())
+    {
+      CERR("Document must be an object.");
+      return -1;
+    }
+
+    if(!(d.HasMember("modules") && d["modules"].IsArray()))
+    {
+      CERR("Document must have a modules array.");
+      return -1;
+    }
+
+    if(d.HasMember("name") && d["name"].IsString())
+      CLOG("Building CModuleTable \""<<d["name"].GetString()<<"\"...");
+
+    charlie::CModuleTable table;
+    const rapidjson::Value& modules = d["modules"];
+    for (rapidjson::SizeType i = 0; i < modules.Size(); i++)
+    {
+      const rapidjson::Value& ix = modules[i];
+      if(!ix.IsObject())
+      {
+        CERR("modules["<<i<<"] must be an object.");
+        continue;
+      }
+      if(!ix.HasMember("id") || !ix["id"].IsUint64())
+      {
+        CERR("modules["<<i<<"].id must be a number");
+        continue;
+      }
+      charlie::CModule* mod = table.add_modules();
+      mod->set_id(ix["id"].GetUint64());
+      if(ix.HasMember("mainfcn") && ix["mainfcn"].IsBool())
+      {
+        mod->set_mainfcn(ix["mainfcn"].GetBool());
+      }
+      if(ix.HasMember("initial") && ix["initial"].IsBool())
+      {
+        mod->set_initial(ix["initial"].GetBool());
+      }
+    }
+
+    size_t outSize = table.ByteSize();
+    char* out = (char*)malloc(sizeof(char)*outSize);
+    if(!table.SerializeToArray(out, outSize)){
+      CERR("Unable to serialize module table to array.");
+      free(out);
+      return -1;
+    }
+
+    if(comm->sign_)
+    {
+      Crypto * crypt = loadCrypto(&(comm->identity_), &(comm->identxor_));
+      if(crypt != NULL)
+      {
+        unsigned char* sig;
+        size_t sigLen = (size_t)crypt->digestSign((const unsigned char*)out, outSize, &sig, false);
+        if(sigLen == FAILURE)
+        {
+          CERR("Unable to sign the table.");
+          return -1;
+        }
+        charlie::CSignedBuffer rbuf;
+        rbuf.set_data(out, outSize);
+        rbuf.set_sig(sig, sigLen);
+        free(sig);
+        free(out);
+        CLOG("Signed the module table.");
+        outSize = rbuf.ByteSize();
+        out = (char*)malloc(sizeof(char)*outSize);
+        if(!rbuf.SerializeToArray(out, outSize))
+        {
+          CERR("Unable to serialize signature buffer to array.");
+          free(out);
+          return -1;
+        }
+      }
+      else
+      {
+        CERR("Unable to load crypto to encrypt modtable! Refusing to continue...");
+        return -1;
+      }
+      delete crypt;
+    }
+
+    if(comm->xorkey_.length()>0)
+    {
+      CLOG("Applying XOR key \""<<comm->xorkey_<<"\"...");
+      apply_xor(out, outSize, comm->xorkey_.c_str(), comm->xorkey_.length());
+    }
+
+    std::ofstream of;
+    of.open (output_path.c_str(), std::ios::out|std::ios::binary);
+    of.write((const char*)out, outSize);
+    of.close();
+    free(out);
+    return 0;
+  }
+  else
+  {
+    CLOG("Unable to open "<<input_path.c_str()<<"...");
+    return -1;
+  }
+}
+
 int main(int argc, const char** argv)
 {
   std::string pth1 (argv[0]);
@@ -466,7 +750,6 @@ int main(int argc, const char** argv)
     return 1;
   }
   GenericOptions* opt = (GenericOptions*)(&comm);
-  CLOG(opt->cmdid);
   if(opt->cmdid == 0)
     return generateIdentity(&boost::get<GenIdentCommand>(comm), &full_path);
   else if(opt->cmdid == 1)
@@ -475,5 +758,9 @@ int main(int argc, const char** argv)
     return generateEmbedFile(&boost::get<EmbedCommand>(comm), &full_path);
   else if(opt->cmdid == 3)
     return protoCleanFile(&boost::get<ProtoCleanCommand>(comm), &full_path);
+  else if(opt->cmdid == 4)
+    return hashStrTest(&boost::get<HashStrCommand>(comm), &full_path);
+  else if(opt->cmdid == 5)
+    return generateModuleTable(&boost::get<GenModtableCommand>(comm), &full_path);
   return 1;
 }

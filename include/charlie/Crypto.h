@@ -29,9 +29,13 @@ public:
 
     ~Crypto();
 
-    int rsaEncrypt(const unsigned char *msg, size_t msgLen, unsigned char **encMsg, unsigned char **ek, size_t *ekl, unsigned char **iv, size_t *ivl);
+    int rsaEncrypt(const unsigned char *msg, size_t msgLen, unsigned char **encMsg, unsigned char **ek, size_t *ekl, unsigned char **iv, size_t *ivl, bool useRemote=true);
 
-    int rsaDecrypt(unsigned char *encMsg, size_t encMsgLen, unsigned char *ek, size_t ekl, unsigned char *iv, size_t ivl, unsigned char **decMsg);
+    int rsaDecrypt(unsigned char *encMsg, size_t encMsgLen, unsigned char *ek, size_t ekl, unsigned char *iv, size_t ivl, unsigned char **decMsg, bool useRemote=false);
+
+    int digestSign(const unsigned char *msg, size_t msgLen, unsigned char** sig, bool useRemote=false);
+
+    int digestVerify(const unsigned char *msg, size_t msgLen, unsigned char* sig, size_t sigLen, bool useRemote=false);
 
     int getRemotePubKey(unsigned char **pubKey);
 
@@ -52,12 +56,14 @@ public:
     int genLocalKeyPair();
 
 private:
-    static EVP_PKEY *localKeypair;
+    EVP_PKEY *localKeypair;
     EVP_PKEY *remotePubKey;
 
     EVP_CIPHER_CTX *rsaEncryptCtx;
-
     EVP_CIPHER_CTX *rsaDecryptCtx;
+
+    EVP_MD_CTX *digestSignCtx;
+    EVP_MD_CTX *digestVerifyCtx;
 
     int init();
 };

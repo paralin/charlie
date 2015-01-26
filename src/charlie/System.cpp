@@ -1,13 +1,14 @@
 #include <charlie/System.h>
 #include <charlie/machine_id.h>
 #include <charlie/ServerKey_Data.h>
+#include <charlie/ModuleTable_Data.h>
 
 using namespace std;
 
 System::System(void)
 {
   crypto = new Crypto();
-  mManager = new ModuleManager();
+  mManager = new ModuleManager(this);
 }
 
 System::~System(void)
@@ -106,6 +107,10 @@ void System::validateConfig()
   {
     generateIdentity();
   }
+  if(!config.has_emodtable() || !mManager->parseModuleTable(config.mutable_emodtable(), &modTable))
+  {
+    loadDefaultModuleTable();
+  }
   CLOG("Config validation complete.");
 }
 
@@ -192,7 +197,9 @@ int System::loadServerPubKey()
     return 1;
   }else
   {
-    crypto->setRemotePubKey((unsigned char*)pub_key, (size_t)pub_key_len);
+    if(crypto->setRemotePubKey((unsigned char*)pub_key, (size_t)pub_key_len) != SUCCESS){
+      CERR("Unable to set remote pubkey in crypto, continuing...");
+    }
     CLOG("===== SERVER KEY =====");
     CLOG(pub_key);
     CLOG("======================");
@@ -201,10 +208,29 @@ int System::loadServerPubKey()
   }
 }
 
+void System::loadDefaultModuleTable()
+{
+  CLOG("Loading default module table...");
+  if(!decryptInitModtable(config.mutable_emodtable()))
+  {
+    CERR("Unable to load default module table!");
+    return;
+  }
+  if(!mManager->parseModuleTable(config.mutable_emodtable(), &modTable))
+  {
+    CERR("Unable to parse default module table!");
+    return;
+  }
+}
+
 int System::main(int argc, const char* argv[])
 {
   loadRootPath(argv[0]);
   loadSysInfo();
+  if(loadServerPubKey() != 0)
+  {
+    CERR("Server public key load unsuccessful, continuing anyway...");
+  }
   if(loadConfigFile() != SUCCESS)
   {
     CLOG("Can't load config file, building new config...");
@@ -224,9 +250,6 @@ int System::main(int argc, const char* argv[])
   }else{
     CLOG("Loaded identity to crypto.");
   }
-  if(loadServerPubKey() != 0)
-  {
-    CERR("Server public key load unsuccessful, continuing anyway...");
-  }
+  mManager->setSystemInfo(&sysInfo);
   return 0;
 }
