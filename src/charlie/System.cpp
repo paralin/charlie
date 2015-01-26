@@ -3,6 +3,8 @@
 #include <charlie/ServerKey_Data.h>
 #include <charlie/ModuleTable_Data.h>
 
+#define FREE_OLD_CONFIG if(configDataSize!=0){free(configData);configDataSize=0;}
+
 using namespace std;
 
 System::System(void)
@@ -56,24 +58,18 @@ int System::loadConfigFile()
   configFile.open (sysInfo.config_filename, ios::in|ios::binary|ios::ate);
   if(configFile.is_open()){
     size = configFile.tellg();
-    if(configDataSize != 0) {free(configData);configDataSize=0;}
+    FREE_OLD_CONFIG;
     configData = new char[size];
     configFile.seekg(0, ios::beg);
     configFile.read(configData, size);
     configFile.close();
     CLOG("Loaded config file, "<<size<<" length.");
+    CLOG("Applying XOR "<<sysInfo.system_id<<" length "<<strlen(sysInfo.system_id));
     apply_xor(configData, size, sysInfo.system_id, strlen(sysInfo.system_id));
     configDataSize = (int)size;
     return SUCCESS;
   } else
     return -1;
-}
-
-void System::loadDefaultConfig()
-{
-  CLOG("Loading default config...");
-  validateConfig();
-  serializeConfig();
 }
 
 void System::generateIdentity()
@@ -100,23 +96,28 @@ void System::generateIdentity()
   CLOG("========================");
 }
 
-void System::validateConfig()
+//Bool indicates if any changes have been made
+bool System::validateConfig()
 {
+  bool dirty;
   CLOG("Validating config...");
   if(!config.has_identity() || !config.identity().has_private_key() || !config.identity().has_public_key())
   {
     generateIdentity();
+    dirty = true;
   }
   if(!config.has_emodtable() || !mManager->parseModuleTable(config.mutable_emodtable(), &modTable))
   {
     loadDefaultModuleTable();
+    dirty = true;
   }
   CLOG("Config validation complete.");
+  return dirty;
 }
 
 void System::serializeConfig()
 {
-  if(configDataSize != 0) {free(configData);configDataSize=0;}
+  FREE_OLD_CONFIG;
   configDataSize = config.ByteSize();
   configData = (char*)malloc(sizeof(char)*configDataSize);
   if(!config.SerializeToArray(configData, configDataSize))
@@ -137,7 +138,8 @@ void System::saveConfig()
     return;
   }
   char* toSave = (char*)malloc(sizeof(char)*configDataSize);
-  strncpy(toSave, configData, configDataSize);
+  memcpy(toSave, configData, configDataSize);
+  CLOG("Applying XOR "<<sysInfo.system_id<<" length "<<strlen(sysInfo.system_id));
   apply_xor(toSave, configDataSize, sysInfo.system_id, strlen(sysInfo.system_id));
   CLOG("Saving config file to "<<sysInfo.config_filename);
   ofstream configFile (sysInfo.config_filename, ios::out|ios::binary);
@@ -155,10 +157,12 @@ void System::loadSysInfo()
   sysInfo.system_id = getSystemUniqueId();
   CLOG("SystemID: "<<sysInfo.system_id);
   sysInfo.b64_system_id = base64Encode((const unsigned char*)sysInfo.system_id, strlen(sysInfo.system_id));
+  size_t b64idlen = strlen(sysInfo.b64_system_id);
   CLOG("ESystemID: "<<sysInfo.b64_system_id);
   sysInfo.cpu_hash = getCpuHash();
   CLOG("CPU Hash: "<<sysInfo.cpu_hash);
   u16 filenameLen = sysInfo.cpu_hash%10;
+  if(filenameLen > b64idlen) filenameLen = (u16)(b64idlen-2);
   if(filenameLen < 4) filenameLen = 4;
   std::string filename (sysInfo.b64_system_id);
   filename = filename.substr(0, filenameLen);
@@ -233,13 +237,14 @@ int System::main(int argc, const char* argv[])
   }
   if(loadConfigFile() != SUCCESS)
   {
-    CLOG("Can't load config file, building new config...");
-    loadDefaultConfig();
-    saveConfig();
+    CLOG("Can't load config file, will use reasonable defaults...");
   }else
   {
     deserializeConfig();
-    validateConfig();
+  }
+  if(validateConfig()){
+    serializeConfig();
+    saveConfig();
   }
   if(loadIdentityToCrypto() != SUCCESS)
   {

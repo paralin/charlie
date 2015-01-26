@@ -35,8 +35,7 @@ class System {
     void     loadRootPath(const char* arvg0);
     void     loadSysInfo();
     int      loadConfigFile();
-    void     validateConfig();
-    void     loadDefaultConfig();
+    bool     validateConfig();
     void     serializeConfig();
     void     deserializeConfig();
     void     saveConfig();
