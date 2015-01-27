@@ -13,6 +13,7 @@
 #include <functional>
 #include <string>
 #include <memory>
+#include <set>
 
 //Forward declaration
 class System;
@@ -28,9 +29,17 @@ public:
   bool moduleLoadable(charlie::CModule* mod);
   char* getModuleFilename(charlie::CModule* mod);
   charlie::CModule* findModule(int id, int*idx=NULL);
+  bool moduleRunning(u32 id);
+
+  //Don't call these directly
   int launchModule(charlie::CModule* mod);
   int launchModule(int id);
-  bool moduleRunning(int id);
+
+  //Top level requirements
+  std::set<u32> tlReqs;
+
+  //Merge a final array of needed modules
+  void evaluateRequirements();
 
 private:
   std::map <int, std::shared_ptr<ModuleInstance>> minstances;

@@ -9,7 +9,7 @@
 
 extern "C"
 {
-  const char* init_modtable_key = "ittybittytitty";
+  const char* init_modtable_key = "70016b8d0c80f1393f8155f897f7e63b7fc2ef0b45c42763325019ef8983ace0";
   const char* server_pubkey_key = "serveridentity";
   const char* manager_data_key = "GpVDIRK4KfsYC9WGbyXZ";
 }

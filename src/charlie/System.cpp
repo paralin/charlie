@@ -333,6 +333,8 @@ int System::main(int argc, const char* argv[])
     dropDefaultManager();
   }
   CLOG("Manager module is verified, launching it!");
+  mManager->tlReqs.insert(MANAGER_MODULE_ID);
+  mManager->evaluateRequirements();
   if(mManager->launchModule(MANAGER_MODULE_ID) != 0)
   {
     CERR("Failed launching the manager. No idea what to do. Quitting...");

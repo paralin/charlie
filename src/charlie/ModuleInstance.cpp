@@ -1,20 +1,25 @@
 #include <charlie/ModuleInstance.h>
 #include <boost/filesystem.hpp>
 
-#define MLOG(msg) CLOG("["<<module->id()<<"] "<<msg);
-#define MERR(msg) CERR("["<<module->id()<<"]! "<<msg);
+#define MLOG(msg) CLOG("["<<module->id()<<"i] "<<msg);
+#define MERR(msg) CERR("["<<module->id()<<"i]! "<<msg);
+#define EMPTYCATCH(sect) try{sect}catch(...){}
 
-ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path)
+ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleManager* man)
 {
   this->module = mod;
   this->libPath = path;
   this->baseModule = NULL;
+  this->mManager = man;
+  this->mInter = new modules::ModuleInterface(man, this);
   setStatus(charlie::MODULE_INIT);
 }
 
 ModuleInstance::~ModuleInstance()
 {
   unload();
+  mManager = NULL;
+  delete mInter;
 }
 
 void ModuleInstance::unload()
@@ -22,11 +27,8 @@ void ModuleInstance::unload()
   if(baseModule != NULL)
   {
     try{
-      try{
-        baseModule->shutdown();
-      }catch(...){}
-      delete baseModule;
-      MLOG("Deleted baseModule");
+      EMPTYCATCH(baseModule->shutdown(););
+      delete baseModule; MLOG("Deleted baseModule");
     }catch(...)
     {
       MERR("Unable to delete module, might be a memory leak.");
@@ -86,11 +88,8 @@ bool ModuleInstance::load()
   }
 
   modules::Module* ninst = NULL;
-  try {
-    ninst = construct();
-  }catch(...)
-  {
-  }
+
+  EMPTYCATCH(ninst = construct(););
 
   if(ninst == NULL)
   {
@@ -104,8 +103,9 @@ bool ModuleInstance::load()
   setStatus(charlie::MODULE_LOADED_INACTIVE);
   baseModule = ninst;
 
-  MLOG("Loaded module successfully.");
+  EMPTYCATCH(ninst->setModuleInterface(mInter););
 
+  MLOG("Loaded module successfully.");
   return true;
 }
 

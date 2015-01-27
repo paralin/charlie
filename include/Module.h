@@ -5,6 +5,7 @@
 #include <glib.h>
 #include <gmodule.h>
 #include <vector>
+#include <ModuleInterface.h>
 
 #define VISIBLE_FUNCTION __attribute__ ((visibility ("default")))
 
@@ -15,6 +16,8 @@ namespace modules
   public:
     // Provide a pointer to the requested dependency
     virtual int injectDependency (u32 id, void* dep);
+
+    virtual void setModuleInterface(ModuleInterface* inter);
 
     // Release everything and prepare to be deleted
     virtual void shutdown();

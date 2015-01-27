@@ -113,7 +113,7 @@ charlie::CModule* ModuleManager::findModule(int id, int* idx)
   return emod;
 }
 
-bool ModuleManager::moduleRunning(int id)
+bool ModuleManager::moduleRunning(u32 id)
 {
   return minstances.count(id)>0;
 }
@@ -132,12 +132,56 @@ int ModuleManager::launchModule(charlie::CModule* mod)
   char* path = getModuleFilename(mod);
   std::string modPat(path);
   free(path);
-  std::shared_ptr<ModuleInstance> inst (new ModuleInstance(mod, modPat));
+  std::shared_ptr<ModuleInstance> inst (new ModuleInstance(mod, modPat, this));
   if(!inst->load())
   {
     CERR("Unable to load module "<<mod->id()<<"...");
     return 1;
   }
-  CLOG("Loaded manager module.");
+  minstances.insert(std::pair<int, std::shared_ptr<ModuleInstance>>(mod->id(), inst));
   return 0;
 }
+
+void ModuleManager::evaluateRequirements()
+{
+  bool solved = false;
+  std::map<int, std::shared_ptr<ModuleInstance>> solmods(minstances);
+  std::set<u32> solution;
+  while(!solved)
+  {
+    //Solution now contains all requirements
+    //in solution and not in map -> add
+    //in map and not in solution -> remove
+    solution.clear();
+    solved = true;
+    for (auto &any : solmods ) {
+      std::shared_ptr<ModuleInstance> inst = any.second;
+      solution.insert(inst->modReqs.begin(), inst->modReqs.end());
+    }
+    solution.insert(tlReqs.begin(), tlReqs.end());
+    std::set<u32> toRemove;
+    for (auto &any : solmods )
+      if(solution.count(any.first)==0)
+        toRemove.insert(any.first);
+    for (auto id : toRemove)
+      solmods.erase(id);
+    solved = toRemove.empty();
+  }
+  //Now merge solutions and solmods
+  for (auto &any : solmods )
+    solution.insert(any.first);
+  //Now solution is the ids to keep
+  for(auto &any : minstances)
+    if(solution.count(any.first)==0)
+      minstances.erase(any.first);
+  //Load the modules we do need
+  CLOG("Solved deps tree, loaded modules: "<<solution.size());
+  for(auto id : solution)
+    if(!moduleRunning(id))
+      launchModule(id);
+}
+
+
+
+
+

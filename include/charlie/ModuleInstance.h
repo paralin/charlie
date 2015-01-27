@@ -7,12 +7,15 @@
 #include <string>
 #include <glib.h>
 #include <gmodule.h>
+#include <ModuleInterface.h>
+#include <set>
 
 typedef modules::Module* (*ConstructFunc) (void);
+class ModuleManager;
 class ModuleInstance
 {
 public:
-  ModuleInstance(charlie::CModule* mod, std::string path);
+  ModuleInstance(charlie::CModule* mod, std::string path, ModuleManager* man);
   ~ModuleInstance();
 
   bool load();
@@ -20,10 +23,14 @@ public:
 
   charlie::CModuleInstance inst;
 
+  std::set<u32> modReqs;
+
 private:
   charlie::CModule* module;
   std::string libPath;
   inline void setStatus(::charlie::EModuleStatus value);
   modules::Module* baseModule;
   GModule* gmod;
+  ModuleManager* mManager;
+  modules::ModuleInterface * mInter;
 };
