@@ -62,6 +62,7 @@ endif()
 
 if(EXISTS "${CMAKE_BINARY_DIR}/server_identity")
   MESSAGE( STATUS "Server identity exists, encoding it into server_pubkey" )
+  add_custom_target(server_identity COMMENT "Using existing server identity.")
 else()
   MESSAGE( STATUS "Server identity doesn't exist, one will be re-generated..." )
   add_custom_command(
