@@ -26,23 +26,31 @@ public:
   bool parseModuleTable(charlie::CSignedBuffer* buf, charlie::CModuleTable* outp);
 
   //Check if the manager lib exists; if not return false
-  bool moduleLoadable(charlie::CModule* mod);
+  bool moduleLoadable(charlie::CModule* mod, bool cleanFail=false);
   char* getModuleFilename(charlie::CModule* mod);
-  charlie::CModule* findModule(int id, int*idx=NULL);
+  charlie::CModule* findModule(u32 id, int*idx=NULL);
   bool moduleRunning(u32 id);
 
-  //Don't call these directly
-  int launchModule(charlie::CModule* mod);
-  int launchModule(int id);
+  //Set dirty
+  void deferRecheckModules();
+
+  //Main loop
+  void updateEverything();
 
   //Top level requirements
   std::set<u32> tlReqs;
-
+private:
+  //Don't call these directly
+  int launchModule(charlie::CModule* mod);
+  int launchModule(u32 id);
+  int launchModuleWithChecks(charlie::CModule* mod);
+  int launchModuleWithChecks(u32 id);
   //Merge a final array of needed modules
   void evaluateRequirements();
-
-private:
   std::map <int, std::shared_ptr<ModuleInstance>> minstances;
   System* sys;
   SystemInfo* sysInfo;
+
+  //Check first loop run
+  bool modulesDirty;
 };

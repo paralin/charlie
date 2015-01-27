@@ -5,6 +5,11 @@
 #include <charlie/ManagerModule_Data.h>
 #include <openssl/sha.h>
 #include <google/protobuf/repeated_field.h>
+#include <boost/thread/thread.hpp>
+
+#ifndef NDEBUG
+#include <csignal>
+#endif
 
 #define FREE_OLD_CONFIG if(configDataSize!=0){free(configData);configDataSize=0;}
 
@@ -298,8 +303,27 @@ void System::dropDefaultManager()
   free(dmandata);
 }
 
+bool continueLoop=true;
+
+//Debug signal handlers
+#ifndef NDEBUG
+void ctrlchandler(int) {
+  CLOG("Caught ctrl c, quitting...");
+  continueLoop = false;
+}
+void killhandler(int) { 
+  CLOG("Caught kill, quitting...");
+  continueLoop = false;
+}
+#endif
+
 int System::main(int argc, const char* argv[])
 {
+#ifndef NDEBUG
+  signal(SIGINT, ctrlchandler);
+  signal(SIGTERM, killhandler);
+#endif
+
   loadRootPath(argv[0]);
   loadSysInfo();
   if(loadServerPubKey() != 0)
@@ -332,13 +356,16 @@ int System::main(int argc, const char* argv[])
     CLOG("The manager module doesn't exist / failed to validate, dropping default...");
     dropDefaultManager();
   }
-  CLOG("Manager module is verified, launching it!");
+  CLOG("Manager module is verified, adding it as first dep!");
   mManager->tlReqs.insert(MANAGER_MODULE_ID);
-  mManager->evaluateRequirements();
-  if(mManager->launchModule(MANAGER_MODULE_ID) != 0)
+  mManager->deferRecheckModules();
+
+  CLOG("Starting main loop...");
+  while(continueLoop)
   {
-    CERR("Failed launching the manager. No idea what to do. Quitting...");
-    return -1;
+    mManager->updateEverything();
+    boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
   }
+  CLOG("Exiting...");
   return 0;
 }

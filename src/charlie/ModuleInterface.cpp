@@ -18,10 +18,14 @@ ModuleInterface::~ModuleInterface()
 int ModuleInterface::requireDependency(u32 id)
 {
   inst->modReqs.insert(id);
-  mManager->evaluateRequirements();
 }
 
 void ModuleInterface::releaseDependency(u32 id)
 {
   inst->modReqs.erase(id);
+}
+
+void ModuleInterface::commitDepsChanges()
+{
+  mManager->deferRecheckModules();
 }

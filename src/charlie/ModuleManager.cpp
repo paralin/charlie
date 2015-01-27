@@ -65,7 +65,7 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
   return g_module_build_path((const gchar *) sysInfo->root_path, (const char*)fnstr.substr(0, fnlen).c_str());
 }
 
-bool ModuleManager::moduleLoadable(charlie::CModule* mod)
+bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
 {
   //First get the filename of the module
   char* path = getModuleFilename(mod);
@@ -86,6 +86,11 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod)
   if(memcmp(hash, digest, SHA256_DIGEST_LENGTH)!=0)
   {
     CERR("Module digest for ["<<mod->id()<<"] doesn't match.");
+    if(cleanFail)
+    {
+      CLOG("Deleting mismatch library file...");
+      boost::filesystem::remove(path);
+    }
     free(path);
     free(digest);
     return false;
@@ -98,7 +103,7 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod)
   return true;
 }
 
-charlie::CModule* ModuleManager::findModule(int id, int* idx)
+charlie::CModule* ModuleManager::findModule(u32 id, int* idx)
 {
   int emcount = sys->modTable.modules_size();
   charlie::CModule *emod = NULL;
@@ -118,7 +123,21 @@ bool ModuleManager::moduleRunning(u32 id)
   return minstances.count(id)>0;
 }
 
-int ModuleManager::launchModule(int id)
+int ModuleManager::launchModuleWithChecks(u32 id)
+{
+  charlie::CModule * mod = findModule(id);
+  if(mod == NULL) return -1;
+  return launchModuleWithChecks(mod);
+}
+
+int ModuleManager::launchModuleWithChecks(charlie::CModule* mod)
+{
+  //check if module loadable with a hash check
+  if(!moduleLoadable(mod, true)) return 1;
+  return launchModule(mod);
+}
+
+int ModuleManager::launchModule(u32 id)
 {
   charlie::CModule * mod = findModule(id);
   if(mod == NULL) return -1;
@@ -170,18 +189,27 @@ void ModuleManager::evaluateRequirements()
   //Now merge solutions and solmods
   for (auto &any : solmods )
     solution.insert(any.first);
+
   //Now solution is the ids to keep
   for(auto &any : minstances)
     if(solution.count(any.first)==0)
       minstances.erase(any.first);
+
   //Load the modules we do need
   CLOG("Solved deps tree, loaded modules: "<<solution.size());
   for(auto id : solution)
     if(!moduleRunning(id))
-      launchModule(id);
+      launchModuleWithChecks(id);
 }
 
+void ModuleManager::deferRecheckModules()
+{
+  modulesDirty = true;
+}
 
-
-
-
+void ModuleManager::updateEverything()
+{
+  if(modulesDirty)
+    evaluateRequirements();
+  modulesDirty = false;
+}
