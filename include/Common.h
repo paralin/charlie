@@ -2,4 +2,4 @@
 
 #include <IntTypes.h>
 
-#define MANAGER_MODULE_ID \(u32\)706246331661018
+#define MANAGER_MODULE_ID 3133916783

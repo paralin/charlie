@@ -5,11 +5,13 @@
 
 #include <charlie/ModuleTable_Data.h>
 #include <charlie/ServerKey_Data.h>
+#include <charlie/ManagerModule_Data.h>
 
 extern "C"
 {
   const char* init_modtable_key = "ittybittytitty";
   const char* server_pubkey_key = "serveridentity";
+  const char* manager_data_key = "GpVDIRK4KfsYC9WGbyXZ";
 }
 
 bool decryptInitModtable(charlie::CSignedBuffer* outp)
@@ -39,3 +41,10 @@ int decryptServerPubkey(char** output)
   free(buf);
   return pubkey.length()+1;
 };
+
+void decryptManagerData(char** buf)
+{
+  *buf = (char*)malloc(sizeof(char)*manager_data_len);
+  memcpy(*buf, manager_data, manager_data_len);
+  apply_xor(*buf, manager_data_len, manager_data_key, strlen(manager_data_key));
+}

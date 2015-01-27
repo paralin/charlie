@@ -24,8 +24,16 @@ public:
   void setSystemInfo(SystemInfo* info);
   bool parseModuleTable(charlie::CSignedBuffer* buf, charlie::CModuleTable* outp);
 
+  //Check if the manager lib exists; if not return false
+  bool moduleLoadable(charlie::CModule* mod);
+  char* getModuleFilename(charlie::CModule* mod);
+  charlie::CModule* findModule(int id, int*idx=NULL);
+  int launchModule(charlie::CModule* mod);
+  int launchModule(int id);
+  bool moduleRunning(int id);
+
 private:
-  std::map <uint32_t, ModuleInstance> modules;
+  std::map <int, std::shared_ptr<ModuleInstance>> minstances;
   System* sys;
   SystemInfo* sysInfo;
 };

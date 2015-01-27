@@ -43,6 +43,7 @@ class System {
     int      loadIdentityToCrypto();
     int      loadServerPubKey();
     void     loadDefaultModuleTable();
+    void     dropDefaultManager();
 
     ModuleManager *mManager;
 

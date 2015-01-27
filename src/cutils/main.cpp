@@ -18,9 +18,10 @@
 #include <gmodule.h>
 #include <stdio.h>
 #include <boost/regex.hpp>
-#include <boost/functional/hash.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
+#include <charlie/hash.h>
+#include <openssl/sha.h>
 
 //#define PRINT_VERBOSE
 
@@ -47,6 +48,7 @@ struct GenModtableCommand : public GenericOptions {
   bool        sign_;
   std::string identity_;
   std::string identxor_;
+  bool        hash_;
 };
 
 struct EmbedCommand : public GenericOptions {
@@ -257,6 +259,7 @@ Command ParseOptions(int argc, const char *argv[])
   {
     po::options_description geni_desc("genmodtable options");
     geni_desc.add_options()
+      ("hash", "Hash the libraries using gmodule for name")
       ("sign", "Sign the data in a CSignedBuffer.")
       ("identity", po::value<std::string>(), "Identity for CSignedBuffer")
       ("identxor", po::value<std::string>(), "XOR key for identity file")
@@ -276,6 +279,9 @@ Command ParseOptions(int argc, const char *argv[])
       comm.json_ = vm["json"].as<std::string>();
       comm.output_ = vm["output"].as<std::string>();
       comm.sign_ = false;
+      if(vm.count("hash") > 0){
+        comm.hash_ = true;
+      }
       if(vm.count("sign") > 0){
         comm.sign_ = true;
         comm.identity_ = vm["identity"].as<std::string>();
@@ -486,10 +492,8 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
 
 int hashStrTest(HashStrCommand* comm, fs::path *full_path)
 {
-  boost::hash<std::string> hash_fn;
-  std::size_t str_hash = hash_fn(comm->str_);
-
-  std::cout << str_hash << std::endl;
+  unsigned int hash = hashString((const char*)comm->str_.c_str());
+  std::cout << hash << std::endl;
   return 0;
 }
 
@@ -646,13 +650,18 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
         CERR("modules["<<i<<"] must be an object.");
         continue;
       }
-      if(!ix.HasMember("id") || !ix["id"].IsUint64())
+      if(!ix.HasMember("name") || !ix["name"].IsString())
       {
         CERR("modules["<<i<<"].id must be a number");
         continue;
       }
       charlie::CModule* mod = table.add_modules();
-      mod->set_id(ix["id"].GetUint64());
+      //calculate the ID
+      std::string name(ix["name"].GetString());
+      CLOG("== "<<name<<" ==");
+      unsigned int id = hashString(name.c_str());
+      mod->set_id(id);
+      CLOG("id:   "<<id);
       if(ix.HasMember("mainfcn") && ix["mainfcn"].IsBool())
       {
         mod->set_mainfcn(ix["mainfcn"].GetBool());
@@ -660,6 +669,25 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
       if(ix.HasMember("initial") && ix["initial"].IsBool())
       {
         mod->set_initial(ix["initial"].GetBool());
+      }
+      if(comm->hash_)
+      {
+        gchar* filename = g_module_build_path((const gchar *) full_path->string().c_str(), name.c_str());
+        CLOG("filename: "<<filename);
+        unsigned char* digest;
+        if(sha256File(filename, &digest)!=0)
+        {
+          CERR("Unable to hash file for some reason.");
+        }
+        else
+        {
+          mod->set_hash(digest, SHA256_DIGEST_LENGTH);
+          char mdString[SHA256_DIGEST_LENGTH*2+1];
+          for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+            sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+          CLOG("digest: "<<mdString);
+          free(digest);
+        }
       }
     }
 

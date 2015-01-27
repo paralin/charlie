@@ -18,6 +18,7 @@ include_directories("${PROJECT_SOURCE_DIR}/deps/rapidjson/include/")
 set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} dl)
 # add_definitions("-std=c++11 -D__FILE__ \"file\"")
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -Os -fvisibility=hidden -s")
 
 # Build compile tool
@@ -26,6 +27,7 @@ add_executable(cutils
   "src/protogen/charlie.pb.cc"
   "src/charlie/xor.cpp"
   "src/charlie/Crypto.cpp"
+  "src/charlie/hash.cpp"
   )
 target_link_libraries(cutils ${LIBS})
 
@@ -83,7 +85,7 @@ MESSAGE( STATUS "Planning to generate the initial module table..." )
 add_custom_command(
   OUTPUT init_mtable
   COMMAND cutils
-  ARGS genmodtable --xorkey ittybittytitty --output init_mtable --sign --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json
+  ARGS genmodtable --xorkey ittybittytitty --output init_mtable --sign --hash --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json
   DEPENDS cutils server_identity
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
@@ -93,7 +95,7 @@ foreach(to_embed_lib IN LISTS embed_libraries)
   add_custom_command(
     OUTPUT ${to_embed_lib}_data.c
     COMMAND cutils
-    ARGS embed --output ${to_embed_lib}_data.c --input "${CMAKE_BINARY_DIR}/${to_embed_lib}" --xorkey destroid --usegmodule
+    ARGS embed --output ${to_embed_lib}_data.c --input "${CMAKE_BINARY_DIR}/${to_embed_lib}" --xorkey GpVDIRK4KfsYC9WGbyXZ --usegmodule
     DEPENDS ${to_embed_lib} cutils
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )

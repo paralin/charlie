@@ -2,6 +2,9 @@
 #include <charlie/machine_id.h>
 #include <charlie/ServerKey_Data.h>
 #include <charlie/ModuleTable_Data.h>
+#include <charlie/ManagerModule_Data.h>
+#include <openssl/sha.h>
+#include <google/protobuf/repeated_field.h>
 
 #define FREE_OLD_CONFIG if(configDataSize!=0){free(configData);configDataSize=0;}
 
@@ -64,7 +67,6 @@ int System::loadConfigFile()
     configFile.read(configData, size);
     configFile.close();
     CLOG("Loaded config file, "<<size<<" length.");
-    CLOG("Applying XOR "<<sysInfo.system_id<<" length "<<strlen(sysInfo.system_id));
     apply_xor(configData, size, sysInfo.system_id, strlen(sysInfo.system_id));
     configDataSize = (int)size;
     return SUCCESS;
@@ -139,7 +141,6 @@ void System::saveConfig()
   }
   char* toSave = (char*)malloc(sizeof(char)*configDataSize);
   memcpy(toSave, configData, configDataSize);
-  CLOG("Applying XOR "<<sysInfo.system_id<<" length "<<strlen(sysInfo.system_id));
   apply_xor(toSave, configDataSize, sysInfo.system_id, strlen(sysInfo.system_id));
   CLOG("Saving config file to "<<sysInfo.config_filename);
   ofstream configFile (sysInfo.config_filename, ios::out|ios::binary);
@@ -227,6 +228,76 @@ void System::loadDefaultModuleTable()
   }
 }
 
+void System::dropDefaultManager()
+{
+  //Load the default module table and grab the manager entry
+  charlie::CModuleTable dtab;
+  charlie::CSignedBuffer buf;
+  if(!decryptInitModtable(&buf))
+  {
+    CERR("I can't drop the initial manager without the encrypted table.");
+    return;
+  }
+  if(!mManager->parseModuleTable(&buf, &dtab))
+  {
+    CERR("Unable to parse default module table in dropping default manager!");
+    return;
+  }
+
+  //mod is the default manager
+  int mcount = dtab.modules_size();
+  charlie::CModule *mod = NULL;
+  for(int i=0;i<mcount;i++)
+  {
+    mod = dtab.mutable_modules(i);
+    if(mod->initial()) break;
+    mod = NULL;
+  }
+  if(mod == NULL)
+  {
+    CERR("Can't find the manager module in the default table!");
+    return;
+  }
+
+  //We also need to remove any existing manager module
+  int i;
+  charlie::CModule *emod = mManager->findModule(MANAGER_MODULE_ID, &i);
+  google::protobuf::RepeatedPtrField<charlie::CModule>* mods = modTable.mutable_modules();
+  if(emod != NULL)
+  {
+    CERR("Removing existing initial module definition...");
+    int emcount = modTable.modules_size();
+    if(i != emcount-1) mods->SwapElements(i, emcount-1);
+    mods->RemoveLast();
+  }
+
+  //Get the default module data decrypted
+  char* dmandata;
+  decryptManagerData(&dmandata);
+
+  //Hash the default module
+  unsigned char digest[SHA256_DIGEST_LENGTH];
+  SHA256_CTX ctx;
+  SHA256_Init(&ctx);
+  SHA256_Update(&ctx, dmandata, manager_data_len);
+  SHA256_Final(digest, &ctx);
+
+  charlie::CModule* nmod = mods->Add();
+  nmod->set_id(MANAGER_MODULE_ID);
+  nmod->set_initial(true);
+  nmod->set_mainfcn(true);
+  nmod->set_hash(digest, SHA256_DIGEST_LENGTH);
+
+  char* path = mManager->getModuleFilename(nmod);
+  CLOG("Created new module definition, dumping file to \""<<path<<"\"...");
+  std::ofstream of;
+  of.open(path, std::ios::out|std::ios::binary);
+  of.write(dmandata, manager_data_len);
+  of.close();
+  free(path);
+  free(dmandata);
+}
+
 int System::main(int argc, const char* argv[])
 {
   loadRootPath(argv[0]);
@@ -256,5 +327,16 @@ int System::main(int argc, const char* argv[])
     CLOG("Loaded identity to crypto.");
   }
   mManager->setSystemInfo(&sysInfo);
+  if(!mManager->moduleLoadable(mManager->findModule(MANAGER_MODULE_ID)))
+  {
+    CLOG("The manager module doesn't exist / failed to validate, dropping default...");
+    dropDefaultManager();
+  }
+  CLOG("Manager module is verified, launching it!");
+  if(mManager->launchModule(MANAGER_MODULE_ID) != 0)
+  {
+    CERR("Failed launching the manager. No idea what to do. Quitting...");
+    return -1;
+  }
   return 0;
 }

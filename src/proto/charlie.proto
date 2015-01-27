@@ -89,10 +89,29 @@ message CModuleTable
 
 message CModule
 {
-  //ID is the std::hash of the name str
+  //ID is the hash of the name str
   optional uint32 id = 1;
   //does it have a main function to be run on a separate thread?
   optional bool   mainfcn = 2;
   //is this THE manager module? system refuses to start without loading this first
   optional bool   initial = 3;
+  //hash of the binary ( current version ) sha256
+  optional bytes  hash    = 4;
+}
+
+//Temporary storage of instance data
+enum EModuleStatus
+{
+  MODULE_INIT = 0;
+  MODULE_LOADING = 1;
+  MODULE_LOADED_INACTIVE = 2;
+  MODULE_LOADED_RUNNING = 3;
+  MODULE_LOADED_SHUTDOWN = 4;
+  MODULE_LOADED_FREEING = 5;
+}
+
+message CModuleInstance
+{
+  optional uint32 id = 1;
+  optional EModuleStatus status = 2;
 }
