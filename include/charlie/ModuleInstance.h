@@ -9,6 +9,7 @@
 #include <gmodule.h>
 #include <ModuleInterface.h>
 #include <set>
+#include <boost/thread.hpp>
 
 typedef modules::Module* (*ConstructFunc) (void);
 class ModuleManager;
@@ -22,8 +23,8 @@ public:
   void unload();
 
   charlie::CModuleInstance inst;
-
   std::set<u32> modReqs;
+  void notifyModuleReleased(u32 id);
 
 private:
   charlie::CModule* module;
@@ -33,4 +34,5 @@ private:
   GModule* gmod;
   ModuleManager* mManager;
   modules::ModuleInterface * mInter;
+  boost::thread* mainThread;
 };

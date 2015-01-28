@@ -6,7 +6,7 @@ project(charlie)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-find_package(Boost REQUIRED COMPONENTS filesystem system program_options regex thread)
+find_package(Boost REQUIRED COMPONENTS filesystem system program_options regex thread chrono)
 find_package(Protobuf REQUIRED)
 find_package(GLIB REQUIRED COMPONENTS gmodule)
 find_package(OpenSSL REQUIRED)
@@ -20,6 +20,7 @@ set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSS
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -Os -fvisibility=hidden -s")
+set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
 
 # Build compile tool
 add_executable(cutils
@@ -50,7 +51,7 @@ endif()
 # Build manager
 file(GLOB manager_SRC "src/modules/manager/*.cpp")
 add_library(manager SHARED ${manager_SRC})
-set_target_properties(manager PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
+set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 
 # Set the list of libraries to compile embed code
 set(embed_libraries manager)

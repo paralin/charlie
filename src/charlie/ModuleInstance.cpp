@@ -1,9 +1,13 @@
 #include <charlie/ModuleInstance.h>
 #include <boost/filesystem.hpp>
+#include <charlie/ModuleManager.h>
+#include <boost/chrono.hpp>
 
+#ifndef CHARLIE_MODULE
 #define MLOG(msg) CLOG("["<<module->id()<<"i] "<<msg);
 #define MERR(msg) CERR("["<<module->id()<<"i]! "<<msg);
 #define EMPTYCATCH(sect) try{sect}catch(...){}
+#endif
 
 ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleManager* man)
 {
@@ -12,6 +16,7 @@ ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleMa
   this->baseModule = NULL;
   this->mManager = man;
   this->mInter = new modules::ModuleInterface(man, this);
+  this->mainThread = NULL;
   setStatus(charlie::MODULE_INIT);
 }
 
@@ -24,11 +29,29 @@ ModuleInstance::~ModuleInstance()
 
 void ModuleInstance::unload()
 {
+  if(mainThread != NULL)
+  {
+    if(baseModule != NULL)
+    {
+      MLOG("Joining main thread...");
+      mainThread->interrupt();
+      if(mainThread->joinable()){
+        boost::chrono::seconds sec(5);
+        if(!mainThread->try_join_for(sec))
+          MERR("Waited for 5 seconds but it hasn't exited.");
+      }
+    }
+    EMPTYCATCH(delete mainThread;);
+    mainThread = NULL;
+  }
   if(baseModule != NULL)
   {
     try{
+      if(mManager != NULL)
+        mManager->onModuleReleased(module->id());
       EMPTYCATCH(baseModule->shutdown(););
-      delete baseModule; MLOG("Deleted baseModule");
+      delete baseModule;
+      MLOG("Deleted baseModule");
     }catch(...)
     {
       MERR("Unable to delete module, might be a memory leak.");
@@ -106,6 +129,18 @@ bool ModuleInstance::load()
   EMPTYCATCH(ninst->setModuleInterface(mInter););
 
   MLOG("Loaded module successfully.");
+
+  if(module->mainfcn())
+  {
+    MLOG("Starting module thread...");
+    try{
+      mainThread = new boost::thread(&modules::Module::module_main, ninst);
+    }
+    catch(...)
+    {
+      MERR("Error when starting module thread.");
+    }
+  }
   return true;
 }
 
@@ -114,4 +149,10 @@ inline void ModuleInstance::setStatus(::charlie::EModuleStatus value)
   if(inst.status() == value) return;
   MLOG("status => "<<value);
   inst.set_status(value);
+}
+
+void ModuleInstance::notifyModuleReleased(u32 id)
+{
+  if(baseModule != NULL)
+    EMPTYCATCH(baseModule->releaseDependency(id););
 }

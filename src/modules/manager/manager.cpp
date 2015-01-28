@@ -1,43 +1,51 @@
-#include <Module.h>
-#include <Logging.h>
-
 //xxx: Later maybe this can be automated?
 #define MODULE_ID 3133916783
-#define MLOG(msg) CLOG("["<<MODULE_ID<<"m] "<<msg);
-#define MERR(msg) CERR("["<<MODULE_ID<<"m]! "<<msg);
+#include <modules/manager/Manager.h>
+#include <boost/thread.hpp>
 
-namespace modules
+using namespace modules::manager;
+
+ManagerModule::ManagerModule()
 {
-  namespace manager
+  MLOG("Manager module constructed...");
+}
+
+void ManagerModule::shutdown()
+{
+  MLOG("Shutting down manager module..");
+}
+
+void ManagerModule::setModuleInterface(ModuleInterface* inter)
+{
+  MLOG("Received module interface");
+  mInter = inter;
+}
+
+void ManagerModule::injectDependency(u32 id, void* dep)
+{
+  MLOG("Dep injected "<<id);
+}
+
+void ManagerModule::releaseDependency(u32 id)
+{
+  MLOG("Dep released "<<id);
+}
+
+bool running = true;
+void ManagerModule::module_main()
+{
+  while(running)
   {
-    class ManagerModule : public modules::Module
+    try{
+      //An interruption point
+      boost::this_thread::sleep( boost::posix_time::milliseconds(2000));
+    }
+    catch(...)
     {
-    public:
-      ManagerModule()
-      {
-        MLOG("Constructing manager module...");
-      }
-
-      //Called when the module is about to be deleted
-      void shutdown()
-      {
-        MLOG("Deconstructing manager module..");
-      }
-
-      void setModuleInterface(ModuleInterface* inter)
-      {
-        MLOG("Received module interface");
-        mInter = inter;
-      }
-
-      int injectDependency(u32 id, void* dep)
-      {
-      };
-
-    private:
-      ModuleInterface* mInter;
-    };
-  };
-};
+      MLOG("Interrupted, exiting...");
+      break;
+    }
+  }
+}
 
 CHARLIE_CONSTRUCT(modules::manager::ManagerModule);

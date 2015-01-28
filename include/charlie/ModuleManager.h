@@ -39,15 +39,21 @@ public:
 
   //Top level requirements
   std::set<u32> tlReqs;
+
+  //Internal stuff
+  void onModuleReleased(u32 id);
+
 private:
   //Don't call these directly
   int launchModule(charlie::CModule* mod);
   int launchModule(u32 id);
   int launchModuleWithChecks(charlie::CModule* mod);
   int launchModuleWithChecks(u32 id);
+
   //Merge a final array of needed modules
   void evaluateRequirements();
   std::map <int, std::shared_ptr<ModuleInstance>> minstances;
+  std::set<u32> notifyRelease;
   System* sys;
   SystemInfo* sysInfo;
 

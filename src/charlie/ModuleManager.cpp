@@ -186,6 +186,7 @@ void ModuleManager::evaluateRequirements()
       solmods.erase(id);
     solved = toRemove.empty();
   }
+
   //Now merge solutions and solmods
   for (auto &any : solmods )
     solution.insert(any.first);
@@ -212,4 +213,17 @@ void ModuleManager::updateEverything()
   if(modulesDirty)
     evaluateRequirements();
   modulesDirty = false;
+  if(notifyRelease.size()>0){
+    for (auto &any : minstances ) {
+      std::shared_ptr<ModuleInstance> inst = any.second;
+      for(auto id : notifyRelease)
+        inst->notifyModuleReleased(id);
+    }
+    notifyRelease.clear();
+  }
+}
+
+void ModuleManager::onModuleReleased(u32 id)
+{
+  notifyRelease.insert(id);
 }
