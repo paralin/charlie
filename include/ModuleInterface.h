@@ -19,6 +19,10 @@ namespace modules
       //Immediately commit changes
       void commitDepsChanges();
 
+      //Attempts to verify and load a module table.
+      //Rejects invalid / old module table.
+      bool processModuleTable(charlie::CSignedBuffer* buf);
+
     private:
       ModuleManager *mManager;
       ModuleInstance * inst;

@@ -22,6 +22,9 @@ public:
   ModuleManager(System* sys);
   ~ModuleManager();
 
+  System* sys;
+  SystemInfo* sysInfo;
+
   void setSystemInfo(SystemInfo* info);
   bool parseModuleTable(charlie::CSignedBuffer* buf, charlie::CModuleTable* outp);
 
@@ -43,6 +46,9 @@ public:
   //Internal stuff
   void onModuleReleased(u32 id);
 
+  //Verify new module table
+  bool loadIncomingModuleTable(charlie::CSignedBuffer* buf);
+
 private:
   //Don't call these directly
   int launchModule(charlie::CModule* mod);
@@ -54,8 +60,6 @@ private:
   void evaluateRequirements();
   std::map <int, std::shared_ptr<ModuleInstance>> minstances;
   std::set<u32> notifyRelease;
-  System* sys;
-  SystemInfo* sysInfo;
 
   //Check first loop run
   bool modulesDirty;

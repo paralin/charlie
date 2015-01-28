@@ -29,3 +29,9 @@ void ModuleInterface::commitDepsChanges()
 {
   mManager->deferRecheckModules();
 }
+
+bool ModuleInterface::processModuleTable(charlie::CSignedBuffer* buf)
+{
+  if(buf == NULL) return false;
+  return mManager->loadIncomingModuleTable(buf);
+}

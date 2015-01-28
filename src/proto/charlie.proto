@@ -74,6 +74,7 @@ message CSaveContainer
   optional CIdentity identity  = 1;
   //Module table encrypted with server pubkey
   optional CSignedBuffer emodtable = 2;
+  optional CModuleConfigTable config = 3;
 }
 
 message CIdentity
@@ -85,6 +86,11 @@ message CIdentity
 message CModuleTable
 {
   repeated CModule modules = 1;
+  optional int64   timestamp = 2;
+}
+
+message CModuleConfigTable
+{
 }
 
 message CModule
@@ -104,10 +110,8 @@ enum EModuleStatus
 {
   MODULE_INIT = 0;
   MODULE_LOADING = 1;
-  MODULE_LOADED_INACTIVE = 2;
+  MODULE_LOADED = 2;
   MODULE_LOADED_RUNNING = 3;
-  MODULE_LOADED_SHUTDOWN = 4;
-  MODULE_LOADED_FREEING = 5;
 }
 
 message CModuleInstance

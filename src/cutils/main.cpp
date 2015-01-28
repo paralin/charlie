@@ -22,6 +22,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <charlie/hash.h>
 #include <openssl/sha.h>
+#include <ctime>
 
 //#define PRINT_VERBOSE
 
@@ -641,6 +642,7 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
       CLOG("Building CModuleTable \""<<d["name"].GetString()<<"\"...");
 
     charlie::CModuleTable table;
+    table.set_timestamp(std::time(0));
     const rapidjson::Value& modules = d["modules"];
     for (rapidjson::SizeType i = 0; i < modules.Size(); i++)
     {

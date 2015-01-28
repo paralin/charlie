@@ -123,7 +123,7 @@ bool ModuleInstance::load()
     return false;
   }
 
-  setStatus(charlie::MODULE_LOADED_INACTIVE);
+  setStatus(charlie::MODULE_LOADED);
   baseModule = ninst;
 
   EMPTYCATCH(ninst->setModuleInterface(mInter););
@@ -140,6 +140,7 @@ bool ModuleInstance::load()
     {
       MERR("Error when starting module thread.");
     }
+    setStatus(charlie::MODULE_LOADED_RUNNING);
   }
   return true;
 }

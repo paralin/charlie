@@ -49,7 +49,7 @@ if(EXISTS ${REDACT_CH_PTH})
 endif()
 
 # Build manager
-file(GLOB manager_SRC "src/modules/manager/*.cpp")
+file(GLOB manager_SRC "src/modules/manager/*.cpp" ${proto_SRC})
 add_library(manager SHARED ${manager_SRC})
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 

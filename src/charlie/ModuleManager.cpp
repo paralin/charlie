@@ -9,6 +9,8 @@
 #include <charlie/hash.h>
 #include <sstream>
 
+#define USE_MHASH_FILENAME
+
 ModuleManager::ModuleManager(System* system)
 {
   sys = system;
@@ -37,13 +39,44 @@ bool ModuleManager::parseModuleTable(charlie::CSignedBuffer* inbuf, charlie::CMo
     CERR("Unable to parse module table.");
     return false;
   }
-  CLOG("Module table verified and loaded.");
+  CLOG("Module table verified and parsed.");
+  return true;
+}
+
+bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
+{
+  charlie::CModuleTable ntab;
+  CLOG("Verifying incoming module table...");
+  if(!parseModuleTable(buf, &ntab))
+  {
+    CLOG("Verification failed...");
+    return false;
+  }
+  if(!ntab.has_timestamp())
+  {
+    CERR("Timestamp required on incoming table...");
+    return false;
+  }
+  if(ntab.timestamp() <= sys->modTable.timestamp())
+  {
+    CERR("Incoming table is older / same as current.");
+    return false;
+  }
+  //Okay, we have a good new module table
+  sys->modTable.Clear();
+  sys->modTable.CheckTypeAndMergeFrom(ntab);
+  CLOG("Merged new verified module table.");
+  //todo: maybe we need to update all the modules?
+  //todo: notify the modules of the change?
   return true;
 }
 
 char* ModuleManager::getModuleFilename(charlie::CModule* mod)
 {
-  //The filename is base 64 encoded ID number
+  //The filename is based on the hash of the file xor by 
+#ifdef USE_MHASH_FILENAME
+  const unsigned char* digest = (const unsigned char*)mod->hash().c_str();
+#else
   std::ostringstream ss;
   ss << mod->id();
   std::string s = ss.str();
@@ -52,9 +85,16 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
   SHA256_Init(&ctx);
   SHA256_Update(&ctx, s.c_str(), s.length());
   SHA256_Final(digest, &ctx);
+#endif
   char mdString[SHA256_DIGEST_LENGTH*2+1];
+  size_t keyi=0;
+  size_t keylen = strlen(sysInfo->system_id);
   for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+  {
+    sprintf(&mdString[i*2], "%02x", (unsigned int)(digest[i])^(unsigned int)sysInfo->system_id[keyi]);
+    keyi++;
+    if(keyi >= keylen) keyi = 0;
+  }
   //Calculate filename length
   //First grab the 0-9 value of the first
   int first = (((int)mdString[0])%10);
