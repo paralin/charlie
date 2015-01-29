@@ -23,8 +23,8 @@ proto:
 	-mkdir ./src/server_protogen/
 	-mkdir ./include/server_protogen/
 	-mkdir ./include/protogen/
-	cd src/proto && protoc -I=`pwd` --cpp_out=../protogen/ `pwd`/charlie.proto
-	cd src/proto && protoc -I=`pwd` --cpp_out=../server_protogen/ `pwd`/charlie_server.proto
+	cd src/proto && protoc -I=. --cpp_out=../protogen/ ./charlie.proto
+	cd src/proto && protoc -I=. --cpp_out=../server_protogen/ ./charlie_server.proto
 	cp ./src/protogen/*.h ./include/protogen/
 	cp ./src/server_protogen/*.h ./include/server_protogen/
 	touch proto
