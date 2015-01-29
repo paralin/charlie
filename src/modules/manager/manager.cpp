@@ -34,6 +34,8 @@ void ManagerModule::releaseDependency(u32 id)
 bool running = true;
 void ManagerModule::module_main()
 {
+  mInter->requireDependency(4);
+  mInter->commitDepsChanges();
   while(running)
   {
     try{

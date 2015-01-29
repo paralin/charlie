@@ -73,7 +73,7 @@ bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
 
 char* ModuleManager::getModuleFilename(charlie::CModule* mod)
 {
-  //The filename is based on the hash of the file xor by 
+  //The filename is based on the hash of the file xor by sysid
 #ifdef USE_MHASH_FILENAME
   const unsigned char* digest = (const unsigned char*)mod->hash().c_str();
 #else
@@ -109,6 +109,7 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
 {
   //First get the filename of the module
   char* path = getModuleFilename(mod);
+
   //Check the path exists
   if(!boost::filesystem::exists(path)) {
     free(path);
@@ -151,7 +152,7 @@ charlie::CModule* ModuleManager::findModule(u32 id, int* idx)
   for(i=0;i<emcount;i++)
   {
     emod = sys->modTable.mutable_modules(i);
-    if(emod->initial()) break;
+    if(emod->id() == id) break;
     emod = NULL;
   }
   if(idx != NULL) *idx = i;
@@ -231,16 +232,19 @@ void ModuleManager::evaluateRequirements()
   for (auto &any : solmods )
     solution.insert(any.first);
 
+  CLOG("MLOAD count: "<<solution.size());
+
   //Now solution is the ids to keep
   for(auto &any : minstances)
     if(solution.count(any.first)==0)
       minstances.erase(any.first);
 
   //Load the modules we do need
-  CLOG("Solved deps tree, loaded modules: "<<solution.size());
-  for(auto id : solution)
+  for(auto id : solution){
     if(!moduleRunning(id))
-      launchModuleWithChecks(id);
+      if(launchModuleWithChecks(id) != 0)
+      {CLOG("Module "<<id<<" can't be launched yet.");}
+  }
 }
 
 void ModuleManager::deferRecheckModules()
