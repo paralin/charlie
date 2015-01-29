@@ -2,11 +2,13 @@
 #include <IntTypes.h>
 #include <protogen/charlie.pb.h>
 
+#define VISIBLE __attribute__ ((visibility ("default")))
+
 class ModuleManager;
 class ModuleInstance;
 namespace modules
 {
-  class ModuleInterface
+  class VISIBLE ModuleInterface
   {
     public:
       ModuleInterface(ModuleManager *manager, ModuleInstance * inst);
