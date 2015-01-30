@@ -15,7 +15,7 @@ ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleMa
   this->libPath = path;
   this->baseModule = NULL;
   this->mManager = man;
-  this->mInter = new modules::ModuleInterface(man, this);
+  this->mInter = new ModuleInterImpl(man, this);
   this->mainThread = NULL;
   setStatus(charlie::MODULE_INIT);
 }

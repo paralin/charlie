@@ -25,14 +25,10 @@ enum EBodyEncryptionType
 {
   //No body encryption
   NO_ENCRYPTION = 0;
-  //Encrypted with server private key
-  SIGNED_SERVER_PRI = 1;
   //Encrypted with client's public key
-  SIGNED_CLIENT_PUB = 2;
-  //Encrypted with the client's private key
-  SIGNED_CLIENT_PRI = 3;
+  SIGNED_CLIENT_PUB = 1;
   //Encrypted with the server's public key
-  SIGNED_SERVER_PUB = 4;
+  SIGNED_SERVER_PUB = 2;
 }
 
 //Some data EVP public key signed
@@ -74,7 +70,7 @@ message CSaveContainer
   optional CIdentity identity  = 1;
   //Module table encrypted with server pubkey
   optional CSignedBuffer emodtable = 2;
-  optional CModuleConfigTable config = 3;
+  repeated CModuleStorage mod_configs = 3;
 }
 
 message CIdentity
@@ -87,10 +83,6 @@ message CModuleTable
 {
   repeated CModule modules = 1;
   optional int64   timestamp = 2;
-}
-
-message CModuleConfigTable
-{
 }
 
 message CModule
@@ -119,3 +111,13 @@ message CModuleInstance
   optional uint32 id = 1;
   optional EModuleStatus status = 2;
 }
+
+message CModuleStorage
+{
+  // Binary data for the module data buffer
+  optional bytes data = 1;
+  // Signature of the binary using identity
+  optional bytes sig  = 2;
+}
+
+// ==== MODULE SPECIFIC, CHANGING PROTO ====

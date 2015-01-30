@@ -4,3 +4,6 @@
 [submodule "deps/rapidjson"]
 	path = deps/rapidjson
 	url = https://github.com/miloyip/rapidjson
+[submodule "deps/mxe"]
+	path = deps/mxe
+	url = https://github.com/mxe/mxe.git

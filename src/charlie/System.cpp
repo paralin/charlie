@@ -63,12 +63,12 @@ int System::loadConfigFile()
     return -1;
   ifstream configFile;
   streampos size;
-  configFile.open (sysInfo.config_filename, ios::in|ios::binary|ios::ate);
+  configFile.open (sysInfo.config_filename, ios_base::in|ios_base::binary|ios_base::ate);
   if(configFile.is_open()){
     size = configFile.tellg();
     FREE_OLD_CONFIG;
     configData = new char[size];
-    configFile.seekg(0, ios::beg);
+    configFile.seekg(0, ios_base::beg);
     configFile.read(configData, size);
     configFile.close();
     CLOG("Loaded config file, "<<size<<" length.");
@@ -148,7 +148,7 @@ void System::saveConfig()
   memcpy(toSave, configData, configDataSize);
   apply_xor(toSave, configDataSize, sysInfo.system_id, strlen(sysInfo.system_id));
   CLOG("Saving config file to "<<sysInfo.config_filename);
-  ofstream configFile (sysInfo.config_filename, ios::out|ios::binary);
+  ofstream configFile (sysInfo.config_filename, ios_base::out|ios_base::binary);
   if(configFile.is_open()){
     configFile.write(toSave, configDataSize);
   }else{
@@ -296,7 +296,7 @@ void System::dropDefaultManager()
   char* path = mManager->getModuleFilename(nmod);
   CLOG("Created new module definition, dumping file to \""<<path<<"\"...");
   std::ofstream of;
-  of.open(path, std::ios::out|std::ios::binary);
+  of.open(path, std::ios_base::out|std::ios_base::binary);
   of.write(dmandata, manager_data_len);
   of.close();
   free(path);

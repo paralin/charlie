@@ -7,7 +7,7 @@
 #include <string>
 #include <glib.h>
 #include <gmodule.h>
-#include <ModuleInterface.h>
+#include <charlie/ModuleInterImpl.h>
 #include <set>
 #include <boost/thread.hpp>
 
@@ -33,6 +33,6 @@ private:
   modules::Module* baseModule;
   GModule* gmod;
   ModuleManager* mManager;
-  modules::ModuleInterface * mInter;
+  ModuleInterImpl * mInter;
   boost::thread* mainThread;
 };

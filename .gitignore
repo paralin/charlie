@@ -51,3 +51,6 @@ make
 makedbg
 makerel
 proto
+setupmxe
+makemxe
+makemxer

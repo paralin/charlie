@@ -1,32 +1,30 @@
+
 #pragma once
 #include <IntTypes.h>
 #include <protogen/charlie.pb.h>
+#include <charlie/Crypto.h>
 
 #define VISIBLE __attribute__ ((visibility ("default")))
 
-class ModuleManager;
-class ModuleInstance;
 namespace modules
 {
   class VISIBLE ModuleInterface
   {
     public:
-      ModuleInterface(ModuleManager *manager, ModuleInstance * inst);
-      ~ModuleInterface();
-
       //Request that a module be loaded
-      int  requireDependency(u32 id);
-      void releaseDependency(u32 id);
+      virtual int  requireDependency(u32 id);
+      virtual void releaseDependency(u32 id);
 
       //Immediately commit changes
-      void commitDepsChanges();
+      virtual void commitDepsChanges();
 
       //Attempts to verify and load a module table.
       //Rejects invalid / old module table.
-      bool processModuleTable(charlie::CSignedBuffer* buf);
+      virtual bool processModuleTable(charlie::CSignedBuffer* buf);
 
-    private:
-      ModuleManager *mManager;
-      ModuleInstance * inst;
+      //Returns a copy of the verified module table data
+      virtual charlie::CSignedBuffer* getModuleTable();
+
+      virtual Crypto* getCrypto();
   };
 };

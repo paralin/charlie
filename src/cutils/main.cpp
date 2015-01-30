@@ -4,7 +4,6 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <protogen/charlie.pb.h>
-#include <iostream>
 #include <fstream>
 #include <charlie/xor.h>
 #include <google/protobuf/text_format.h>
@@ -350,7 +349,7 @@ int generateIdentity(GenIdentCommand* comm, fs::path *full_path)
   }
 
   std::ofstream outFile;
-  outFile.open (output_path.c_str(), std::ios::out|std::ios::binary);
+  outFile.open (output_path.string().c_str(), std::ios_base::out|std::ios_base::binary);
   outFile.write(out, outSize);
   outFile.close();
 
@@ -362,28 +361,28 @@ int generateIdentity(GenIdentCommand* comm, fs::path *full_path)
 int generateEmbedFile(EmbedCommand* comm, fs::path *full_path)
 {
   fs::path libpath(comm->input_);
-  const gchar* curr = full_path->c_str();
+  const gchar* curr = full_path->string().c_str();
   const gchar* symfile = comm->output_.c_str();
   fs::path symfilep(symfile);
   fs::path symn = symfilep.stem();
 
-  const char* sym = symn.c_str();
+  const char* sym = symn.string().c_str();
 
   const char* path;
   if(comm->usegmodule_)
-    path = (libpath.remove_filename()/boost::filesystem::path(g_module_build_path(curr, libpath.filename().c_str())).filename()).c_str();
+    path = (libpath.remove_filename()/boost::filesystem::path(g_module_build_path(curr, libpath.filename().string().c_str())).filename()).string().c_str();
   else
-    path = (libpath.remove_filename()/boost::filesystem::path(libpath.filename().c_str())).filename().c_str();
+    path = (libpath.remove_filename()/boost::filesystem::path(libpath.filename().string().c_str())).filename().string().c_str();
   CLOG("Embedding "<<path<<" into "<<symfile);
 
   char* memblock;
   std::streampos size;
-  std::ifstream inFile (path, std::ios::in|std::ios::binary|std::ios::ate);
+  std::ifstream inFile (path, std::ios_base::in|std::ios_base::binary|std::ios_base::ate);
   if(inFile.is_open())
   {
     size = inFile.tellg();
     memblock = new char [size];
-    inFile.seekg (0, std::ios::beg);
+    inFile.seekg (0, std::ios_base::beg);
     inFile.read (memblock, size);
     inFile.close();
   }else{
@@ -397,7 +396,7 @@ int generateEmbedFile(EmbedCommand* comm, fs::path *full_path)
     apply_xor(memblock, size, comm->xorkey_.c_str(), comm->xorkey_.length());
   }
 
-  std::ofstream outFile (symfile, std::ios::out);
+  std::ofstream outFile (symfile, std::ios_base::out);
   if(outFile.is_open())
   {
     outFile << "#pragma GCC diagnostic ignored \"-Woverflow\"\n";
@@ -435,14 +434,14 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
   CLOG("Loading server identity file...");
   fs::path input_path((*full_path)/comm->identity_);
   output_path = fs::path((*full_path)/comm->output_);
-  std::ifstream inFile (input_path.c_str(), std::ios::in|std::ios::binary|std::ios::ate);
+  std::ifstream inFile (input_path.string().c_str(), std::ios_base::in|std::ios_base::binary|std::ios_base::ate);
   if(inFile.is_open())
   {
     std::streampos size;
     char* memblock;
     size = inFile.tellg();
     memblock = new char [size];
-    inFile.seekg (0, std::ios::beg);
+    inFile.seekg (0, std::ios_base::beg);
     inFile.read (memblock, size);
     inFile.close();
     if(comm->xorkey_.length()>0)
@@ -478,7 +477,7 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
     }
 
     std::ofstream of;
-    of.open (output_path.c_str(), std::ios::out|std::ios::binary);
+    of.open (output_path.string().c_str(), std::ios_base::out|std::ios_base::binary);
     of.write(memblock, outbufsize);
     of.close();
     free(memblock);
@@ -486,7 +485,7 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
   }
   else
   {
-    CLOG("Unable to open "<<input_path.c_str()<<"...");
+    CLOG("Unable to open "<<input_path.string().c_str()<<"...");
     return -1;
   }
 }
@@ -533,7 +532,7 @@ int protoCleanFile(ProtoCleanCommand* comm, fs::path *full_path)
 
     //Write output
     std::ofstream of;
-    of.open(comm->output_.c_str(), std::ios::out);
+    of.open(comm->output_.c_str(), std::ios_base::out);
     of << buffer.str();
     of.close();
   }else
@@ -549,14 +548,14 @@ Crypto * loadCrypto(std::string *infile, std::string *identxor)
   //Load the identity
   Crypto * crypt = new Crypto();
 
-  std::ifstream inFile (infile->c_str(), std::ios::in|std::ios::binary|std::ios::ate);
+  std::ifstream inFile (infile->c_str(), std::ios_base::in|std::ios_base::binary|std::ios_base::ate);
   if(inFile.is_open())
   {
     std::streampos size;
     char* memblock;
     size = inFile.tellg();
     memblock = new char [size];
-    inFile.seekg (0, std::ios::beg);
+    inFile.seekg (0, std::ios_base::beg);
     inFile.read (memblock, size);
     inFile.close();
 
@@ -608,7 +607,7 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
   CLOG("Loading json input file...");
   fs::path input_path((*full_path)/comm->json_);
   output_path = fs::path((*full_path)/comm->output_);
-  std::ifstream inFile (input_path.c_str(), std::ios::in);
+  std::ifstream inFile (input_path.string().c_str(), std::ios_base::in);
   if(inFile.is_open())
   {
     std::stringstream buffer;
@@ -743,7 +742,7 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
     }
 
     std::ofstream of;
-    of.open (output_path.c_str(), std::ios::out|std::ios::binary);
+    of.open (output_path.string().c_str(), std::ios_base::out|std::ios_base::binary);
     of.write((const char*)out, outSize);
     of.close();
     free(out);
