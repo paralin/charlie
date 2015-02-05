@@ -3,7 +3,7 @@
 
 class ModuleManager;
 class ModuleInstance;
-class VISIBLE ModuleInterImpl : public modules::ModuleInterface
+class ModuleInterImpl : public modules::ModuleInterface
 {
   public:
     ModuleInterImpl(ModuleManager *manager, ModuleInstance * inst);
@@ -24,6 +24,14 @@ class VISIBLE ModuleInterImpl : public modules::ModuleInterface
     charlie::CSignedBuffer* getModuleTable();
 
     Crypto* getCrypto();
+
+    charlie::CModuleStorage* getStorage();
+
+    //Updates signature and saves storage.
+    void saveStorage(void* data, size_t len);
+
+    //Will unload and reload this module
+    void requestReload();
 
   private:
     ModuleManager *mManager;

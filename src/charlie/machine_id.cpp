@@ -3,9 +3,9 @@
 #include <boost/asio/ip/host_name.hpp>
 #define s8 char
 
-const char* getMachineName()
+std::string getMachineName()
 {
-  return boost::asio::ip::host_name().c_str();
+  return boost::asio::ip::host_name();
 }
 
 #if defined(_WIN64) || defined(_WIN32)
@@ -18,59 +18,59 @@ const char* getMachineName()
 // So any one or two mac's is fine.
 u16 hashMacAddress( PIP_ADAPTER_INFO info )
 {
-   u16 hash = 0;
-   for ( u32 i = 0; i < info->AddressLength; i++ )
-   {
-      hash += ( info->Address[i] << (( i & 1 ) * 8 ));
-   }
-   return hash;
+  u16 hash = 0;
+  for ( u32 i = 0; i < info->AddressLength; i++ )
+  {
+    hash += ( info->Address[i] << (( i & 1 ) * 8 ));
+  }
+  return hash;
 }
 
 void getMacHash( u16& mac1, u16& mac2 )
 {
-   IP_ADAPTER_INFO AdapterInfo[32];
-   DWORD dwBufLen = sizeof( AdapterInfo );
+  IP_ADAPTER_INFO AdapterInfo[32];
+  DWORD dwBufLen = sizeof( AdapterInfo );
 
-   DWORD dwStatus = GetAdaptersInfo( AdapterInfo, &dwBufLen );
-   if ( dwStatus != ERROR_SUCCESS )
-      return; // no adapters.
+  DWORD dwStatus = GetAdaptersInfo( AdapterInfo, &dwBufLen );
+  if ( dwStatus != ERROR_SUCCESS )
+    return; // no adapters.
 
-   PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
-   mac1 = hashMacAddress( pAdapterInfo );
-   if ( pAdapterInfo->Next )
-      mac2 = hashMacAddress( pAdapterInfo->Next );
+  PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
+  mac1 = hashMacAddress( pAdapterInfo );
+  if ( pAdapterInfo->Next )
+    mac2 = hashMacAddress( pAdapterInfo->Next );
 
-   // sort the mac addresses. We don't want to invalidate
-   // both macs if they just change order.
-   if ( mac1 > mac2 )
-   {
-      u16 tmp = mac2;
-      mac2 = mac1;
-      mac1 = tmp;
-   }
+  // sort the mac addresses. We don't want to invalidate
+  // both macs if they just change order.
+  if ( mac1 > mac2 )
+  {
+    u16 tmp = mac2;
+    mac2 = mac1;
+    mac1 = tmp;
+  }
 }
 
 u16 getVolumeHash()
 {
-   DWORD serialNum = 0;
+  DWORD serialNum = 0;
 
-   // Determine if this volume uses an NTFS file system.
-   GetVolumeInformation( "c:\\", NULL, 0, &serialNum, NULL, NULL, NULL, 0 );
-   u16 hash = (u16)(( serialNum + ( serialNum >> 16 )) & 0xFFFF );
+  // Determine if this volume uses an NTFS file system.
+  GetVolumeInformation( "c:\\", NULL, 0, &serialNum, NULL, NULL, NULL, 0 );
+  u16 hash = (u16)(( serialNum + ( serialNum >> 16 )) & 0xFFFF );
 
-   return hash;
+  return hash;
 }
 
 u16 getCpuHash()
 {
-   int cpuinfo[4] = { 0, 0, 0, 0 };
-   __cpuid( cpuinfo, 0 );
-   u16 hash = 0;
-   u16* ptr = (u16*)(&cpuinfo[0]);
-   for ( u32 i = 0; i < 8; i++ )
-      hash += ptr[i];
+  int cpuinfo[4] = { 0, 0, 0, 0 };
+  __cpuid( cpuinfo, 0 );
+  u16 hash = 0;
+  u16* ptr = (u16*)(&cpuinfo[0]);
+  for ( u32 i = 0; i < 8; i++ )
+    hash += ptr[i];
 
-   return hash;
+  return hash;
 }
 
 
@@ -105,201 +105,202 @@ u16 getCpuHash()
 // mac's is fine.
 u16 hashMacAddress( u8* mac )
 {
-   u16 hash = 0;
+  u16 hash = 0;
 
-   for ( u32 i = 0; i < 6; i++ )
-   {
-      hash += ( mac[i] << (( i & 1 ) * 8 ));
-   }
-   return hash;
+  for ( u32 i = 0; i < 6; i++ )
+  {
+    hash += ( mac[i] << (( i & 1 ) * 8 ));
+  }
+  return hash;
 }
 
 void getMacHash( u16& mac1, u16& mac2 )
 {
-   mac1 = 0;
-   mac2 = 0;
+  mac1 = 0;
+  mac2 = 0;
 
 #ifdef DARWIN
 
-   struct ifaddrs* ifaphead;
-   if ( getifaddrs( &ifaphead ) != 0 )
-      return;
+  struct ifaddrs* ifaphead;
+  if ( getifaddrs( &ifaphead ) != 0 )
+    return;
 
-   // iterate over the net interfaces
-   bool foundMac1 = false;
-   struct ifaddrs* ifap;
-   for ( ifap = ifaphead; ifap; ifap = ifap->ifa_next )
-   {
-      struct sockaddr_dl* sdl = (struct sockaddr_dl*)ifap->ifa_addr;
-      if ( sdl && ( sdl->sdl_family == AF_LINK ) && ( sdl->sdl_type == IFT_ETHER ))
+  // iterate over the net interfaces
+  bool foundMac1 = false;
+  struct ifaddrs* ifap;
+  for ( ifap = ifaphead; ifap; ifap = ifap->ifa_next )
+  {
+    struct sockaddr_dl* sdl = (struct sockaddr_dl*)ifap->ifa_addr;
+    if ( sdl && ( sdl->sdl_family == AF_LINK ) && ( sdl->sdl_type == IFT_ETHER ))
+    {
+      if ( !foundMac1 )
       {
-          if ( !foundMac1 )
-          {
-             foundMac1 = true;
-             mac1 = hashMacAddress( (u8*)(LLADDR(sdl))); //sdl->sdl_data) +
-                                    sdl->sdl_nlen) );
-          } else {
-             mac2 = hashMacAddress( (u8*)(LLADDR(sdl))); //sdl->sdl_data) +
-                                    sdl->sdl_nlen) );
-             break;
-          }
+        foundMac1 = true;
+        mac1 = hashMacAddress( (u8*)(LLADDR(sdl))); //sdl->sdl_data) +
+        sdl->sdl_nlen) );
+      } else {
+        mac2 = hashMacAddress( (u8*)(LLADDR(sdl))); //sdl->sdl_data) +
+        sdl->sdl_nlen) );
+        break;
       }
-   }
+    }
+  }
 
-   freeifaddrs( ifaphead );
+  freeifaddrs( ifaphead );
 
 #else // !DARWIN
 
-   int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP );
-   if ( sock < 0 ) return;
+  int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP );
+  if ( sock < 0 ) return;
 
-   // enumerate all IP addresses of the system
-   struct ifconf conf;
-   char ifconfbuf[ 128 * sizeof(struct ifreq)  ];
-   memset( ifconfbuf, 0, sizeof( ifconfbuf ));
-   conf.ifc_buf = ifconfbuf;
-   conf.ifc_len = sizeof( ifconfbuf );
-   if ( ioctl( sock, SIOCGIFCONF, &conf ))
-   {
-      return;
-   }
+  // enumerate all IP addresses of the system
+  struct ifconf conf;
+  char ifconfbuf[ 128 * sizeof(struct ifreq)  ];
+  memset( ifconfbuf, 0, sizeof( ifconfbuf ));
+  conf.ifc_buf = ifconfbuf;
+  conf.ifc_len = sizeof( ifconfbuf );
+  if ( ioctl( sock, SIOCGIFCONF, &conf ))
+  {
+    return;
+  }
 
-   // get MAC address
-   bool foundMac1 = false;
-   struct ifreq* ifr;
-   for ( ifr = conf.ifc_req; (s8*)ifr < (s8*)conf.ifc_req + conf.ifc_len; ifr++ )
-   {
-      if ( ifr->ifr_addr.sa_data == (ifr+1)->ifr_addr.sa_data )
-         continue;  // duplicate, skip it
+  // get MAC address
+  bool foundMac1 = false;
+  struct ifreq* ifr;
+  for ( ifr = conf.ifc_req; (s8*)ifr < (s8*)conf.ifc_req + conf.ifc_len; ifr++ )
+  {
+    if ( ifr->ifr_addr.sa_data == (ifr+1)->ifr_addr.sa_data )
+      continue;  // duplicate, skip it
 
-      if ( ioctl( sock, SIOCGIFFLAGS, ifr ))
-         continue;  // failed to get flags, skip it
-      if ( ioctl( sock, SIOCGIFHWADDR, ifr ) == 0 )
+    if ( ioctl( sock, SIOCGIFFLAGS, ifr ))
+      continue;  // failed to get flags, skip it
+    if ( ioctl( sock, SIOCGIFHWADDR, ifr ) == 0 )
+    {
+      if ( !foundMac1 )
       {
-         if ( !foundMac1 )
-         {
-            foundMac1 = true;
-            mac1 = hashMacAddress( (u8*)&(ifr->ifr_addr.sa_data));
-         } else {
-            mac2 = hashMacAddress( (u8*)&(ifr->ifr_addr.sa_data));
-            break;
-         }
+        foundMac1 = true;
+        mac1 = hashMacAddress( (u8*)&(ifr->ifr_addr.sa_data));
+      } else {
+        mac2 = hashMacAddress( (u8*)&(ifr->ifr_addr.sa_data));
+        break;
       }
-   }
+    }
+  }
 
-   close( sock );
+  close( sock );
 
 #endif // !DARWIN
 
-   // sort the mac addresses. We don't want to invalidate
-   // both macs if they just change order.
-   if ( mac1 > mac2 )
-   {
-      u16 tmp = mac2;
-      mac2 = mac1;
-      mac1 = tmp;
-   }
+  // sort the mac addresses. We don't want to invalidate
+  // both macs if they just change order.
+  if ( mac1 > mac2 )
+  {
+    u16 tmp = mac2;
+    mac2 = mac1;
+    mac1 = tmp;
+  }
 }
 
 u16 getVolumeHash()
 {
-   // we don't have a 'volume serial number' like on windows.
-   // Lets hash the system name instead.
-   u8* sysname = (u8*)getMachineName();
-   u16 hash = 0;
+  // we don't have a 'volume serial number' like on windows.
+  // Lets hash the system name instead.
+  std::string sysnames = getMachineName();
+  u8* sysname = (u8*)sysnames.c_str();
+  u16 hash = 0;
 
-   for ( u32 i = 0; sysname[i]; i++ )
-      hash += ( sysname[i] << (( i & 1 ) * 8 ));
+  for ( u32 i = 0; sysname[i]; i++ )
+    hash += ( sysname[i] << (( i & 1 ) * 8 ));
 
-   return hash;
+  return hash;
 }
 
 #ifdef DARWIN
- #include <mach-o/arch.h>
- u16 getCpuHash()
- {
-     const NXArchInfo* info = NXGetLocalArchInfo();
-     u16 val = 0;
-     val += (u16)info->cputype;
-     val += (u16)info->cpusubtype;
-     return val;
- }
+#include <mach-o/arch.h>
+u16 getCpuHash()
+{
+  const NXArchInfo* info = NXGetLocalArchInfo();
+  u16 val = 0;
+  val += (u16)info->cputype;
+  val += (u16)info->cpusubtype;
+  return val;
+}
 
 #else // !DARWIN
 
- void getCpuid( u32* p, u32 ax )
- {
-    __asm __volatile
+void getCpuid( u32* p, u32 ax )
+{
+  __asm __volatile
     (   "movl %%ebx, %%esi\n\t"
         "cpuid\n\t"
         "xchgl %%ebx, %%esi"
         : "=a" (p[0]), "=S" (p[1]),
-          "=c" (p[2]), "=d" (p[3])
+        "=c" (p[2]), "=d" (p[3])
         : "0" (ax)
     );
- }
+}
 
- u16 getCpuHash()
- {
-    u32 cpuinfo[4] = { 0, 0, 0, 0 };
-    getCpuid( cpuinfo, 0 );
-    u16 hash = 0;
-    u32* ptr = (&cpuinfo[0]);
-    for ( u32 i = 0; i < 4; i++ )
-       hash += (ptr[i] & 0xFFFF) + ( ptr[i] >> 16 );
+u16 getCpuHash()
+{
+  u32 cpuinfo[4] = { 0, 0, 0, 0 };
+  getCpuid( cpuinfo, 0 );
+  u16 hash = 0;
+  u32* ptr = (&cpuinfo[0]);
+  for ( u32 i = 0; i < 4; i++ )
+    hash += (ptr[i] & 0xFFFF) + ( ptr[i] >> 16 );
 
-    return hash;
- }
+  return hash;
+}
 #endif // !DARWIN
 
 #endif
 
 u16* computeSystemUniqueId()
 {
-   static u16 id[5];
-   static bool computed = false;
+  static u16 id[5];
+  static bool computed = false;
 
-   if ( computed ) return id;
+  if ( computed ) return id;
 
-   // produce a number that uniquely identifies this system.
-   id[0] = getCpuHash();
-   id[1] = getVolumeHash();
-   getMacHash( id[2], id[3] );
+  // produce a number that uniquely identifies this system.
+  id[0] = getCpuHash();
+  id[1] = getVolumeHash();
+  getMacHash( id[2], id[3] );
 
-   // fifth block is some checkdigits
-   id[4] = 0;
-   for ( u32 i = 0; i < 4; i++ )
-      id[4] += id[i];
+  // fifth block is some checkdigits
+  id[4] = 0;
+  for ( u32 i = 0; i < 4; i++ )
+    id[4] += id[i];
 
-   smear( id );
+  smear( id );
 
-   computed = true;
-   return id;
+  computed = true;
+  return id;
 }
 
 const char* getSystemUniqueId()
 {
-   // get the name of the computer
-   std::string buf(getMachineName());
+  // get the name of the computer
+  std::string buf = getMachineName();
 
-   u16* id = computeSystemUniqueId();
-   for ( u32 i = 0; i < 5; i++ )
-   {
-      char num[16];
-      snprintf( num, 16, "%x", id[i] );
-      buf.append("-");
-      switch( strlen( num ))
-      {
+  u16* id = computeSystemUniqueId();
+  for ( u32 i = 0; i < 5; i++ )
+  {
+    char num[16];
+    snprintf( num, 16, "%x", id[i] );
+    buf.append("-");
+    switch( strlen( num ))
+    {
       case 1: buf.append("000"); break;
       case 2: buf.append("00");  break;
       case 3: buf.append("0");   break;
-      }
-      buf.append(num);
-   }
+    }
+    buf.append(num);
+  }
 
-   std::transform(buf.begin(), buf.end(), buf.begin(), ::toupper);
+  std::transform(buf.begin(), buf.end(), buf.begin(), ::toupper);
 
-   char * cstr = new char [buf.length()+1];
-   std::strcpy (cstr, buf.c_str());
-   return cstr;
+  char * cstr = new char [buf.length()+1];
+  std::strcpy (cstr, buf.c_str());
+  return cstr;
 }

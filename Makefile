@@ -14,32 +14,28 @@ clean:
 make: makedbg
 makedbg:
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=DEBUG
 	touch makedbg
 makerel:
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=RELEASE
 	touch makerel
 makemxe:
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch makemxe
 makemxer:
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch makemxer
 compile:
 	cd build && make -j4
 run: all
 	cd build && ./charlie
 proto:
-	-rm -rf ./include/protogen/ ./include/server_protogen/ ./src/protogen/ ./src/server_protogen/
+	-rm -rf ./include/protogen/ ./src/protogen/ ./src/server_protogen/
 	-mkdir ./src/protogen/
-	-mkdir ./src/server_protogen/
-	-mkdir ./include/server_protogen/
 	-mkdir ./include/protogen/
-	cd src/proto && protoc -I=. --cpp_out=../protogen/ ./charlie.proto
-	cd src/proto && protoc -I=. --cpp_out=../server_protogen/ ./charlie_server.proto
+	cd src/proto && protoc --cpp_out=../protogen/ ./*.proto
 	cp ./src/protogen/*.h ./include/protogen/
-	cp ./src/server_protogen/*.h ./include/server_protogen/
 	touch proto

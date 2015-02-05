@@ -332,11 +332,6 @@ int generateIdentity(GenIdentCommand* comm, fs::path *full_path)
   ident.set_public_key(pubkey, pubkeyLen);
   ident.set_private_key(pkey, pkeyLen);
 
-#ifdef PRINT_VERBOSE
-  google::protobuf::TextFormat::PrintToString(ident, &output);
-  CLOG("Final identity: "<<std::endl<<output.c_str());
-#endif
-
   int outSize = ident.ByteSize();
   char* out = (char*)malloc(sizeof(char)*outSize);
   if(!ident.SerializeToArray(out, outSize))

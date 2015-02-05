@@ -109,8 +109,9 @@ int Crypto::digestSign(const unsigned char*msg, size_t msgLen, unsigned char** s
   if(!EVP_DigestSignInit(digestSignCtx, NULL, EVP_sha256(), NULL, key))
     return FAILURE;
 
-  if(!EVP_DigestSignUpdate(digestSignCtx, (const void*)msg, (unsigned int)msgLen))
-    return FAILURE;
+  if(msgLen > 0)
+    if(!EVP_DigestSignUpdate(digestSignCtx, (const void*)msg, (unsigned int)msgLen))
+      return FAILURE;
 
   if(!EVP_DigestSignFinal(digestSignCtx, NULL, &sigLen))
     return FAILURE;
@@ -249,11 +250,6 @@ int Crypto::init() {
 
   digestSignCtx = (EVP_MD_CTX*)malloc(sizeof(EVP_MD_CTX));
   digestVerifyCtx = (EVP_MD_CTX*)malloc(sizeof(EVP_MD_CTX));
-
-  // Always a good idea to check if malloc failed
-  if(rsaEncryptCtx == NULL || rsaDecryptCtx == NULL) {
-    return FAILURE;
-  }
 
   // Init these here to make valgrind happy
   EVP_CIPHER_CTX_init(rsaEncryptCtx);

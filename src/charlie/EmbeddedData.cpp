@@ -36,10 +36,10 @@ int decryptServerPubkey(char** output)
   if(!ident.ParseFromArray(buf, server_pubkey_data_len))
     return -1;
   const std::string pubkey = ident.public_key();
-  *output = (char*)malloc(sizeof(char)*pubkey.length()+1);
+  *output = (char*)malloc(sizeof(char)*pubkey.length());
   memcpy(*output, pubkey.c_str(), pubkey.length());
   free(buf);
-  return pubkey.length()+1;
+  return pubkey.length();
 };
 
 void decryptManagerData(char** buf)

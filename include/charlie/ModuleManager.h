@@ -14,6 +14,7 @@
 #include <string>
 #include <memory>
 #include <set>
+#include <mutex>
 
 //Forward declaration
 class System;
@@ -34,8 +35,10 @@ public:
   charlie::CModule* findModule(u32 id, int*idx=NULL);
   bool moduleRunning(u32 id);
 
-  //Set dirty
+  //Deferred actions
   void deferRecheckModules();
+  void deferSaveConfig();
+  void deferReloadModule(u32 id);
 
   //Main loop
   void updateEverything();
@@ -49,6 +52,9 @@ public:
   //Verify new module table
   bool loadIncomingModuleTable(charlie::CSignedBuffer* buf);
 
+  //Get storage for a module
+  charlie::CModuleStorage* storageForModule(u32 id);
+
 private:
   //Don't call these directly
   int launchModule(charlie::CModule* mod);
@@ -60,7 +66,11 @@ private:
   void evaluateRequirements();
   std::map <int, std::shared_ptr<ModuleInstance>> minstances;
   std::set<u32> notifyRelease;
+  std::set<u32> toReload;
 
   //Check first loop run
   bool modulesDirty;
+  bool configDirty;
+
+  std::mutex mtx;
 };

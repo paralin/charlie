@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include <mutex>
 #include <string.h>
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
@@ -48,10 +49,12 @@ class System {
     ModuleManager *mManager;
 
   public:
+    Crypto* crypto;
     charlie::CSaveContainer config;
+    std::mutex cmtx;
     char*    configData;
-    int      configDataSize;
+    int      configDataSize = 0;
     charlie::CModuleTable modTable;
 
-    Crypto* crypto;
+    void     validateAndSaveConfig();
 };

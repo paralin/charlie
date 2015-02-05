@@ -114,10 +114,10 @@ message CModuleInstance
 
 message CModuleStorage
 {
+  //ID of the module this storage refers to
+  optional uint32 id = 1;
   // Binary data for the module data buffer
-  optional bytes data = 1;
-  // Signature of the binary using identity
-  optional bytes sig  = 2;
+  optional CSignedBuffer buf = 2;
 }
 
 // ==== MODULE SPECIFIC, CHANGING PROTO ====

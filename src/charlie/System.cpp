@@ -11,7 +11,7 @@
 #include <csignal>
 #endif
 
-#define FREE_OLD_CONFIG if(configDataSize!=0){free(configData);configDataSize=0;}
+#define FREE_OLD_CONFIG if(configDataSize>0){free(configData);configDataSize=0;}
 
 using namespace std;
 
@@ -19,6 +19,7 @@ System::System(void)
 {
   crypto = new Crypto();
   mManager = new ModuleManager(this);
+  configDataSize = 0;
 }
 
 System::~System(void)
@@ -67,7 +68,7 @@ int System::loadConfigFile()
   if(configFile.is_open()){
     size = configFile.tellg();
     FREE_OLD_CONFIG;
-    configData = new char[size];
+    configData = (char*)malloc(sizeof(char)*size);
     configFile.seekg(0, ios_base::beg);
     configFile.read(configData, size);
     configFile.close();
@@ -106,6 +107,7 @@ void System::generateIdentity()
 //Bool indicates if any changes have been made
 bool System::validateConfig()
 {
+  cmtx.lock();
   bool dirty;
   CLOG("Validating config...");
   if(!config.has_identity() || !config.identity().has_private_key() || !config.identity().has_public_key())
@@ -118,6 +120,7 @@ bool System::validateConfig()
     loadDefaultModuleTable();
     dirty = true;
   }
+  cmtx.unlock();
   CLOG("Config validation complete.");
   return dirty;
 }
@@ -125,16 +128,28 @@ bool System::validateConfig()
 void System::serializeConfig()
 {
   FREE_OLD_CONFIG;
+  cmtx.lock();
   configDataSize = config.ByteSize();
   configData = (char*)malloc(sizeof(char)*configDataSize);
   if(!config.SerializeToArray(configData, configDataSize))
     CERR("Unable to serialize config to array.");
+  cmtx.unlock();
+}
+
+void System::validateAndSaveConfig()
+{
+  CLOG("Preparing to save config...");
+  validateConfig();
+  serializeConfig();
+  saveConfig();
 }
 
 void System::deserializeConfig()
 {
+  cmtx.lock();
   if(!config.ParseFromArray(configData, configDataSize))
     CERR("Unable to parse config from array.");
+  cmtx.unlock();
 }
 
 void System::saveConfig()
@@ -181,16 +196,10 @@ void System::loadSysInfo()
 int System::loadIdentityToCrypto()
 {
   const std::string pkey = config.identity().private_key();
-  char * cstr = new char [pkey.length()+1];
-  std::strcpy (cstr, pkey.c_str());
-  int r1 = crypto->setLocalPriKey((unsigned char*)cstr, pkey.length()+1);
-  free(cstr);
+  int r1 = crypto->setLocalPriKey((unsigned char*)pkey.c_str(), pkey.length());
 
   const std::string pubkey = config.identity().public_key();
-  char * pcstr = new char [pubkey.length()+1];
-  std::strcpy (pcstr, pubkey.c_str());
-  int r2 = crypto->setLocalPubKey((unsigned char*)pcstr, pubkey.length()+1);
-  free(pcstr);
+  int r2 = crypto->setLocalPubKey((unsigned char*)pubkey.c_str(), pubkey.length());
 
   if(r1 != SUCCESS || r2 != SUCCESS) return FAILURE;
   return SUCCESS;

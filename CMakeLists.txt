@@ -19,10 +19,17 @@ set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSS
 
 # add_definitions("-std=c++11 -D__FILE__ \"file\"")
 
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
-set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -Os -fvisibility=hidden -s")
-set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
+# SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0" CACHE STRING "compile flags" FORCE)
+
 add_definitions("-std=c++11")
+if(CMAKE_BUILD_TYPE MATCHES DEBUG)
+  set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -fvisibility=hidden")
+  set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
+  add_definitions("-O0")
+else()
+  set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -Os -fvisibility=hidden -s")
+  set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
+endif()
 
 # Build compile tool
 add_executable(cutils
@@ -35,24 +42,24 @@ add_executable(cutils
 target_link_libraries(cutils ${LIBS})
 
 # Redact files
-set(proto_SRC charlie.pb.redacted.cc)
+set(redact_proto charlie manager)
 
-set(REDACT_CH_PTH "${PROJECT_SOURCE_DIR}/src/protogen/charlie.pb.cc")
-if(EXISTS ${REDACT_CH_PTH})
-  MESSAGE( STATUS "Will redact charlie proto files." )
-  file(COPY "${PROJECT_SOURCE_DIR}/src/protogen/charlie.pb.h" DESTINATION ${CMAKE_BINARY_DIR})
+MESSAGE( STATUS "Will redact charlie proto files." )
+foreach(to_redact IN LISTS redact_proto)
+  MESSAGE( STATUS "Planning to redact ${to_redact} proto files..." )
+  file(COPY "${PROJECT_SOURCE_DIR}/src/protogen/${to_redact}.pb.h" DESTINATION ${CMAKE_BINARY_DIR})
   add_custom_command(
-    OUTPUT charlie.pb.redacted.cc
+    OUTPUT ${to_redact}.pb.redacted.cc
     COMMAND cutils
-    ARGS protoclean --input ${REDACT_CH_PTH} --output charlie.pb.redacted.cc
+    ARGS protoclean --input "${PROJECT_SOURCE_DIR}/src/protogen/${to_redact}.pb.cc" --output ${to_redact}.pb.redacted.cc
     DEPENDS cutils
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
-endif()
+endforeach()
 
 # Build manager
-file(GLOB manager_SRC "src/modules/manager/*.cpp" ${proto_SRC})
-add_library(manager SHARED ${manager_SRC})
+file(GLOB manager_SRC "src/modules/manager/*.cpp")
+add_library(manager SHARED ${manager_SRC} "charlie.pb.redacted.cc" "manager.pb.redacted.cc")
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 target_link_libraries(manager "${Boost_SYSTEM_LIBRARY}" "${Boost_THREAD_LIBRARY}")
 
@@ -126,7 +133,7 @@ add_custom_command(
 
 # Build charlie
 file(GLOB charlie_SRC "src/charlie/*.cpp")
-add_executable(charlie manager_data.c server_pubkey_data.c init_modtable_data.c ${charlie_SRC} ${proto_SRC})
+add_executable(charlie manager_data.c server_pubkey_data.c init_modtable_data.c ${charlie_SRC} "charlie.pb.redacted.cc")
 set_target_properties(charlie PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 
 #add_dependencies(charlie embed)

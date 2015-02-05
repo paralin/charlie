@@ -7,7 +7,7 @@
 #include <vector>
 #include <ModuleInterface.h>
 
-#define VISIBLE_FUNCTION __attribute__ ((visibility ("default")))
+#define VISIBLE __attribute__ ((visibility ("default")))
 
 #ifndef MODULE_ID
 #define MODULE_ID 0
@@ -20,27 +20,28 @@
 
 namespace modules
 {
-  class Module
+  class VISIBLE Module
   {
   public:
+    virtual ~Module() {};
     // Provide a pointer to the requested dependency
-    virtual void injectDependency (u32 id, void* dep);
+    virtual void injectDependency (u32 id, void* dep) = 0;
     // When a dep is released
-    virtual void releaseDependency(u32 id);
+    virtual void releaseDependency(u32 id) = 0;
     // Provide a handle to the module interface
-    virtual void setModuleInterface(ModuleInterface* inter);
+    virtual void setModuleInterface(ModuleInterface* inter) = 0;
     // Release everything and prepare to be deleted
-    virtual void shutdown();
+    virtual void shutdown() = 0;
 
     // If module->mainfcn() then this will be run
-    virtual void module_main();
+    virtual void module_main() = 0;
   };
 };
 
 #define CHARLIE_CONSTRUCT(CLASS) \
   extern "C"\
   {\
-    G_MODULE_EXPORT VISIBLE_FUNCTION modules::Module* cmconstr() \
+    G_MODULE_EXPORT VISIBLE modules::Module* cmconstr() \
     {\
       return new CLASS();\
     }\

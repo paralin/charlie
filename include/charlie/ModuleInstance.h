@@ -26,8 +26,9 @@ public:
   std::set<u32> modReqs;
   void notifyModuleReleased(u32 id);
 
-private:
   charlie::CModule* module;
+
+private:
   std::string libPath;
   inline void setStatus(::charlie::EModuleStatus value);
   modules::Module* baseModule;

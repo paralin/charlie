@@ -1,6 +1,7 @@
 #include <Common.h>
 #include <Module.h>
 #include <Logging.h>
+#include <protogen/manager.pb.h>
 
 namespace modules
 {
@@ -21,6 +22,10 @@ namespace modules
 
     private:
       ModuleInterface* mInter;
+      charlie::CModuleStorage* stor;
+      CManagerConfig config;
+
+      void parseStorage();
     };
   };
 };

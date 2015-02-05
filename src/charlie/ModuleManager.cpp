@@ -14,6 +14,8 @@
 ModuleManager::ModuleManager(System* system)
 {
   sys = system;
+  configDirty = false;
+  modulesDirty = false;
 }
 
 ModuleManager::~ModuleManager()
@@ -249,14 +251,49 @@ void ModuleManager::evaluateRequirements()
 
 void ModuleManager::deferRecheckModules()
 {
+  mtx.lock();
+  CLOG("Deferring modules update...");
   modulesDirty = true;
+  mtx.unlock();
+}
+
+void ModuleManager::deferSaveConfig()
+{
+  mtx.lock();
+  CLOG("Deferring config save...");
+  configDirty = true;
+  mtx.unlock();
+}
+
+void ModuleManager::deferReloadModule(u32 id)
+{
+  mtx.lock();
+  CLOG("Deferring reload of "<<id<<"...");
+  toReload.insert(id);
+  mtx.unlock();
 }
 
 void ModuleManager::updateEverything()
 {
+  mtx.lock();
+  if(toReload.size()>0)
+  {
+    mtx.unlock();
+    for(auto id : toReload)
+    {
+      if(moduleRunning(id))
+      {
+        CLOG("Reloading "<<id<<" as requested...");
+        minstances.erase(id);
+      }
+    }
+    mtx.lock();
+    toReload.clear();
+  }
+  mtx.unlock();
   if(modulesDirty)
     evaluateRequirements();
-  modulesDirty = false;
+  mtx.lock();
   if(notifyRelease.size()>0){
     for (auto &any : minstances ) {
       std::shared_ptr<ModuleInstance> inst = any.second;
@@ -265,9 +302,61 @@ void ModuleManager::updateEverything()
     }
     notifyRelease.clear();
   }
+
+  if(configDirty)
+    sys->validateAndSaveConfig();
+
+  modulesDirty = false;
+  configDirty  = false;
+  mtx.unlock();
 }
 
 void ModuleManager::onModuleReleased(u32 id)
 {
+  mtx.lock();
   notifyRelease.insert(id);
+  mtx.unlock();
+}
+
+charlie::CModuleStorage* ModuleManager::storageForModule(u32 id)
+{
+  sys->cmtx.lock();
+  charlie::CModuleStorage* ptr = NULL;
+  bool found = false;
+  int i=0;
+  for(auto conf : sys->config.mod_configs())
+  {
+    if(conf.id() == id)
+    {
+      found = true;
+      break;
+    }
+    i++;
+  }
+  if(!found)
+  {
+    ptr = sys->config.add_mod_configs();
+    ptr->set_id(id);
+    /*
+    charlie::CSignedBuffer* buf = ptr->mutable_buf();
+    buf->set_data("", 0);
+    if(updateSignedBuf(buf, sys->crypto) == FAILURE)
+    {
+      CERR("Unable to sign module storage for "<<id);
+    }
+    */
+  }
+  else
+  {
+    ptr = sys->config.mutable_mod_configs(i);
+    charlie::CSignedBuffer* buf = ptr->mutable_buf();
+    if(!buf->has_data()) buf->Clear();
+    else if(verifySignedBuf(buf, sys->crypto, false) != SUCCESS)
+    {
+      CERR("Config for "<<id<<" verify failed, clearing it...");
+      buf->Clear();
+    }
+  }
+  sys->cmtx.unlock();
+  return ptr;
 }
