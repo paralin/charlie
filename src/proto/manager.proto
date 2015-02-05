@@ -1,0 +1,8 @@
+option optimize_for = LITE_RUNTIME;
+import "charlie.proto";
+package modules.manager;
+
+message CManagerConfig
+{
+  optional string test = 1;
+}
