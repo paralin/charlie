@@ -28,7 +28,7 @@ class ModuleInterImpl : public modules::ModuleInterface
     charlie::CModuleStorage* getStorage();
 
     //Updates signature and saves storage.
-    void saveStorage(void* data, size_t len);
+    void saveStorage(const char* data, size_t len);
 
     //Will unload and reload this module
     void requestReload();

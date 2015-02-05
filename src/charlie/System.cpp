@@ -108,7 +108,7 @@ void System::generateIdentity()
 bool System::validateConfig()
 {
   cmtx.lock();
-  bool dirty;
+  bool dirty = false;
   CLOG("Validating config...");
   if(!config.has_identity() || !config.identity().has_private_key() || !config.identity().has_public_key())
   {

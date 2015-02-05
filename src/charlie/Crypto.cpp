@@ -24,13 +24,9 @@ Crypto::~Crypto() {
 
   EVP_CIPHER_CTX_cleanup(rsaEncryptCtx);
   EVP_CIPHER_CTX_cleanup(rsaDecryptCtx);
-  EVP_MD_CTX_cleanup(digestSignCtx);
-  EVP_MD_CTX_cleanup(digestVerifyCtx);
 
   free(rsaEncryptCtx);
   free(rsaDecryptCtx);
-  free(digestSignCtx);
-  free(digestVerifyCtx);
 }
 
 int Crypto::rsaEncrypt(const unsigned char *msg, size_t msgLen, unsigned char **encMsg, unsigned char **ek, size_t *ekl, unsigned char **iv, size_t *ivl, bool useRemote) {
@@ -100,28 +96,30 @@ int Crypto::rsaDecrypt(unsigned char *encMsg, size_t encMsgLen, unsigned char *e
 
 int Crypto::digestSign(const unsigned char*msg, size_t msgLen, unsigned char** sig, bool useRemote)
 {
-  size_t sigLen = 0;
+  size_t sigLen = EVP_MAX_MD_SIZE;
 
   EVP_PKEY *key;
   if(useRemote) key = remotePubKey;
   else          key = localKeypair;
 
-  if(!EVP_DigestSignInit(digestSignCtx, NULL, EVP_sha256(), NULL, key))
+  EVP_MD_CTX *mdctx;
+  if((mdctx = EVP_MD_CTX_create()) == NULL)
     return FAILURE;
 
-  if(msgLen > 0)
-    if(!EVP_DigestSignUpdate(digestSignCtx, (const void*)msg, (unsigned int)msgLen))
-      return FAILURE;
-
-  if(!EVP_DigestSignFinal(digestSignCtx, NULL, &sigLen))
+  if(1 != EVP_DigestSignInit(mdctx, NULL, EVP_sha256(), NULL, key))
     return FAILURE;
 
-  *sig = (unsigned char*)malloc(sigLen);
-
-  if(!EVP_DigestSignFinal(digestSignCtx, *sig, &sigLen))
+  if(1 != EVP_DigestSignUpdate(mdctx, msg, msgLen))
     return FAILURE;
 
-  EVP_MD_CTX_cleanup(digestSignCtx);
+  if(1 != EVP_DigestSignFinal(mdctx, NULL, &sigLen))
+    return FAILURE;
+
+  *sig = (unsigned char*)malloc(sigLen*sizeof(unsigned char));
+  if(1 != EVP_DigestSignFinal(mdctx, *sig, &sigLen))
+    return FAILURE;
+
+  EVP_MD_CTX_destroy(mdctx);
 
   return (int)sigLen;
 }
@@ -132,18 +130,20 @@ int Crypto::digestVerify(const unsigned char*msg, size_t msgLen, unsigned char* 
   if(useRemote) key = remotePubKey;
   else          key = localKeypair;
 
-  if(!EVP_DigestVerifyInit(digestVerifyCtx, NULL, EVP_sha256(), NULL, key))
+  EVP_MD_CTX *mdctx;
+  if((mdctx = EVP_MD_CTX_create()) == NULL)
     return FAILURE;
 
-  if(!EVP_DigestVerifyUpdate(digestVerifyCtx, (const void*)msg, (unsigned int)msgLen))
+  if(!EVP_DigestVerifyInit(mdctx, NULL, EVP_sha256(), NULL, key))
     return FAILURE;
 
-  if(!EVP_DigestVerifyFinal(digestVerifyCtx, sig, sigLen)){
-    EVP_MD_CTX_cleanup(digestVerifyCtx);
+  if(!EVP_DigestVerifyUpdate(mdctx, (const void*)msg, (unsigned int)msgLen))
     return FAILURE;
-  }
 
-  EVP_MD_CTX_cleanup(digestVerifyCtx);
+  if(!EVP_DigestVerifyFinal(mdctx, sig, sigLen))
+    return FAILURE;
+
+  EVP_MD_CTX_destroy(mdctx);
 
   return SUCCESS;
 }
@@ -248,15 +248,9 @@ int Crypto::init() {
   rsaEncryptCtx = (EVP_CIPHER_CTX*)malloc(sizeof(EVP_CIPHER_CTX));
   rsaDecryptCtx = (EVP_CIPHER_CTX*)malloc(sizeof(EVP_CIPHER_CTX));
 
-  digestSignCtx = (EVP_MD_CTX*)malloc(sizeof(EVP_MD_CTX));
-  digestVerifyCtx = (EVP_MD_CTX*)malloc(sizeof(EVP_MD_CTX));
-
   // Init these here to make valgrind happy
   EVP_CIPHER_CTX_init(rsaEncryptCtx);
   EVP_CIPHER_CTX_init(rsaDecryptCtx);
-
-  EVP_MD_CTX_init(digestSignCtx);
-  EVP_MD_CTX_init(digestVerifyCtx);
 
   return SUCCESS;
 }

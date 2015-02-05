@@ -62,9 +62,6 @@ private:
     EVP_CIPHER_CTX *rsaEncryptCtx;
     EVP_CIPHER_CTX *rsaDecryptCtx;
 
-    EVP_MD_CTX *digestSignCtx;
-    EVP_MD_CTX *digestVerifyCtx;
-
     int init();
 };
 

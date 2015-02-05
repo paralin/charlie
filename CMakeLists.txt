@@ -98,7 +98,7 @@ add_custom_command(
   OUTPUT init_mtable
   COMMAND cutils
   ARGS genmodtable --xorkey 70016b8d0c80f1393f8155f897f7e63b7fc2ef0b45c42763325019ef8983ace0 --output init_mtable --sign --hash --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json
-  DEPENDS cutils server_identity
+  DEPENDS cutils server_identity manager
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
 

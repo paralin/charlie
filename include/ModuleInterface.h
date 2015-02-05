@@ -29,7 +29,7 @@ namespace modules
       virtual charlie::CModuleStorage* getStorage() = 0;
 
       //Updates signature and saves storage.
-      virtual void saveStorage(void* data, size_t len) = 0;
+      virtual void saveStorage(const char* data, size_t len) = 0;
 
       //Will unload and reload this module
       virtual void requestReload() = 0;

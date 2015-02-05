@@ -24,8 +24,6 @@ namespace modules
       ModuleInterface* mInter;
       charlie::CModuleStorage* stor;
       CManagerConfig config;
-
-      void parseStorage();
     };
   };
 };

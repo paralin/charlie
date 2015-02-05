@@ -54,7 +54,7 @@ charlie::CModuleStorage* ModuleInterImpl::getStorage()
   return mManager->storageForModule(inst->module->id());
 }
 
-void ModuleInterImpl::saveStorage(void* data, size_t len)
+void ModuleInterImpl::saveStorage(const char* data, size_t len)
 {
   charlie::CModuleStorage* stor = getStorage();
   charlie::CSignedBuffer* buf = stor->mutable_buf();
