@@ -3,11 +3,6 @@
 #include <boost/asio/ip/host_name.hpp>
 #define s8 char
 
-std::string getMachineName()
-{
-  return boost::asio::ip::host_name();
-}
-
 #if defined(_WIN64) || defined(_WIN32)
 
 #include <windows.h>
@@ -59,6 +54,14 @@ u16 getVolumeHash()
   u16 hash = (u16)(( serialNum + ( serialNum >> 16 )) & 0xFFFF );
 
   return hash;
+}
+
+std::string getMachineName()
+{
+  static char computerName[1024];
+  DWORD size = 1024;
+  GetComputerName( computerName, &size );
+  return std::string(&(computerName[0]));
 }
 
 u16 getCpuHash()
@@ -199,6 +202,18 @@ void getMacHash( u16& mac1, u16& mac2 )
     mac2 = mac1;
     mac1 = tmp;
   }
+}
+
+std::string getMachineName()
+{
+  static struct utsname u;
+
+  if ( uname( &u ) < 0 )
+  {
+    assert(0);
+    return std::string("unknown");
+  }
+  return std::string(u.nodename);
 }
 
 u16 getVolumeHash()
