@@ -315,7 +315,7 @@ const char* getSystemUniqueId()
 
   std::transform(buf.begin(), buf.end(), buf.begin(), ::toupper);
 
-  char * cstr = new char [buf.length()+1];
+  char * cstr = (char*)malloc((buf.length()+1)*sizeof(char));
   std::strcpy (cstr, buf.c_str());
   return cstr;
 }

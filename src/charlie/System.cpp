@@ -46,12 +46,12 @@ void System::loadRootPath(const char* arvg)
   full_path = fs::system_complete( fs::path( pth2 ) );
 
   std::string exePath = full_path.string();
-  char * cexePath = new char [exePath.length()+1];
+  char * cexePath = (char*)malloc((exePath.length()+1)*sizeof(char));
   std::strcpy (cexePath, exePath.c_str());
   sysInfo.exe_path = (const char*)cexePath;
   CLOG("Path to exe:  " << sysInfo.exe_path);
   std::string rootPath = (full_path.remove_filename()/"/").string();
-  char * crootPath = new char [rootPath.length()+1];
+  char * crootPath = (char*)malloc(sizeof(char)*(rootPath.length()+1));
   std::strcpy (crootPath, rootPath.c_str());
   sysInfo.root_path = (const char*)crootPath;
   CLOG("Path to root: " << sysInfo.root_path);
@@ -188,7 +188,7 @@ void System::loadSysInfo()
   std::string filename (sysInfo.b64_system_id);
   filename = filename.substr(0, filenameLen);
   CLOG("Filename: "<<filename);
-  char * cstr = new char [filename.length()+1];
+  char * cstr = (char*)malloc((filename.length()+1)*sizeof(char));
   std::strcpy (cstr, filename.c_str());
   sysInfo.config_filename = (const char*)cstr;
 }

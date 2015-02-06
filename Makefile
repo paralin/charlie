@@ -1,7 +1,7 @@
-all: proto makedbg compile
-release: proto makerel compile
-mxe: setupmxe proto makemxe compile
-mxer: setupmxe proto makemxer compile
+all: makedbg compile
+release: makerel compile
+mxe: setupmxe makemxe compile
+mxer: setupmxe makemxer compile
 
 setupmxe:
 	git submodule update --init
@@ -12,19 +12,19 @@ clean:
 	-rm -rf build makerel makedbg proto makemxe makemxer
 
 make: makedbg
-makedbg:
+makedbg: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=DEBUG
 	touch makedbg
-makerel:
+makerel: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=RELEASE
 	touch makerel
-makemxe:
+makemxe: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch makemxe
-makemxer:
+makemxer: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch makemxer
@@ -39,3 +39,6 @@ proto:
 	cd src/proto && protoc --cpp_out=../protogen/ ./*.proto
 	cp ./src/protogen/*.h ./include/protogen/
 	touch proto
+
+valgrind: makedbg compile
+	cd build && valgrind --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../valgrind.supp ./charlie
