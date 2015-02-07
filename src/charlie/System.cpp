@@ -102,6 +102,8 @@ void System::generateIdentity()
   CLOG(pkey);
   CLOG(pubkey);
   CLOG("========================");
+  free(pkey);
+  free(pubkey);
 }
 
 //Bool indicates if any changes have been made
@@ -376,5 +378,6 @@ int System::main(int argc, const char* argv[])
     boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
   }
   CLOG("Exiting...");
+  FREE_OLD_CONFIG;
   return 0;
 }

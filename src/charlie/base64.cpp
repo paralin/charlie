@@ -1,28 +1,23 @@
+#include <openssl/buffer.h>
 #include <charlie/base64.h>
 
 char* base64Encode(const unsigned char *message, const size_t length) {
-    BIO *bio;
-    BIO *b64;
-    FILE* stream;
+    BIO *bmem, *b64;
+    BUF_MEM *bptr;
 
-    int encodedSize = 4*ceil((double)length/3);
-    char *buffer = (char*)malloc(encodedSize+1);
-    if(buffer == NULL) {
-        fprintf(stderr, "Failed to allocate memory\n");
-        exit(1);
-    }
-
-    stream = fmemopen(buffer, encodedSize+1, "w");
     b64 = BIO_new(BIO_f_base64());
-    bio = BIO_new_fp(stream, BIO_NOCLOSE);
-    bio = BIO_push(b64, bio);
-    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
-    BIO_write(bio, message, length);
-    (void)BIO_flush(bio);
-    BIO_free_all(bio);
-    fclose(stream);
+    bmem = BIO_new(BIO_s_mem());
+    b64 = BIO_push(b64, bmem);
+    BIO_write(b64, message, length);
+    BIO_flush(b64);
+    BIO_get_mem_ptr(b64, &bptr);
 
-    return buffer;
+    char* buf = (char*)malloc(bptr->length);
+    memcpy(buf, bptr->data, bptr->length-1);
+    buf[bptr->length-1] = 0;
+
+    BIO_free_all(b64);
+    return buf;
 }
 
 int base64Decode(const char *b64message, const size_t length, unsigned char **buffer) {
@@ -35,17 +30,18 @@ int base64Decode(const char *b64message, const size_t length, unsigned char **bu
         fprintf(stderr, "Failed to allocate memory\n");
         exit(1);
     }
-    FILE* stream = fmemopen((char*)b64message, length, "r");
 
+
+    bio = BIO_new(BIO_s_mem());
+    BIO_puts(bio, b64message);
     b64 = BIO_new(BIO_f_base64());
-    bio = BIO_new_fp(stream, BIO_NOCLOSE);
     bio = BIO_push(b64, bio);
+
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
     decodedLength = BIO_read(bio, *buffer, length);
     (*buffer)[decodedLength] = '\0';
 
     BIO_free_all(bio);
-    fclose(stream);
 
     return decodedLength;
 }
