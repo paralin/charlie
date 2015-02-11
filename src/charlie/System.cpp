@@ -317,12 +317,12 @@ void System::dropDefaultManager()
 bool continueLoop=true;
 
 //Debug signal handlers
-#ifndef NDEBUG
+#ifndef CNDEBUG
 void ctrlchandler(int) {
   CLOG("Caught ctrl c, quitting...");
   continueLoop = false;
 }
-void killhandler(int) { 
+void killhandler(int) {
   CLOG("Caught kill, quitting...");
   continueLoop = false;
 }
@@ -330,7 +330,7 @@ void killhandler(int) {
 
 int System::main(int argc, const char* argv[])
 {
-#ifndef NDEBUG
+#ifndef CNDEBUG
   signal(SIGINT, ctrlchandler);
   signal(SIGTERM, killhandler);
 #endif
