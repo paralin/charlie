@@ -49,6 +49,8 @@ struct GenModtableCommand : public GenericOptions {
   std::string identity_;
   std::string identxor_;
   bool        hash_;
+  std::string libprefix_;
+  std::string libsuffix_;
 };
 
 struct EmbedCommand : public GenericOptions {
@@ -264,6 +266,8 @@ Command ParseOptions(int argc, const char *argv[])
       ("identity", po::value<std::string>(), "Identity for CSignedBuffer")
       ("identxor", po::value<std::string>(), "XOR key for identity file")
       ("output", po::value<std::string>(), "File to write the module table to")
+      ("libprefix", po::value<std::string>(), "Prefix of a library file")
+      ("libsuffix", po::value<std::string>(), "Suffix of a library file")
       ("json", po::value<std::string>(), "Input json file for the module table.");
 
     std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
@@ -278,6 +282,8 @@ Command ParseOptions(int argc, const char *argv[])
     {
       comm.json_ = vm["json"].as<std::string>();
       comm.output_ = vm["output"].as<std::string>();
+      comm.libprefix_ = vm["libprefix"].as<std::string>();
+      comm.libsuffix_ = vm["libsuffix"].as<std::string>();
       comm.sign_ = false;
       if(vm.count("hash") > 0){
         comm.hash_ = true;
@@ -668,7 +674,9 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
       }
       if(comm->hash_)
       {
-        gchar* filename = g_module_build_path((const gchar *) full_path->string().c_str(), name.c_str());
+        //gchar* filename = g_module_build_path((const gchar *) full_path->string().c_str(), name.c_str());
+        std::string fns = full_path->string()+"/"+comm->libprefix_+name+comm->libsuffix_;
+        const char* filename = fns.c_str();
         CLOG("filename: "<<filename);
         unsigned char* digest;
         if(sha256File(filename, &digest)!=0)

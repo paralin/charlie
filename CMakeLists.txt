@@ -1,45 +1,87 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
+if(WINCC)
+  #Undo override by the toolchain
+  MESSAGE( STATUS "Overriding build type ${CMAKE_BUILD_TYPE} with ${ACTUAL_BUILD_TYPE}...")
+  set(CMAKE_BUILD_TYPE ${ACTUAL_BUILD_TYPE})
+endif()
 
 project(charlie)
 
+#Dynamically link
+find_package(DL REQUIRED)
+find_package(Threads REQUIRED)
+set(THREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
+
+#set(LINK_SEARCH_START_STATIC ON)
+#set(LINK_SEARCH_END_STATIC ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX} "so")
+#SET(BUILD_SHARED_LIBRARIES OFF)
+set(STATIC_LIBC_ARGS "-static-libgcc -static-libstdc++")
+
 find_package(Boost REQUIRED COMPONENTS filesystem system program_options regex thread chrono)
 find_package(Protobuf REQUIRED)
 find_package(GLIB REQUIRED COMPONENTS gmodule)
 find_package(OpenSSL REQUIRED)
 
-include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
+#Remove pthread from the boost libraries
+list(REMOVE_AT Boost_LIBRARIES -1)
+
+include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
 include_directories("include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/rapidjson/include/")
 
-set(LIBS ${Boost_LIBRARIES} ${GLIB_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} dl)
+#set(LIBS ${DL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${DL_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+MESSAGE( STATUS "GModule: ${GLIB_GMODULE_LIBRARIES}")
+MESSAGE( STATUS "GLIB: ${GLIB_LIBRARIES}")
+set(LIBS -Wl,-Bstatic ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
-# add_definitions("-std=c++11 -D__FILE__ \"file\"")
-
-# SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0" CACHE STRING "compile flags" FORCE)
-
-add_definitions("-std=c++11")
-if(CMAKE_BUILD_TYPE MATCHES DEBUG)
-  set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -fvisibility=hidden")
-  set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
-  add_definitions("-O0")
-else()
-  set(STEALTH_FLAGS "-fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -Os -fvisibility=hidden -s")
-  set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
+if(WINCC)
+  find_package(ZLIB REQUIRED)
+  find_package(Libiconv REQUIRED)
+  find_library(WINSOCK_LIBRARY NAMES ws2_32
+    PATHS /lib
+    /usr/lib
+    /usr/local/lib)
+  find_library(IPHLPAP_LIBRARY NAMES iphlpapi
+    PATHS /lib
+    /usr/lib
+    /usr/local/lib)
+  find_package(Intl REQUIRED)
+  list(APPEND LIBS -Wl,-Bstatic ${ZLIB_LIBRARIES} ${Intl_LIBRARIES} winmm ${IPHLPAP_LIBRARY})
 endif()
 
-# Build compile tool
-add_executable(cutils
-  "src/cutils/main.cpp"
-  "src/protogen/charlie.pb.cc"
-  "src/charlie/xor.cpp"
-  "src/charlie/Crypto.cpp"
-  "src/charlie/hash.cpp"
-  )
-target_link_libraries(cutils ${LIBS})
+if(WINCC)
+  add_definitions("-DPTW32_STATIC_LIB")
+  LIST(APPEND LIBS ${WINSOCK_LIBRARY} ${LIBICONV_LIBRARY} ${Intl_LIBRARIES})
+endif()
+
+set(STEALTH_FLAGS "-std=c++11 -fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  #set(STEALTH_FLAGS "${STEALTH_FLAGS}")
+  set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
+else()
+  set(STEALTH_FLAGS "${STEALTH_FLAGS} -Os -s")
+  set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE -fPIC")
+endif()
+
+if(NO_TOOLS)
+  add_custom_target(cutils COMMENT "Not compiling tools.")
+else()
+  # Build compile tool
+  add_executable(cutils
+    "src/cutils/main.cpp"
+    "src/protogen/charlie.pb.cc"
+    "src/charlie/xor.cpp"
+    "src/charlie/Crypto.cpp"
+    "src/charlie/hash.cpp"
+    )
+  target_link_libraries(cutils ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_REGEX_LIBRARY} ${LIBS})
+endif()
 
 # Redact files
 set(redact_proto charlie manager)
@@ -50,7 +92,7 @@ foreach(to_redact IN LISTS redact_proto)
   file(COPY "${PROJECT_SOURCE_DIR}/src/protogen/${to_redact}.pb.h" DESTINATION ${CMAKE_BINARY_DIR})
   add_custom_command(
     OUTPUT ${to_redact}.pb.redacted.cc
-    COMMAND cutils
+    COMMAND "${CMAKE_BINARY_DIR}/cutils"
     ARGS protoclean --input "${PROJECT_SOURCE_DIR}/src/protogen/${to_redact}.pb.cc" --output ${to_redact}.pb.redacted.cc
     DEPENDS cutils
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -61,7 +103,8 @@ endforeach()
 file(GLOB manager_SRC "src/modules/manager/*.cpp")
 add_library(manager SHARED ${manager_SRC} "charlie.pb.redacted.cc" "manager.pb.redacted.cc")
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
-target_link_libraries(manager "${Boost_SYSTEM_LIBRARY}" "${Boost_THREAD_LIBRARY}")
+set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+target_link_libraries(manager -Wl,-Bstatic ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
 
 # Set the list of libraries to compile embed code
 set(embed_libraries manager)
@@ -78,7 +121,7 @@ else()
   MESSAGE( STATUS "Server identity doesn't exist, one will be re-generated..." )
   add_custom_command(
     OUTPUT server_identity
-    COMMAND cutils
+    COMMAND "${CMAKE_BINARY_DIR}/cutils"
     ARGS genident --output server_identity --xorkey serveridentity
     DEPENDS cutils
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -87,7 +130,7 @@ endif()
 MESSAGE( STATUS "The server identity will be encoded into a pubkey..." )
 add_custom_command(
   OUTPUT server_pubkey
-  COMMAND cutils
+  COMMAND "${CMAKE_BINARY_DIR}/cutils"
   ARGS genpubkey --identity server_identity --output server_pubkey --xorkey serveridentity
   DEPENDS cutils server_identity
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -96,8 +139,8 @@ add_custom_command(
 MESSAGE( STATUS "Planning to generate the initial module table..." )
 add_custom_command(
   OUTPUT init_mtable
-  COMMAND cutils
-  ARGS genmodtable --xorkey 70016b8d0c80f1393f8155f897f7e63b7fc2ef0b45c42763325019ef8983ace0 --output init_mtable --sign --hash --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json
+  COMMAND "${CMAKE_BINARY_DIR}/cutils"
+  ARGS genmodtable --xorkey 70016b8d0c80f1393f8155f897f7e63b7fc2ef0b45c42763325019ef8983ace0 --output init_mtable --sign --hash --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json --libprefix "${CMAKE_SHARED_LIBRARY_PREFIX}" --libsuffix "${CMAKE_SHARED_LIBRARY_SUFFIX}"
   DEPENDS cutils server_identity manager
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
@@ -106,8 +149,8 @@ add_custom_command(
 foreach(to_embed_lib IN LISTS embed_libraries)
   add_custom_command(
     OUTPUT ${to_embed_lib}_data.c
-    COMMAND cutils
-    ARGS embed --output ${to_embed_lib}_data.c --input "${CMAKE_BINARY_DIR}/${to_embed_lib}" --xorkey GpVDIRK4KfsYC9WGbyXZ --usegmodule
+    COMMAND "${CMAKE_BINARY_DIR}/cutils"
+    ARGS embed --output ${to_embed_lib}_data.c --input "${CMAKE_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}${to_embed_lib}${CMAKE_SHARED_LIBRARY_SUFFIX}" --xorkey GpVDIRK4KfsYC9WGbyXZ
     DEPENDS ${to_embed_lib} cutils
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
@@ -116,7 +159,7 @@ endforeach()
 # Compile server pubkey into c file
 add_custom_command(
   OUTPUT server_pubkey_data.c
-  COMMAND cutils
+  COMMAND "${CMAKE_BINARY_DIR}/cutils"
   ARGS embed --output server_pubkey_data.c --input "${CMAKE_BINARY_DIR}/server_pubkey"
   DEPENDS server_pubkey cutils
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -125,7 +168,7 @@ add_custom_command(
 # Compile initial module table into c file
 add_custom_command(
   OUTPUT init_modtable_data.c
-  COMMAND cutils
+  COMMAND "${CMAKE_BINARY_DIR}/cutils"
   ARGS embed --output init_modtable_data.c --input "${CMAKE_BINARY_DIR}/init_mtable"
   DEPENDS init_mtable cutils
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -135,6 +178,7 @@ add_custom_command(
 file(GLOB charlie_SRC "src/charlie/*.cpp")
 add_executable(charlie manager_data.c server_pubkey_data.c init_modtable_data.c ${charlie_SRC} "charlie.pb.redacted.cc")
 set_target_properties(charlie PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
+set_target_properties(charlie PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 
 #add_dependencies(charlie embed)
 target_link_libraries(charlie ${LIBS})

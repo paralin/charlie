@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
-#include <mutex>
 #include <string.h>
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
@@ -20,6 +19,7 @@
 #include <charlie/SystemInfo.h>
 #include <charlie/ModuleTable_Data.h>
 #include <charlie/ManagerModule_Data.h>
+#include <boost/thread/mutex.hpp>
 
 namespace fs = boost::filesystem;
 
@@ -51,7 +51,7 @@ class System {
   public:
     Crypto* crypto;
     charlie::CSaveContainer config;
-    std::mutex cmtx;
+    boost::mutex cmtx;
     char*    configData;
     int      configDataSize = 0;
     charlie::CModuleTable modTable;

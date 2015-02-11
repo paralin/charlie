@@ -1,5 +1,6 @@
 //xxx: Later maybe this can be automated?
 #define MODULE_ID 3133916783
+#define CHARLIE_MODULE
 #include <modules/manager/Manager.h>
 #include <boost/thread.hpp>
 
@@ -29,22 +30,6 @@ void ManagerModule::injectDependency(u32 id, void* dep)
 void ManagerModule::releaseDependency(u32 id)
 {
   MLOG("Dep released "<<id);
-}
-
-std::string random_string( size_t length )
-{
-  auto randchar = []() -> char
-  {
-    const char charset[] =
-      "0123456789"
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-      "abcdefghijklmnopqrstuvwxyz";
-    const size_t max_index = (sizeof(charset) - 1);
-    return charset[ rand() % max_index ];
-  };
-  std::string str(length,0);
-  std::generate_n( str.begin(), length, randchar );
-  return str;
 }
 
 bool running = true;

@@ -5,7 +5,8 @@ mxer: setupmxe makemxer compile
 
 setupmxe:
 	git submodule update --init
-	cd deps/mxe && make gcc boost curl libffi libltdl zlib openssl glib protobuf
+	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf
+	sed -i '/set(CMAKE_BUILD_TYPE Release)/d' ./deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake
 	touch setupmxe
 
 clean:
@@ -14,19 +15,31 @@ clean:
 make: makedbg
 makedbg: proto
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=DEBUG
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug
 	touch makedbg
 makerel: proto
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=RELEASE
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
 	touch makerel
 makemxe: proto
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug
+	cd build && make cutils
+	mv ./build/cutils cutils
+	-rm -rf build
+	-mkdir build
+	mv ./cutils ./build/cutils
+	cd build && cmake .. -DACTUAL_BUILD_TYPE=Debug -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch makemxe
 makemxer: proto
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
+	cd build && make cutils
+	mv ./build/cutils cutils
+	-rm -rf build
+	-mkdir build
+	mv ./cutils ./build/cutils
+	cd build && cmake .. -DACTUAL_BUILD_TYPE=Release -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes -DCNDEBUG
 	touch makemxer
 compile:
 	cd build && make -j4
