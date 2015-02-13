@@ -35,6 +35,8 @@ namespace modules
 
     // If module->mainfcn() then this will be run
     virtual void module_main() = 0;
+
+    virtual void* getPublicInterface() = 0;
   };
 };
 

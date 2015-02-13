@@ -5,6 +5,11 @@
       "name": "manager",
       "mainfcn": true,
       "initial": true
+    },
+    {
+      "name": "persist",
+      "mainfcn": false,
+      "initial": false
     }
   ]
 }

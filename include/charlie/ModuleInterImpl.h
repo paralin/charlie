@@ -1,5 +1,6 @@
 #pragma once
 #include <ModuleInterface.h>
+#include <charlie/SystemInfo.h>
 
 class ModuleManager;
 class ModuleInstance;
@@ -10,7 +11,7 @@ class ModuleInterImpl : public modules::ModuleInterface
     ~ModuleInterImpl();
 
     //Request that a module be loaded
-    int  requireDependency(u32 id);
+    void requireDependency(u32 id);
     void releaseDependency(u32 id);
 
     //Immediately commit changes
@@ -24,6 +25,7 @@ class ModuleInterImpl : public modules::ModuleInterface
     charlie::CSignedBuffer* getModuleTable();
 
     Crypto* getCrypto();
+    SystemInfo* getSysInfo();
 
     charlie::CModuleStorage* getStorage();
 
@@ -32,6 +34,11 @@ class ModuleInterImpl : public modules::ModuleInterface
 
     //Will unload and reload this module
     void requestReload();
+
+    //Trigger a recheck of the modules
+    void triggerModuleRecheck();
+
+    int relocateEverything(const char* targetPath);
 
   private:
     ModuleManager *mManager;

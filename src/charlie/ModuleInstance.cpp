@@ -6,7 +6,7 @@
 #ifndef CHARLIE_MODULE
 #define MLOG(msg) CLOG("["<<module->id()<<"i] "<<msg);
 #define MERR(msg) CERR("["<<module->id()<<"i]! "<<msg);
-#define EMPTYCATCH(sect) try{sect}catch(...){}
+#define EMPTYCATCH(sect) try{sect;}catch(...){}
 #endif
 
 ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleManager* man)
@@ -17,6 +17,7 @@ ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleMa
   this->mManager = man;
   this->mInter = new ModuleInterImpl(man, this);
   this->mainThread = NULL;
+  this->publicInterface = NULL;
   setStatus(charlie::MODULE_INIT);
 }
 
@@ -68,6 +69,7 @@ void ModuleInstance::unload()
     }
     gmod = NULL;
   }
+  this->publicInterface = NULL;
   setStatus(charlie::MODULE_INIT);
 }
 
@@ -142,6 +144,10 @@ bool ModuleInstance::load()
     }
     setStatus(charlie::MODULE_LOADED_RUNNING);
   }
+
+  MLOG("Attempting to fetch pointer to public interface...");
+  EMPTYCATCH(publicInterface = ninst->getPublicInterface());
+
   return true;
 }
 
@@ -156,4 +162,10 @@ void ModuleInstance::notifyModuleReleased(u32 id)
 {
   if(baseModule != NULL)
     EMPTYCATCH(baseModule->releaseDependency(id););
+}
+
+void ModuleInstance::notifyModuleLoaded(u32 id, void* ptr)
+{
+  if(baseModule != NULL)
+    EMPTYCATCH(baseModule->injectDependency(id, ptr););
 }

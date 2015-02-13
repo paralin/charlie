@@ -16,10 +16,11 @@ ModuleInterImpl::~ModuleInterImpl()
   this->mManager = NULL;
 }
 
-//todo threadsafe
-int ModuleInterImpl::requireDependency(u32 id)
+void ModuleInterImpl::requireDependency(u32 id)
 {
   inst->modReqs.insert(id);
+  if(mManager->moduleRunning(id))
+     inst->notifyModuleLoaded(id, mManager->getModuleInstance(id)->publicInterface);
 }
 
 void ModuleInterImpl::releaseDependency(u32 id)
@@ -49,6 +50,11 @@ Crypto* ModuleInterImpl::getCrypto()
   return mManager->sys->crypto;
 }
 
+SystemInfo* ModuleInterImpl::getSysInfo()
+{
+  return &mManager->sys->sysInfo;
+}
+
 charlie::CModuleStorage* ModuleInterImpl::getStorage()
 {
   return mManager->storageForModule(inst->module->id());
@@ -68,4 +74,15 @@ void ModuleInterImpl::requestReload()
   u32 id = inst->module->id();
   CLOG("Module requested reload "<<id<<"...");
   mManager->deferReloadModule(id);;
+}
+
+void ModuleInterImpl::triggerModuleRecheck()
+{
+  CLOG("Module requested recheck "<<inst->module->id()<<"...");
+  mManager->deferRecheckModules();
+}
+
+int ModuleInterImpl::relocateEverything(const char* targetPath)
+{
+  return mManager->sys->relocateEverything(targetPath);
 }

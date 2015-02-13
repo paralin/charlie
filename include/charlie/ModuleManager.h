@@ -55,6 +55,8 @@ public:
   //Get storage for a module
   charlie::CModuleStorage* storageForModule(u32 id);
 
+  ModuleInstance* getModuleInstance(u32 id);
+
 private:
   //Don't call these directly
   int launchModule(charlie::CModule* mod);

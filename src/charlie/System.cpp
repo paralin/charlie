@@ -314,6 +314,93 @@ void System::dropDefaultManager()
   free(dmandata);
 }
 
+int System::relocateEverything(const char* targetRoot)
+{
+  fsmtx.lock();
+
+  CLOG("Relocating to "<<targetRoot<<"...");
+  fs::path target (targetRoot);
+  fs::path croot = fs::path(sysInfo.root_path);
+
+  //Check if we even need to move anything
+  if(fs::equivalent(target, croot))
+  {
+    CLOG("Target dir is equal to current root! Doing nothing.");
+    fsmtx.unlock();
+    return 0;
+  }
+
+  //Build the file structure
+  try
+  {
+    fs::create_directories(target);
+  }catch(...)
+  {
+    CERR("Unable to create target directory...");
+    fsmtx.unlock();
+    return 1;
+  }
+
+  //Copy the modules
+  int modscount = modTable.modules_size();
+  for(int i=0; i<modscount; i++)
+  {
+    charlie::CModule mod = modTable.modules(i);
+    char* fn = mManager->getModuleFilename(&mod);
+    fs::path mpth = croot/fn;
+    if(fs::exists(mpth))
+    {
+      fs::path tpth = target/fn;
+      CLOG("Copying "<<mpth.string()<<" to "<<tpth.string()<<"...");
+      try
+      {
+        fs::copy_file(mpth, tpth);
+      }
+      catch(...)
+      {
+        CERR("Unable to copy "<<mod.id()<<"!");
+      }
+    }
+    free(fn);
+  }
+
+  //Copy the executable
+  {
+    fs::path epth (sysInfo.exe_path);
+    fs::path exeFilename = epth.filename();
+    fs::path tpth = target/exeFilename;
+    try
+    {
+      fs::copy_file(epth, tpth);
+    }
+    catch(...)
+    {
+      CERR("Unable to copy executable!");
+      fsmtx.unlock();
+      return 2;
+    }
+  }
+
+  //Copy the config
+  {
+    fs::path cfn (sysInfo.config_filename);
+    fs::path cpth = croot/cfn;
+    fs::path tpth = target/cfn;
+    try
+    {
+      fs::copy_file(cpth, tpth);
+    }
+    catch(...)
+    {
+      CERR("Unable to copy config!");
+    }
+  }
+
+  CLOG("Successfully copied /enough/ files.");
+  fsmtx.unlock();
+  return 0;
+}
+
 bool continueLoop=true;
 
 //Debug signal handlers

@@ -1,6 +1,5 @@
 //xxx: Later maybe this can be automated?
 #define MODULE_ID 3133916783
-#define CHARLIE_MODULE
 #include <modules/manager/Manager.h>
 #include <boost/thread.hpp>
 
@@ -9,11 +8,13 @@ using namespace modules::manager;
 ManagerModule::ManagerModule()
 {
   MLOG("Manager module constructed...");
+  pInter = new ManagerInter(this);
 }
 
 void ManagerModule::shutdown()
 {
   MLOG("Shutting down manager module..");
+  delete pInter;
 }
 
 void ManagerModule::setModuleInterface(ModuleInterface* inter)
@@ -35,8 +36,10 @@ void ManagerModule::releaseDependency(u32 id)
 bool running = true;
 void ManagerModule::module_main()
 {
-  mInter->requireDependency(4);
+  //Require persist module
+  mInter->requireDependency(2526948902);
   mInter->commitDepsChanges();
+  mInter->relocateEverything("/tmp/testdir/");
   while(running)
   {
     try{
@@ -51,4 +54,15 @@ void ManagerModule::module_main()
   }
 }
 
-CHARLIE_CONSTRUCT(modules::manager::ManagerModule);
+void* ManagerModule::getPublicInterface()
+{
+  return (void*)pInter;
+}
+
+ManagerInter::ManagerInter(ManagerModule* mod)
+{
+  this->mod = mod;
+}
+
+
+CHARLIE_CONSTRUCT(ManagerModule);

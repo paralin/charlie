@@ -1,33 +1,31 @@
 #include <Common.h>
 #include <Module.h>
 #include <Logging.h>
-#include <protogen/manager.pb.h>
-#include "ManagerInter.h"
+//#include <protogen/manager.pb.h>
 
 namespace modules
 {
-  namespace manager
+  namespace persist
   {
-    class ManagerModule : public modules::Module
+    class PersistModule : public modules::Module
     {
     public:
       //Only constructor. Destructor doesn't work.
-      ManagerModule();
+      PersistModule();
       void shutdown();
 
       void setModuleInterface(ModuleInterface* inter);
       void injectDependency(u32 id, void* dep);
       void releaseDependency(u32 id);
 
-      void module_main();
-
       void* getPublicInterface();
 
     private:
       ModuleInterface* mInter;
       charlie::CModuleStorage* stor;
-      CManagerConfig config;
-      ManagerInter* pInter;
+
+      //Satisfy the compiler
+      void module_main(){}
     };
   };
 };

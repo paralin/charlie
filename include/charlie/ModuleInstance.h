@@ -25,8 +25,10 @@ public:
   charlie::CModuleInstance inst;
   std::set<u32> modReqs;
   void notifyModuleReleased(u32 id);
+  void notifyModuleLoaded(u32 mod, void* ptr);
 
   charlie::CModule* module;
+  void* publicInterface;
 
 private:
   std::string libPath;

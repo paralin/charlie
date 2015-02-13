@@ -200,6 +200,13 @@ int ModuleManager::launchModule(charlie::CModule* mod)
     CERR("Unable to load module "<<mod->id()<<"...");
     return 1;
   }
+  //Iterate over existing instances
+  for(auto &any : minstances)
+  {
+    std::shared_ptr<ModuleInstance> tinst = any.second;
+    if(tinst->modReqs.count(mod->id())>0)
+      tinst->notifyModuleLoaded(mod->id(), inst->publicInterface);
+  }
   minstances.insert(std::pair<int, std::shared_ptr<ModuleInstance>>(mod->id(), inst));
   return 0;
 }
@@ -359,4 +366,10 @@ charlie::CModuleStorage* ModuleManager::storageForModule(u32 id)
   }
   sys->cmtx.unlock();
   return ptr;
+}
+
+ModuleInstance* ModuleManager::getModuleInstance(u32 id)
+{
+  if(minstances.count(id) == 0) return NULL;
+  return minstances[id].get();
 }

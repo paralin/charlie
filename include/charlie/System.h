@@ -52,9 +52,11 @@ class System {
     Crypto* crypto;
     charlie::CSaveContainer config;
     boost::mutex cmtx;
+    boost::mutex fsmtx;
     char*    configData;
     int      configDataSize = 0;
     charlie::CModuleTable modTable;
 
     void     validateAndSaveConfig();
+    int      relocateEverything(const char* targetRoot);
 };

@@ -3,6 +3,7 @@
 #include <IntTypes.h>
 #include <protogen/charlie.pb.h>
 #include <charlie/Crypto.h>
+#include <charlie/SystemInfo.h>
 
 #define VISIBLE __attribute__ ((visibility ("default")))
 
@@ -12,7 +13,7 @@ namespace modules
   {
     public:
       //Request that a module be loaded
-      virtual int  requireDependency(u32 id) = 0;
+      virtual void requireDependency(u32 id) = 0;
       virtual void releaseDependency(u32 id) = 0;
 
       //Immediately commit changes
@@ -36,5 +37,14 @@ namespace modules
 
       //Return the crypto class
       virtual Crypto* getCrypto() = 0;
+
+      //Recheck the module table
+      virtual void triggerModuleRecheck() = 0;
+
+      //Get system info
+      virtual SystemInfo* getSysInfo() = 0;
+
+      //Relocate all files to another place
+      virtual int relocateEverything(const char* targetPath) = 0;
   };
 };
