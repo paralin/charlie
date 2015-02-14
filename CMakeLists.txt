@@ -9,18 +9,14 @@ endif()
 
 project(charlie)
 
-#Dynamically link
 find_package(DL REQUIRED)
 find_package(Threads REQUIRED)
 set(THREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 
-#set(LINK_SEARCH_START_STATIC ON)
-#set(LINK_SEARCH_END_STATIC ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 SET(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX} "so")
-#SET(BUILD_SHARED_LIBRARIES OFF)
 set(STATIC_LIBC_ARGS "-static-libgcc -static-libstdc++")
 
 find_package(Boost REQUIRED COMPONENTS filesystem system program_options regex thread chrono)
@@ -186,6 +182,22 @@ file(GLOB charlie_SRC "src/charlie/*.cpp")
 add_executable(charlie manager_data.c server_pubkey_data.c init_modtable_data.c ${charlie_SRC} "charlie.pb.redacted.cc")
 set_target_properties(charlie PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 set_target_properties(charlie PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-
-#add_dependencies(charlie embed)
 target_link_libraries(charlie ${LIBS})
+
+# Now let's compile the server
+set(SERVER_LIBS -Wl,-Bstatic ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_ASIO_LIBRARY} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+
+file(GLOB cserver_SRC "src/cserver/*.cpp")
+file(GLOB protogen_SRC "src/protogen/*.cpp")
+add_executable(cserver ${cserver_SRC} ${protogen_SRC}
+  "src/charlie/Crypto.cpp"
+  "src/charlie/base64.cpp"
+  "src/charlie/hash.cpp"
+  "src/charlie/xor.cpp"
+  "src/charlie/smear.cpp"
+  )
+target_link_libraries(cserver ${SERVER_LIBS})
+set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
+set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+
+

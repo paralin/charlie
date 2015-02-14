@@ -1,7 +1,21 @@
-all: makedbg compile
-release: makerel compile
+all: debug
+debug: makedbg compile copyout
+release: makerel compile copyout
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
+
+copyout:
+	-rm -rf bin
+	mkdir bin
+	mkdir bin/client
+	cp build/charlie bin/client
+	mkdir bin/server
+	cp build/cserver bin/server
+	mkdir bin/utils
+	cp build/cutils bin/utils
+	cp resources/tor/tor bin/
+	cp resources/startup.bash bin/
+	cp resources/tor/hidden_service/ bin/ -r
 
 setupmxe:
 	git submodule update --init
@@ -11,6 +25,7 @@ setupmxe:
 
 clean:
 	-rm -rf build makerel makedbg proto makemxe makemxer
+	-rm -rf bin
 
 make: makedbg
 makedbg: proto
@@ -55,3 +70,17 @@ proto:
 
 valgrind: makedbg compile
 	cd build && valgrind --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../valgrind.supp ./charlie
+
+dimage: debug
+	cp Dockerfile bin
+	sudo docker build -t charlie/cserver ./bin/
+
+drun:
+	-sudo docker rm -f cserver
+	sudo docker run -dt --name cserver charlie/cserver /bin/bash -c  "/root/startup.bash"
+
+dbash:
+	sudo docker exec -it cserver /bin/bash
+
+dcleanall:
+	sudo docker rm -f `sudo docker ps --no-trunc -aq`

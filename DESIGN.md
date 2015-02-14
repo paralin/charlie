@@ -91,3 +91,7 @@ Here is the order of steps taken by the management module
   5. Handle any errors returned by server, validate the response from
      the server to make sure it's a valid remote server.
   6. Send a CMsgRequestModuleTable
+
+# TOR NETWORK INFO
+
+Port 39221
