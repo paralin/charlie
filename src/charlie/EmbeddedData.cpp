@@ -18,8 +18,10 @@ bool decryptInitModtable(charlie::CSignedBuffer* outp)
 {
   char* output = (char*)malloc(sizeof(char)*init_modtable_data_len);
   memcpy(output, init_modtable_data, init_modtable_data_len);
+
   //Decrypt xor
   apply_xor(output, init_modtable_data_len, init_modtable_key, strlen(init_modtable_key));
+
   //Parse out the rsa buffer
   bool success = outp->ParseFromArray(output, init_modtable_data_len);
   free(output);

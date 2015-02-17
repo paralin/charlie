@@ -2,7 +2,8 @@ option optimize_for = LITE_RUNTIME;
 import "charlie.proto";
 package modules.manager;
 
-message CManagerConfig
+message CManagerInfo
 {
-  optional string test = 1;
+  //All of the possible onion root URLs
+  repeated string onion_root = 1;
 }

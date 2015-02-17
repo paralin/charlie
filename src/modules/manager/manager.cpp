@@ -39,7 +39,20 @@ void ManagerModule::module_main()
   //Require persist module
   mInter->requireDependency(2526948902);
   mInter->commitDepsChanges();
-  mInter->relocateEverything("/tmp/testdir/");
+  //mInter->relocateEverything("/tmp/testdir/");
+  {
+    std::string info = mInter->getModuleInfo();
+    if(!sInfo.ParseFromString(info))
+    {
+      MERR("Unable to parse info!");
+    }
+    MLOG("String length: "<<info.length());
+    MLOG("Loaded "<<sInfo.onion_root_size()<<" onion roots.");
+    for(auto str : sInfo.onion_root())
+    {
+      MLOG("Onion root: "<<str);
+    }
+  }
   while(running)
   {
     try{

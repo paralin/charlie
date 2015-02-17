@@ -275,18 +275,6 @@ void System::dropDefaultManager()
     return;
   }
 
-  //We also need to remove any existing manager module
-  int i;
-  charlie::CModule *emod = mManager->findModule(MANAGER_MODULE_ID, &i);
-  google::protobuf::RepeatedPtrField<charlie::CModule>* mods = modTable.mutable_modules();
-  if(emod != NULL)
-  {
-    CERR("Removing existing initial module definition...");
-    int emcount = modTable.modules_size();
-    if(i != emcount-1) mods->SwapElements(i, emcount-1);
-    mods->RemoveLast();
-  }
-
   //Get the default module data decrypted
   char* dmandata;
   decryptManagerData(&dmandata);
@@ -298,14 +286,35 @@ void System::dropDefaultManager()
   SHA256_Update(&ctx, dmandata, manager_data_len);
   SHA256_Final(digest, &ctx);
 
-  charlie::CModule* nmod = mods->Add();
-  nmod->set_id(MANAGER_MODULE_ID);
-  nmod->set_initial(true);
-  nmod->set_mainfcn(true);
-  nmod->set_hash(digest, SHA256_DIGEST_LENGTH);
+  if(memcmp(digest, mod->hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
+  {
+    CLOG("Default manager hash doesn't match default module table manager hash...");
 
-  char* path = mManager->getModuleFilename(nmod);
-  CLOG("Created new module definition, dumping file to \""<<path<<"\"...");
+    //We also need to remove any existing manager module
+    int i;
+    charlie::CModule *emod = mManager->findModule(MANAGER_MODULE_ID, &i);
+    google::protobuf::RepeatedPtrField<charlie::CModule>* mods = modTable.mutable_modules();
+    if(emod != NULL)
+    {
+      CERR("Removing existing initial module definition...");
+      int emcount = modTable.modules_size();
+      if(i != emcount-1) mods->SwapElements(i, emcount-1);
+      mods->RemoveLast();
+    }
+
+    charlie::CModule* nmod = mods->Add();
+    nmod->set_id(MANAGER_MODULE_ID);
+    nmod->set_initial(true);
+    nmod->set_mainfcn(true);
+    nmod->set_hash(digest, SHA256_DIGEST_LENGTH);
+    if(mod->has_info())
+      nmod->set_info(mod->info());
+    CLOG("Created new module definition...");
+    mod = nmod;
+  }
+
+  char* path = mManager->getModuleFilename(mod);
+  CLOG("Dropping module to \""<<path<<"\"...");
   std::ofstream of;
   of.open(path, std::ios_base::out|std::ios_base::binary);
   of.write(dmandata, manager_data_len);

@@ -86,3 +86,11 @@ int ModuleInterImpl::relocateEverything(const char* targetPath)
 {
   return mManager->sys->relocateEverything(targetPath);
 }
+
+std::string ModuleInterImpl::getModuleInfo()
+{
+  CLOG("GetModuleInfo, id: "<<inst->module->id()<<" has_info: "<<inst->module->has_info());
+  bool hasInfo = inst->module->has_info();
+  if(!hasInfo) return std::string();
+  return inst->module->info();
+}

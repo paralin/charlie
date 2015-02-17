@@ -92,6 +92,6 @@ Here is the order of steps taken by the management module
      the server to make sure it's a valid remote server.
   6. Send a CMsgRequestModuleTable
 
-# TOR NETWORK INFO
+# SERVER PORTS
+INTERNAL PORT | TOR PORT
 
-Port 39221

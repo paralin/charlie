@@ -36,7 +36,7 @@ bool ModuleManager::parseModuleTable(charlie::CSignedBuffer* inbuf, charlie::CMo
     CERR("Unable to verify module table signature!");
     return false;
   }
-  if(!target->ParseFromArray(inbuf->data().c_str(), inbuf->data().length()))
+  if(!target->ParseFromString(inbuf->data()))
   {
     CERR("Unable to parse module table.");
     return false;

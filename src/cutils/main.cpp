@@ -23,6 +23,8 @@
 #include <openssl/sha.h>
 #include <ctime>
 
+#include <protogen/manager.pb.h>
+
 //#define PRINT_VERBOSE
 
 namespace po = boost::program_options;
@@ -672,6 +674,28 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
       {
         mod->set_initial(ix["initial"].GetBool());
       }
+      if(ix.HasMember("info") && ix["info"].IsObject() && ix.HasMember("info_type") && ix["info_type"].IsString())
+      {
+        std::string ityp (ix["info_type"].GetString());
+        if(ityp.compare("CManagerInfo") == 0)
+        {
+          CLOG("info_type recognized CManagerInfo");
+          modules::manager::CManagerInfo manInfo;
+          const rapidjson::Value& onionRoots = ix["info"]["onion_root"];
+          CLOG("Onion root count: "<<onionRoots.Size());
+          for (rapidjson::SizeType oi = 0; oi < onionRoots.Size(); oi++)
+          {
+            manInfo.add_onion_root(onionRoots[oi].GetString());
+            CLOG("Adding onion root: "<<onionRoots[oi].GetString());
+          }
+          std::string* info = mod->mutable_info();
+          if(!manInfo.SerializeToString(info))
+          {
+            CERR("Unable to serialize modInfo to string");
+          }
+          CLOG("has_info: "<<mod->has_info());
+        }
+      }
       if(comm->hash_)
       {
         //gchar* filename = g_module_build_path((const gchar *) full_path->string().c_str(), name.c_str());
@@ -695,13 +719,15 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
       }
     }
 
-    size_t outSize = table.ByteSize();
-    char* out = (char*)malloc(sizeof(char)*outSize);
-    if(!table.SerializeToArray(out, outSize)){
-      CERR("Unable to serialize module table to array.");
-      free(out);
+    std::string outd;
+    if(!table.SerializeToString(&outd)){
+      CERR("Unable to serialize module table to string.");
       return -1;
     }
+
+    size_t outSize = outd.length();
+    char* out = (char*)malloc(outSize*sizeof(char));
+    memcpy(out, outd.c_str(), outd.length());
 
     if(comm->sign_)
     {

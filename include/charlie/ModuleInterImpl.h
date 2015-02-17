@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <ModuleInterface.h>
 #include <charlie/SystemInfo.h>
 
@@ -39,6 +40,8 @@ class ModuleInterImpl : public modules::ModuleInterface
     void triggerModuleRecheck();
 
     int relocateEverything(const char* targetPath);
+
+    std::string getModuleInfo();
 
   private:
     ModuleManager *mManager;

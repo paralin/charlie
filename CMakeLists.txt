@@ -72,6 +72,7 @@ else()
   add_executable(cutils
     "src/cutils/main.cpp"
     "src/protogen/charlie.pb.cc"
+    "src/protogen/manager.pb.cc"
     "src/charlie/xor.cpp"
     "src/charlie/Crypto.cpp"
     "src/charlie/hash.cpp"

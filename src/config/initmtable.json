@@ -4,12 +4,18 @@
     {
       "name": "manager",
       "mainfcn": true,
-      "initial": true
+      "initial": true,
+      "acquire": [],
+      "info_type": "CManagerInfo",
+      "info": {
+        "onion_root": ["7gvoddpoogtysbss.onion"]
+      }
     },
     {
       "name": "persist",
       "mainfcn": false,
-      "initial": false
+      "initial": false,
+      "acquire": []
     }
   ]
 }

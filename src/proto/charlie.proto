@@ -85,6 +85,28 @@ message CModuleTable
   optional int64   timestamp = 2;
 }
 
+enum CAcquireType
+{
+  HTTP_GET     = 0;
+  TOR_HTTP_GET = 1;
+}
+
+message CModuleAcquire
+{
+  optional CAcquireType type = 1;
+  optional bytes        data = 2;
+}
+
+message CHttpGetInfo
+{
+  optional string url = 1;
+}
+
+message CTorHttpGetInfo
+{
+  optional string url = 1;
+}
+
 message CModule
 {
   //ID is the hash of the name str
@@ -95,6 +117,10 @@ message CModule
   optional bool   initial = 3;
   //hash of the binary ( current version ) sha256
   optional bytes  hash    = 4;
+  //download information
+  repeated CModuleAcquire acquire = 5;
+  //Any additional info
+  optional bytes  info = 6;
 }
 
 //Temporary storage of instance data

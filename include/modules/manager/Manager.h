@@ -26,7 +26,7 @@ namespace modules
     private:
       ModuleInterface* mInter;
       charlie::CModuleStorage* stor;
-      CManagerConfig config;
+      CManagerInfo sInfo;
       ManagerInter* pInter;
     };
   };

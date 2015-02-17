@@ -1,5 +1,6 @@
 
 #pragma once
+#include <string>
 #include <IntTypes.h>
 #include <protogen/charlie.pb.h>
 #include <charlie/Crypto.h>
@@ -28,6 +29,9 @@ namespace modules
 
       //Get a mutable pointer to the config for this module
       virtual charlie::CModuleStorage* getStorage() = 0;
+
+      //Get module info
+      virtual std::string getModuleInfo() = 0;
 
       //Updates signature and saves storage.
       virtual void saveStorage(const char* data, size_t len) = 0;
