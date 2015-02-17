@@ -190,7 +190,8 @@ set(SERVER_LIBS -Wl,-Bstatic ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_
 
 file(GLOB cserver_SRC "src/cserver/*.cpp")
 file(GLOB protogen_SRC "src/protogen/*.cpp")
-add_executable(cserver ${cserver_SRC} ${protogen_SRC}
+file(GLOB http_SRC "src/http/*.cpp")
+add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
   "src/charlie/Crypto.cpp"
   "src/charlie/base64.cpp"
   "src/charlie/hash.cpp"
