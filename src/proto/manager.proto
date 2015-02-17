@@ -4,6 +4,11 @@ package modules.manager;
 
 message CManagerInfo
 {
-  //All of the possible onion root URLs
-  repeated string onion_root = 1;
+  //init table update urls
+  repeated string init_url = 1;
+}
+
+message CInitInfo
+{
+  optional charlie.CModuleTable mtable = 1;
 }

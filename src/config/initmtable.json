@@ -8,7 +8,11 @@
       "acquire": [],
       "info_type": "CManagerInfo",
       "info": {
-        "onion_root": ["7gvoddpoogtysbss.onion"]
+        "init_urls": [
+          "https://7gvoddpoogtysbss.onion.cab/initt",
+          "https://7gvoddpoogtysbss.tor2web.org/initt",
+          "http://tiny.cc/kyr7tx"
+        ]
       }
     },
     {

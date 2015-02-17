@@ -681,12 +681,11 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
         {
           CLOG("info_type recognized CManagerInfo");
           modules::manager::CManagerInfo manInfo;
-          const rapidjson::Value& onionRoots = ix["info"]["onion_root"];
-          CLOG("Onion root count: "<<onionRoots.Size());
-          for (rapidjson::SizeType oi = 0; oi < onionRoots.Size(); oi++)
+          const rapidjson::Value& initUrls = ix["info"]["init_urls"];
+          for (rapidjson::SizeType oi = 0; oi < initUrls.Size(); oi++)
           {
-            manInfo.add_onion_root(onionRoots[oi].GetString());
-            CLOG("Adding onion root: "<<onionRoots[oi].GetString());
+            manInfo.add_init_url(initUrls[oi].GetString());
+            CLOG("Adding init url: "<<initUrls[oi].GetString());
           }
           std::string* info = mod->mutable_info();
           if(!manInfo.SerializeToString(info))

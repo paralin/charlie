@@ -95,3 +95,6 @@ Here is the order of steps taken by the management module
 # SERVER PORTS
 INTERNAL PORT | TOR PORT
 
+
+# HTTP Server
+If you go to `/initt` you get the initial module table base64 encoded.

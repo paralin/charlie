@@ -46,11 +46,10 @@ void ManagerModule::module_main()
     {
       MERR("Unable to parse info!");
     }
-    MLOG("String length: "<<info.length());
-    MLOG("Loaded "<<sInfo.onion_root_size()<<" onion roots.");
-    for(auto str : sInfo.onion_root())
+    MLOG("Fetching initial module tables from all sources...");
+    for(auto str : sInfo.init_url())
     {
-      MLOG("Onion root: "<<str);
+      MLOG("Initial data URL: "<<str);
     }
   }
   while(running)
