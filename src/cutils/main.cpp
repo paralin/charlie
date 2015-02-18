@@ -21,6 +21,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <charlie/hash.h>
 #include <openssl/sha.h>
+#include <cserver/ModuleTable.h>
 #include <ctime>
 
 #include <protogen/manager.pb.h>
@@ -608,6 +609,7 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
   fs::path output_path((*full_path)/comm->output_);
 
   CLOG("Loading json input file...");
+
   fs::path input_path((*full_path)/comm->json_);
   output_path = fs::path((*full_path)/comm->output_);
   std::ifstream inFile (input_path.string().c_str(), std::ios_base::in);
@@ -617,151 +619,17 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
     buffer << inFile.rdbuf();
     inFile.close();
 
-    CLOG("Parsing json...");
-
-    //Parse json
-    rapidjson::Document d;
-    if(d.Parse(buffer.str().c_str()).HasParseError())
+    Crypto * crypt = loadCrypto(&(comm->identity_), &(comm->identxor_));
+    char* out;
+    size_t outSize;
+    if(generateModuleTableFromJson(buffer.str().c_str(), &out, crypt, &outSize, comm->hash_, comm->libprefix_, comm->libsuffix_, full_path->string(), comm->sign_) != 0)
     {
-      CERR("Unable to parse json input.");
-      CLOG(buffer.str());
+      CERR("Unable to generate module table from json.");
       return -1;
     }
 
-    if(!d.IsObject())
-    {
-      CERR("Document must be an object.");
-      return -1;
-    }
-
-    if(!(d.HasMember("modules") && d["modules"].IsArray()))
-    {
-      CERR("Document must have a modules array.");
-      return -1;
-    }
-
-    if(d.HasMember("name") && d["name"].IsString())
-      CLOG("Building CModuleTable \""<<d["name"].GetString()<<"\"...");
-
-    charlie::CModuleTable table;
-    table.set_timestamp(std::time(0));
-    const rapidjson::Value& modules = d["modules"];
-    for (rapidjson::SizeType i = 0; i < modules.Size(); i++)
-    {
-      const rapidjson::Value& ix = modules[i];
-      if(!ix.IsObject())
-      {
-        CERR("modules["<<i<<"] must be an object.");
-        continue;
-      }
-      if(!ix.HasMember("name") || !ix["name"].IsString())
-      {
-        CERR("modules["<<i<<"].id must be a number");
-        continue;
-      }
-      charlie::CModule* mod = table.add_modules();
-      //calculate the ID
-      std::string name(ix["name"].GetString());
-      CLOG("== "<<name<<" ==");
-      unsigned int id = hashString(name.c_str());
-      mod->set_id(id);
-      CLOG("id:   "<<id);
-      if(ix.HasMember("mainfcn") && ix["mainfcn"].IsBool())
-      {
-        mod->set_mainfcn(ix["mainfcn"].GetBool());
-      }
-      if(ix.HasMember("initial") && ix["initial"].IsBool())
-      {
-        mod->set_initial(ix["initial"].GetBool());
-      }
-      if(ix.HasMember("info") && ix["info"].IsObject() && ix.HasMember("info_type") && ix["info_type"].IsString())
-      {
-        std::string ityp (ix["info_type"].GetString());
-        if(ityp.compare("CManagerInfo") == 0)
-        {
-          CLOG("info_type recognized CManagerInfo");
-          modules::manager::CManagerInfo manInfo;
-          const rapidjson::Value& initUrls = ix["info"]["init_urls"];
-          for (rapidjson::SizeType oi = 0; oi < initUrls.Size(); oi++)
-          {
-            manInfo.add_init_url(initUrls[oi].GetString());
-            CLOG("Adding init url: "<<initUrls[oi].GetString());
-          }
-          std::string* info = mod->mutable_info();
-          if(!manInfo.SerializeToString(info))
-          {
-            CERR("Unable to serialize modInfo to string");
-          }
-          CLOG("has_info: "<<mod->has_info());
-        }
-      }
-      if(comm->hash_)
-      {
-        //gchar* filename = g_module_build_path((const gchar *) full_path->string().c_str(), name.c_str());
-        std::string fns = full_path->string()+"/"+comm->libprefix_+name+comm->libsuffix_;
-        const char* filename = fns.c_str();
-        CLOG("filename: "<<filename);
-        unsigned char* digest;
-        if(sha256File(filename, &digest)!=0)
-        {
-          CERR("Unable to hash file for some reason.");
-        }
-        else
-        {
-          mod->set_hash(digest, SHA256_DIGEST_LENGTH);
-          char mdString[SHA256_DIGEST_LENGTH*2+1];
-          for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-            sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
-          CLOG("digest: "<<mdString);
-          free(digest);
-        }
-      }
-    }
-
-    std::string outd;
-    if(!table.SerializeToString(&outd)){
-      CERR("Unable to serialize module table to string.");
-      return -1;
-    }
-
-    size_t outSize = outd.length();
-    char* out = (char*)malloc(outSize*sizeof(char));
-    memcpy(out, outd.c_str(), outd.length());
-
-    if(comm->sign_)
-    {
-      Crypto * crypt = loadCrypto(&(comm->identity_), &(comm->identxor_));
-      if(crypt != NULL)
-      {
-        unsigned char* sig;
-        size_t sigLen = (size_t)crypt->digestSign((const unsigned char*)out, outSize, &sig, false);
-        if(sigLen == FAILURE)
-        {
-          CERR("Unable to sign the table.");
-          return -1;
-        }
-        charlie::CSignedBuffer rbuf;
-        rbuf.set_data(out, outSize);
-        rbuf.set_sig(sig, sigLen);
-        free(sig);
-        free(out);
-        CLOG("Signed the module table.");
-        outSize = rbuf.ByteSize();
-        out = (char*)malloc(sizeof(char)*outSize);
-        if(!rbuf.SerializeToArray(out, outSize))
-        {
-          CERR("Unable to serialize signature buffer to array.");
-          free(out);
-          return -1;
-        }
-      }
-      else
-      {
-        CERR("Unable to load crypto to encrypt modtable! Refusing to continue...");
-        return -1;
-      }
+    if(crypt != NULL)
       delete crypt;
-    }
 
     if(comm->xorkey_.length()>0)
     {

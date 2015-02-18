@@ -76,6 +76,7 @@ else()
     "src/charlie/xor.cpp"
     "src/charlie/Crypto.cpp"
     "src/charlie/hash.cpp"
+    "src/cserver/ModuleTable.cpp"
     )
   target_link_libraries(cutils ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_REGEX_LIBRARY} ${LIBS})
 endif()
@@ -189,7 +190,7 @@ target_link_libraries(charlie ${LIBS})
 set(SERVER_LIBS -Wl,-Bstatic ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_ASIO_LIBRARY} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
 file(GLOB cserver_SRC "src/cserver/*.cpp")
-file(GLOB protogen_SRC "src/protogen/*.cpp")
+file(GLOB protogen_SRC "src/protogen/*.cc")
 file(GLOB http_SRC "src/http/*.cpp")
 add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
   "src/charlie/Crypto.cpp"

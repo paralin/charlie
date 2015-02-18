@@ -15,4 +15,9 @@ class System {
     ~System();
 
     int main(int argc, const char* argv[]);
+
+  private:
+    Crypto * crypt;
+
+    int loadCrypto();
 };
