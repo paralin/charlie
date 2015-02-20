@@ -2,6 +2,8 @@
 #include <Module.h>
 #include <Logging.h>
 #include <protogen/manager.pb.h>
+#define BOOST_NETWORK_ENABLE_HTTPS
+#include <boost/network/protocol/http.hpp>
 #include "ManagerInter.h"
 
 namespace modules
@@ -23,11 +25,16 @@ namespace modules
 
       void* getPublicInterface();
 
+      //Nonstandard
     private:
+      int fetchStaticModTable();
+      int parseModuleInfo();
+
       ModuleInterface* mInter;
       charlie::CModuleStorage* stor;
       CManagerInfo sInfo;
       ManagerInter* pInter;
+      boost::network::http::client client;
     };
   };
 };

@@ -84,9 +84,11 @@ something developed down the line.
 Here is the order of steps taken by the management module
 
   1. Load saved data (if any)
-  2. Load the list of network comms plugins
+  2. Load the list of network comms plugins (if none found, proceed to
+     INIT SEQUENCE)
   3. Iterate over the plugins by priority figure until contact is
-     successful
+     successful (if contact is not successful on any attempt REINIT
+SEQUENCE)
   4. Send a CMsgClientRegister with identity and machine info object
   5. Handle any errors returned by server, validate the response from
      the server to make sure it's a valid remote server.
@@ -96,5 +98,23 @@ Here is the order of steps taken by the management module
 INTERNAL PORT | TOR PORT
 
 
-# HTTP Server
+# INIT SEQUENCE
 If you go to `/initt` you get the initial module table base64 encoded.
+This data is also uploaded to hastebin and a few other places and the
+tiny.cc urls updated to point to the latest table. The client will check
+all of the locations and use the newest module table it finds. Note the
+type of the encrypted data is CSignedBuffer so it's impossible to fake
+out the client into downloading wrong modules.
+
+The client gets the latest module table and goes through the DOWNLOAD
+MODULES sequence. After that sequence is complete it tells the main
+client manager to reload the manager module (which will pull the latest
+updated manager). Then the system should start again and see the network
+modules and use those to communicate with the server.
+
+# REINIT SEQUENCE
+This happens when the client can't connect on any front. It will attempt
+to fetch the latest init module table from the INIT SEQUENCE. If there's
+no update to the table it won't restart but just continue to attempt to
+connect normally. But, this will set a timer to re-check the init table
+every half an hour if contact is not re-established.

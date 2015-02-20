@@ -23,6 +23,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem system program_options regex t
 find_package(Protobuf REQUIRED)
 find_package(GLIB REQUIRED COMPONENTS gmodule)
 find_package(OpenSSL REQUIRED)
+find_package(cppnetlib REQUIRED)
 
 #Remove pthread from the boost libraries
 list(REMOVE_AT Boost_LIBRARIES -1)
@@ -30,6 +31,8 @@ list(REMOVE_AT Boost_LIBRARIES -1)
 include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
 include_directories("include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/rapidjson/include/")
+include_directories("${CMAKE_BINARY_DIR}/netlib/include/")
+include_directories(${CPPNETLIB_INCLUDE_DIRS})
 
 #set(LIBS ${DL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${Boost_LIBRARIES} ${ZLIB_LIBRARIES} ${DL_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 MESSAGE( STATUS "GModule: ${GLIB_GMODULE_LIBRARIES}")
@@ -56,7 +59,7 @@ if(WINCC)
   LIST(APPEND LIBS ${WINSOCK_LIBRARY} ${LIBICONV_LIBRARY} ${Intl_LIBRARIES})
 endif()
 
-set(STEALTH_FLAGS "-std=c++11 -fno-rtti -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
+set(STEALTH_FLAGS "-std=c++11 -fno-rtti -DBOOST_NO_RTTI -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   #set(STEALTH_FLAGS "${STEALTH_FLAGS}")
   set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
@@ -102,7 +105,8 @@ file(GLOB manager_SRC "src/modules/manager/*.cpp")
 add_library(manager SHARED ${manager_SRC} "charlie.pb.redacted.cc" "manager.pb.redacted.cc")
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(manager -Wl,-Bstatic ${Boost_SYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
+set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)
+target_link_libraries(manager -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${Boost_THREAD_LIBRARY} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES})
 
 # Build persist
 file(GLOB persist_SRC "src/modules/persist/*.cpp")
@@ -187,7 +191,7 @@ set_target_properties(charlie PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(charlie ${LIBS})
 
 # Now let's compile the server
-set(SERVER_LIBS -Wl,-Bstatic ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_ASIO_LIBRARY} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+set(SERVER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
 file(GLOB cserver_SRC "src/cserver/*.cpp")
 file(GLOB protogen_SRC "src/protogen/*.cc")
@@ -202,5 +206,3 @@ add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
 target_link_libraries(cserver ${SERVER_LIBS})
 set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-
-

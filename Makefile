@@ -5,19 +5,13 @@ mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
 copyout:
-	-rm -rf bin
-	mkdir bin
-	mkdir bin/client
+	mkdir -p bin/client bin/server bin/server/modules/linux bin/server/modules/windows bin/utils
 	cp build/charlie bin/client
-	mkdir    bin/server
-	mkdir -p bin/server/modules/linux/
-	mkdir -p bin/server/modules/windows/
 	-cp build/*.so  bin/server/modules/linux/
 	-cp build/*.dll bin/server/modules/windows/
 	cp build/cserver bin/server
 	cp build/server_identity bin/server
 	cp src/config/init.json bin/server/
-	mkdir bin/utils
 	cp build/cutils bin/utils
 	cp resources/tor/tor bin/
 	cp resources/startup.bash bin/
@@ -30,7 +24,7 @@ setupmxe:
 	touch setupmxe
 
 clean:
-	-rm -rf build makerel makedbg proto makemxe makemxer
+	-rm -rf makerel makedbg proto makemxe makemxer
 	-rm -rf bin
 
 make: makedbg

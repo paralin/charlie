@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
-#include <unistd.h>
-#define u8 uint8_t
-#define u16 uint16_t
-#define u32 uint32_t
-#define u32 uint32_t
+#include <cstdint>
+//#include <unistd.h>
+
+typedef uint32_t u32;
+typedef uint16_t u16;
+typedef uint8_t u8;

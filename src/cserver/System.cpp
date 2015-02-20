@@ -1,11 +1,11 @@
 #include <cserver/System.h>
 #include <cserver/ModuleTable.h>
-#include <http/server.h>
 #include <stdio.h>
 #include <gmodule.h>
 #include <iostream>
 #include <fstream>
 #include <charlie/base64.h>
+#include <sstream>
 
 #define RFAIL(fcn, msg) res=fcn;if(res!=0){CERR(msg);return res;}
 #ifdef WIN32

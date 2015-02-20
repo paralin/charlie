@@ -7,8 +7,6 @@
 #include <charlie/xor.h>
 #include <protogen/charlie.pb.h>
 
-#include <cserver/HTTPEndpoint/HTTPEndpoint.h>
-
 class System {
   public:
     System();

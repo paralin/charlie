@@ -76,9 +76,8 @@ bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
 char* ModuleManager::getModuleFilename(charlie::CModule* mod)
 {
   //The filename is based on the hash of the file xor by sysid
-#ifdef USE_MHASH_FILENAME
   const unsigned char* digest = (const unsigned char*)mod->hash().c_str();
-#else
+  /*
   std::ostringstream ss;
   ss << mod->id();
   std::string s = ss.str();
@@ -87,7 +86,7 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
   SHA256_Init(&ctx);
   SHA256_Update(&ctx, s.c_str(), s.length());
   SHA256_Final(digest, &ctx);
-#endif
+  */
   char mdString[SHA256_DIGEST_LENGTH*2+1];
   size_t keyi=0;
   size_t keylen = strlen(sysInfo->system_id);
@@ -104,7 +103,9 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
   //now scale from 2-9 to 5-12
   int fnlen = (int)(((float)(first/9.0f))*7.0f + 5.0f);
   std::string fnstr (mdString);
-  return g_module_build_path((const gchar *) sysInfo->root_path, (const char*)fnstr.substr(0, fnlen).c_str());
+  std::string rot_pat (sysInfo->root_path);
+  CLOG(rot_pat);
+  return g_module_build_path((const gchar *) (rot_pat.substr(0, rot_pat.length()-1).c_str()), (const char*)fnstr.substr(0, fnlen).c_str());
 }
 
 bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
@@ -114,6 +115,7 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
 
   //Check the path exists
   if(!boost::filesystem::exists(path)) {
+    CLOG("File "<<path<<" does not exist.");
     free(path);
     return false;
   }
