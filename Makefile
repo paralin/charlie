@@ -15,6 +15,7 @@ copyout:
 	cp build/cutils bin/utils
 	cp resources/tor/tor bin/
 	cp resources/startup.bash bin/
+	cp resources/setuptor.expect bin/
 	cp resources/tor/hidden_service/ bin/ -r
 
 setupmxe:

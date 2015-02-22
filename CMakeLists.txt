@@ -106,7 +106,7 @@ add_library(manager SHARED ${manager_SRC} "charlie.pb.redacted.cc" "manager.pb.r
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)
-target_link_libraries(manager -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${Boost_THREAD_LIBRARY} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES})
+target_link_libraries(manager -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES})
 
 # Build persist
 file(GLOB persist_SRC "src/modules/persist/*.cpp")

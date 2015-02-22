@@ -11,11 +11,11 @@
 #ifdef DO_CHARLIE_LOG
 #define CLOG(msg) \
   ( \
-    (std::cout << msg << std::endl) \
+    (std::cout << msg << std::endl << std::flush) \
   )
 #define CERR(msg) \
   ( \
-    (std::cerr << msg << std::endl) \
+    (std::cerr << msg << std::endl << std::flush) \
   )
 #else
 #define CLOG(msg) ;

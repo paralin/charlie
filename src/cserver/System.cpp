@@ -6,6 +6,7 @@
 #include <fstream>
 #include <charlie/base64.h>
 #include <sstream>
+#include <boost/network/protocol/http/server.hpp>
 
 #define RFAIL(fcn, msg) res=fcn;if(res!=0){CERR(msg);return res;}
 #ifdef WIN32
@@ -13,6 +14,8 @@
 #else
 #define G_MODULE_PREFIX "lib"
 #endif
+
+namespace http = boost::network::http;
 
 System::System()
 {
@@ -23,6 +26,22 @@ System::~System()
 {
   delete crypt;
 }
+
+struct hello_world;
+typedef http::server<hello_world> server;
+
+struct hello_world {
+  std::string info;
+  void log(std::string const& str)
+  {
+    CLOG(str);
+  };
+  void operator() (server::request const &request, server::response &response) {
+    std::string ip = source(request);
+    response = server::response::stock_reply(
+        server::response::ok, std::string("Hello, ") + ip + "!" + "\n\n" + info);
+  };
+};
 
 int System::loadCrypto()
 {
@@ -81,6 +100,7 @@ int System::main(int argc, const char* argv[])
   RFAIL(loadCrypto(), "Unable to load crypto!");
 
   std::ifstream inFile ("init.json", std::ios_base::in);
+  hello_world handler;
   if(inFile.is_open())
   {
     std::stringstream buffer;
@@ -92,6 +112,7 @@ int System::main(int argc, const char* argv[])
     if(generateModuleTableFromJson(buffer.str().c_str(), &output, crypt, &outputSize, true, std::string(G_MODULE_PREFIX), std::string(".")+std::string(G_MODULE_SUFFIX), std::string("./modules/linux"), true) == 0)
     {
       char* b64o = base64Encode((const unsigned char*)output, outputSize);
+      handler.info = std::string(b64o);
       CLOG(b64o);
       free(b64o);
     }
@@ -103,6 +124,13 @@ int System::main(int argc, const char* argv[])
   }else
   {
     CERR("Can't find test modtable json");
+  }
+  try {
+    server::options options(handler);
+    server server_(options.address("127.0.0.1").port("9921"));
+    server_.run();
+  }catch (std::exception &e) {
+    CERR(e.what());
   }
   CLOG("Exiting...");
 }

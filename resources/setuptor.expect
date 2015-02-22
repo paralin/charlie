@@ -1,0 +1,5 @@
+set timeout 120
+spawn tor
+expect "Bootstrapped 100%: Done"
+send \003
+expect eof
