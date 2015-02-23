@@ -27,11 +27,6 @@ int base64Decode(const char *b64message, const size_t length, unsigned char **bu
     int decodedLength = calcDecodeLength(b64message, length);
 
     *buffer = (unsigned char*)malloc(decodedLength+1);
-    if(*buffer == NULL) {
-        fprintf(stderr, "Failed to allocate memory\n");
-        exit(1);
-    }
-
 
     bio = BIO_new(BIO_s_mem());
     BIO_puts(bio, b64message);

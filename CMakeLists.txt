@@ -102,7 +102,7 @@ endforeach()
 
 # Build manager
 file(GLOB manager_SRC "src/modules/manager/*.cpp")
-add_library(manager SHARED ${manager_SRC} "charlie.pb.redacted.cc" "manager.pb.redacted.cc")
+add_library(manager SHARED ${manager_SRC} "src/charlie/base64.cpp" "charlie.pb.redacted.cc" "manager.pb.redacted.cc")
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)

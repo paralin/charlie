@@ -29,12 +29,17 @@ namespace modules
     private:
       int fetchStaticModTable();
       int parseModuleInfo();
+      std::string fetchUrl(const std::string& url);
+      std::string fetchStaticUrl(const std::string& url);
+      std::string fetchOnionCabUrl(const std::string& url);
 
       ModuleInterface* mInter;
       charlie::CModuleStorage* stor;
       CManagerInfo sInfo;
       ManagerInter* pInter;
       boost::network::http::client client;
+
+      std::string onionCabHash;
     };
   };
 };
