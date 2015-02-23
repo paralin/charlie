@@ -20,7 +20,7 @@ copyout:
 
 setupmxe:
 	git submodule update --init
-	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf
+	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf cpp-netlib
 	sed -i '/set(CMAKE_BUILD_TYPE Release)/d' ./deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake
 	touch setupmxe
 
