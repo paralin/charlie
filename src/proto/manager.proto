@@ -12,3 +12,8 @@ message CInitInfo
 {
   optional charlie.CModuleTable mtable = 1;
 }
+
+message CManagerStorage
+{
+  optional string onion_cab_cookie = 1;
+}

@@ -50,6 +50,11 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
   while(true)
   {
     http::client::request request(url);
+    if(onionCabHash.empty() && stor.has_onion_cab_cookie())
+    {
+      onionCabHash = std::string(stor.onion_cab_cookie());
+      MLOG("Loaded onion.cab cookie from storage: "<<onionCabHash);
+    }
     if(!onionCabHash.empty())
     {
       std::string cookie = (std::string("onion_cab_iKnowShit=")+onionCabHash);
@@ -107,6 +112,8 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
           }
           MLOG("Final onionCab iKnowShit is "<<mdString);
           onionCabHash = std::string(mdString, 33);
+          stor.set_onion_cab_cookie(onionCabHash);
+          saveStorage();
           continue;
         }else
         {
@@ -138,6 +145,17 @@ std::string ManagerModule::fetchUrl(const std::string& url)
   if(url.find("onion.cab") != std::string::npos)
     return fetchOnionCabUrl(url);
   return fetchStaticUrl(url);
+}
+
+void ManagerModule::saveStorage()
+{
+  std::string data;
+  if(!stor.SerializeToString(&data))
+  {
+    MERR("Unable to serialize storage to string!");
+    return;
+  }
+  mInter->saveStorage(data);
 }
 
 //Base64
@@ -179,12 +197,19 @@ int ManagerModule::parseModuleInfo()
   return sInfo.ParseFromString(info) == 0;
 }
 
+void ManagerModule::loadStorage()
+{
+  std::string* data = mInter->getStorage();
+  if(data != NULL) stor.ParseFromString(*data);
+}
+
 bool running = true;
 void ManagerModule::module_main()
 {
   //Require persist module
   mInter->requireDependency(2526948902);
   mInter->commitDepsChanges();
+  loadStorage();
   //mInter->relocateEverything("/tmp/testdir/");
   if(parseModuleInfo() != 0)
   {

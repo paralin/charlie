@@ -8,6 +8,8 @@
 #include <string>
 #include <string.h>
 
+#include <boost/thread/mutex.hpp>
+
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
@@ -63,6 +65,7 @@ private:
     EVP_CIPHER_CTX *rsaDecryptCtx;
 
     int init();
+    boost::mutex cmtx;
 };
 
 #endif

@@ -28,13 +28,13 @@ namespace modules
       virtual charlie::CSignedBuffer* getModuleTable() = 0;
 
       //Get a mutable pointer to the config for this module
-      virtual charlie::CModuleStorage* getStorage() = 0;
+      virtual std::string* getStorage() = 0;
 
       //Get module info
       virtual std::string getModuleInfo() = 0;
 
       //Updates signature and saves storage.
-      virtual void saveStorage(const char* data, size_t len) = 0;
+      virtual void saveStorage(std::string& data) = 0;
 
       //Will unload and reload this module
       virtual void requestReload() = 0;

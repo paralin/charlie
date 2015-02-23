@@ -333,7 +333,7 @@ charlie::CModuleStorage* ModuleManager::storageForModule(u32 id)
   charlie::CModuleStorage* ptr = NULL;
   bool found = false;
   int i=0;
-  for(auto conf : sys->config.mod_configs())
+  for(auto conf : sys->config.mod_storage())
   {
     if(conf.id() == id)
     {
@@ -344,27 +344,12 @@ charlie::CModuleStorage* ModuleManager::storageForModule(u32 id)
   }
   if(!found)
   {
-    ptr = sys->config.add_mod_configs();
+    ptr = sys->config.add_mod_storage();
     ptr->set_id(id);
-    /*
-    charlie::CSignedBuffer* buf = ptr->mutable_buf();
-    buf->set_data("", 0);
-    if(updateSignedBuf(buf, sys->crypto) == FAILURE)
-    {
-      CERR("Unable to sign module storage for "<<id);
-    }
-    */
   }
   else
   {
-    ptr = sys->config.mutable_mod_configs(i);
-    charlie::CSignedBuffer* buf = ptr->mutable_buf();
-    if(!buf->has_data()) buf->Clear();
-    else if(verifySignedBuf(buf, sys->crypto, false) != SUCCESS)
-    {
-      CERR("Config for "<<id<<" verify failed, clearing it...");
-      buf->Clear();
-    }
+    ptr = sys->config.mutable_mod_storage(i);
   }
   sys->cmtx.unlock();
   return ptr;

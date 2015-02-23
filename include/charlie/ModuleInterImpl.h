@@ -28,10 +28,10 @@ class ModuleInterImpl : public modules::ModuleInterface
     Crypto* getCrypto();
     SystemInfo* getSysInfo();
 
-    charlie::CModuleStorage* getStorage();
+    std::string* getStorage();
 
     //Updates signature and saves storage.
-    void saveStorage(const char* data, size_t len);
+    void saveStorage(std::string& data);
 
     //Will unload and reload this module
     void requestReload();

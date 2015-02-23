@@ -55,17 +55,17 @@ SystemInfo* ModuleInterImpl::getSysInfo()
   return &mManager->sys->sysInfo;
 }
 
-charlie::CModuleStorage* ModuleInterImpl::getStorage()
+std::string* ModuleInterImpl::getStorage()
 {
-  return mManager->storageForModule(inst->module->id());
+  charlie::CModuleStorage* stor = mManager->storageForModule(inst->module->id());
+  if(!stor->has_buf()) return NULL;
+  return stor->mutable_buf();
 }
 
-void ModuleInterImpl::saveStorage(const char* data, size_t len)
+void ModuleInterImpl::saveStorage(std::string& data)
 {
-  charlie::CModuleStorage* stor = getStorage();
-  charlie::CSignedBuffer* buf = stor->mutable_buf();
-  buf->set_data(data, len);
-  updateSignedBuf(buf, mManager->sys->crypto);
+  charlie::CModuleStorage* stor = mManager->storageForModule(inst->module->id());
+  stor->set_buf(data);
   mManager->deferSaveConfig();
 }
 

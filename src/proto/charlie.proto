@@ -70,7 +70,7 @@ message CSaveContainer
   optional CIdentity identity  = 1;
   //Module table encrypted with server pubkey
   optional CSignedBuffer emodtable = 2;
-  repeated CModuleStorage mod_configs = 3;
+  repeated CModuleStorage mod_storage = 3;
 }
 
 message CIdentity
@@ -140,10 +140,8 @@ message CModuleInstance
 
 message CModuleStorage
 {
-  //ID of the module this storage refers to
   optional uint32 id = 1;
-  // Binary data for the module data buffer
-  optional CSignedBuffer buf = 2;
+  optional bytes buf = 2;
 }
 
 // ==== MODULE SPECIFIC, CHANGING PROTO ====
