@@ -4,7 +4,7 @@
 #include <ostream>
 #include <iostream>
 
-#ifndef CNDEBUG
+#ifndef NDEBUG
 #define DO_CHARLIE_LOG
 #endif
 

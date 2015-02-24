@@ -1,10 +1,11 @@
 all: debug
-debug: makedbg compile copyout
-release: makerel compile copyout
+debug: makedbg compile finalize
+release: makerel compile finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
-copyout:
+finalize:
+	strip -s -S --strip-dwo --strip-unneeded -x -X -R .note -R .comment build/charlie
 	mkdir -p bin/client bin/server bin/server/modules/linux bin/server/modules/windows bin/utils
 	cp build/charlie bin/client
 	-cp build/*.so  bin/server/modules/linux/

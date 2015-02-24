@@ -2,6 +2,7 @@
 #include <charlie/xor.h>
 #include <stdio.h>
 #include <string.h>
+#include <zlib.h>
 
 #include <charlie/ModuleTable_Data.h>
 #include <charlie/ServerKey_Data.h>
@@ -44,9 +45,22 @@ int decryptServerPubkey(char** output)
   return pubkey.length();
 };
 
-void decryptManagerData(char** buf)
+void decryptManagerData(unsigned char** obuf)
 {
-  *buf = (char*)malloc(sizeof(char)*manager_data_len);
-  memcpy(*buf, manager_data, manager_data_len);
-  apply_xor(*buf, manager_data_len, manager_data_key, strlen(manager_data_key));
+  unsigned char* buf = (unsigned char*)malloc(sizeof(unsigned char)*manager_data_len);
+  memcpy(buf, manager_data, manager_data_len);
+  apply_xor((char*)buf, manager_data_len, manager_data_key, strlen(manager_data_key));
+  *obuf = (unsigned char*)malloc(sizeof(unsigned char)*manager_data_decomp_len);
+  uLong uncompLen = manager_data_decomp_len;
+  if(uncompress(*obuf, &uncompLen, buf, manager_data_len) != Z_OK)
+  {
+    CERR("Unable to decompress manager data!");
+    free(buf);
+    free(*obuf);
+    return;
+  }else
+  {
+    CLOG("Decompressed manager, "<<manager_data_len<<" -> "<<uncompLen);
+  }
+  free(buf);
 }

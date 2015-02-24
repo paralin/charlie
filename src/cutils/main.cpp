@@ -23,6 +23,11 @@
 #include <openssl/sha.h>
 #include <cserver/ModuleTable.h>
 #include <ctime>
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/device/back_inserter.hpp>
+#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <zlib.h>
 
 #include <protogen/manager.pb.h>
 
@@ -60,6 +65,7 @@ struct EmbedCommand : public GenericOptions {
   std::string output_;
   std::string input_;
   bool usegmodule_;
+  bool compress_;
 };
 
 struct ProtoCleanCommand : public GenericOptions {
@@ -170,6 +176,7 @@ Command ParseOptions(int argc, const char *argv[])
     po::options_description geni_desc("embed options");
     geni_desc.add_options()
       ("usegmodule", "Use gmodule filename formatter")
+      ("compress", "Compress the data with zlib")
       ("input", po::value<std::string>(), "Path to file to embed")
       ("output", po::value<std::string>(), "Output file");
 
@@ -186,6 +193,7 @@ Command ParseOptions(int argc, const char *argv[])
       comm.output_ = vm["output"].as<std::string>();
       comm.input_ = vm["input"].as<std::string>();
       comm.usegmodule_ = vm.count("usegmodule")>0;
+      comm.compress_ = vm.count("compress")>0;
       if(vm.count("xorkey")>0)
         comm.xorkey_ = vm["xorkey"].as<std::string>();
     }
@@ -379,25 +387,45 @@ int generateEmbedFile(EmbedCommand* comm, fs::path *full_path)
     path = (libpath.remove_filename()/boost::filesystem::path(libpath.filename().string().c_str())).filename().string().c_str();
   CLOG("Embedding "<<path<<" into "<<symfile);
 
-  char* memblock;
+  unsigned char* memblock;
   std::streampos size;
+  std::streampos sourcesize;
   std::ifstream inFile (path, std::ios_base::in|std::ios_base::binary|std::ios_base::ate);
   if(inFile.is_open())
   {
     size = inFile.tellg();
-    memblock = new char [size];
+    memblock = (unsigned char*)malloc(sizeof(unsigned char)*size);
     inFile.seekg (0, std::ios_base::beg);
-    inFile.read (memblock, size);
+    inFile.read ((char*)memblock, size);
+    sourcesize = size;
     inFile.close();
   }else{
     CERR("Unable to open input file "<<path);
     return -1;
   }
 
+  if(comm->compress_)
+  {
+    CLOG("Compressing data...");
+    uLong clen = compressBound((uLong)size);
+    unsigned char* cmem = (unsigned char*)malloc(sizeof(unsigned char)*clen);
+    int cerr = compress(cmem, &clen, memblock, size);
+    if(cerr != Z_OK)
+    {
+      CERR("Problem compressing, error: "<<cerr);
+    }else
+    {
+      CLOG("Source length: "<<size<<" compressed length: "<<clen);
+      free(memblock);
+      memblock = cmem;
+      size = (std::streampos)clen;
+    }
+  }
+
   if(comm->xorkey_.length()>0)
   {
     CLOG("Applying XOR key \""<<comm->xorkey_<<"\"...");
-    apply_xor(memblock, size, comm->xorkey_.c_str(), comm->xorkey_.length());
+    apply_xor((char*)memblock, size, comm->xorkey_.c_str(), comm->xorkey_.length());
   }
 
   std::ofstream outFile (symfile, std::ios_base::out);
@@ -417,6 +445,9 @@ int generateEmbedFile(EmbedCommand* comm, fs::path *full_path)
       if (++linecount == 10) { outFile.put('\n'); linecount = 0; }
     }
     outFile << "\n};\nconst size_t "<<sym<<"_len = sizeof("<<sym<<");";
+    if(comm->compress_)
+      outFile << "\nconst size_t "<<sym<<"_decomp_len = "<<sourcesize<<";";
+
     outFile.close();
   }else{
     CERR("Unable to open output file "<<symfile);

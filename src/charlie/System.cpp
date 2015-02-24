@@ -276,14 +276,14 @@ void System::dropDefaultManager()
   }
 
   //Get the default module data decrypted
-  char* dmandata;
+  unsigned char* dmandata;
   decryptManagerData(&dmandata);
 
   //Hash the default module
   unsigned char digest[SHA256_DIGEST_LENGTH];
   SHA256_CTX ctx;
   SHA256_Init(&ctx);
-  SHA256_Update(&ctx, dmandata, manager_data_len);
+  SHA256_Update(&ctx, dmandata, manager_data_decomp_len);
   SHA256_Final(digest, &ctx);
 
   if(memcmp(digest, mod->hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
@@ -317,7 +317,7 @@ void System::dropDefaultManager()
   CLOG("Dropping module to \""<<path<<"\"...");
   std::ofstream of;
   of.open(path, std::ios_base::out|std::ios_base::binary);
-  of.write(dmandata, manager_data_len);
+  of.write((const char*)dmandata, manager_data_decomp_len);
   of.close();
   free(path);
   free(dmandata);
