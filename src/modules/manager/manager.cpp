@@ -55,11 +55,17 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
       onionCabHash = std::string(stor.onion_cab_cookie());
       MLOG("Loaded onion.cab cookie from storage: "<<onionCabHash);
     }
+    std::string cookie;
     if(!onionCabHash.empty())
     {
-      std::string cookie = (std::string("onion_cab_iKnowShit=")+onionCabHash);
-      request << header("Cookie", cookie);
+      cookie = std::string("onion_cab_iKnowShit=")+onionCabHash+";";
+      CLOG("Using header: Cookie: "<<cookie);
+      request << header("Cookie", cookie.c_str());
     }
+    request << header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+    request << header("Accept-Encoding", "identity");
+    request << header("Accept-Language", "en-US,en;q=0.8,ru;q=0.6");
+    request << header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36");
     request << header("Connection", "close");
     http::client::response response = client.get(request);
     const std::string s = body(response);
@@ -168,19 +174,18 @@ int ManagerModule::fetchStaticModTable()
   {
     try {
       MLOG("Trying to fetch table from "<<str<<"...");
-      std::string s = fetchUrl(str);
+      const std::string s = fetchUrl(str);
+      MLOG("Body: "<<s);
 
-      boost::regex re("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", boost::regex_constants::basic);
-      auto begin =
-        boost::sregex_iterator(s.begin(), s.end(), re);
-      auto end = boost::sregex_iterator();
-
-      MLOG("Found " << std::distance(begin, end)<<" words:");
-
-      for (boost::sregex_iterator i = begin; i != end; ++i) {
-        boost::smatch match = *i;
-        std::string match_str = match.str();
-        MLOG(match_str);
+      boost::match_results<std::string::const_iterator> results;
+      boost::regex re("(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?");
+      if (boost::regex_search(s.begin(), s.end(), results, re))
+      {
+        MLOG("Found a base64 encoded string: "<<std::string(results[1].first, results[1].second));
+      }
+      else
+      {
+        MLOG("No base64 strings...");
       }
     }catch(...)
     {
