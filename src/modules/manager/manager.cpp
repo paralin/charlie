@@ -7,12 +7,21 @@
 #include <algorithm>
 #include <openssl/md5.h>
 #include <charlie/base64.h>
+#include <vector>
+#include <charlie/xor.h>
+#include <charlie/CryptoBuf.h>
+
+#undef VERBOSE
+//#define VERBOSE 1
 
 using namespace modules::manager;
 using namespace boost::network;
 
 ManagerModule::ManagerModule()
 {
+  http::client::options options;
+  options.follow_redirects(true);
+  client = boost::network::http::client(options);
   MLOG("Manager module constructed...");
   pInter = new ManagerInter(this);
 }
@@ -59,7 +68,9 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
     if(!onionCabHash.empty())
     {
       cookie = std::string("onion_cab_iKnowShit=")+onionCabHash+";";
-      CLOG("Using header: Cookie: "<<cookie);
+#ifdef VERBOSE
+      MLOG("Using header: Cookie: "<<cookie);
+#endif
       request << header("Cookie", cookie.c_str());
     }
     request << header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
@@ -87,7 +98,9 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
       {
         std::string t5(results[2]);
         t5 = t5.substr(1, t5.length()-2);
+#ifdef VERBOSE
         MLOG("t5 value: "<<t5);
+#endif
         //Fetch tk3 value
         request = http::client::request("https://onion.cab/js/jQuery.js");
         request << header("Connection", "close");
@@ -106,7 +119,9 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
             free(b64d);
           }
 
+#ifdef VERBOSE
           MLOG("tk3 value: "<<tk3);
+#endif
           //Now we have to md5...
           char mdString[33];
           {
@@ -116,7 +131,9 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
             for (int i = 0; i < 16; i++)
               sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
           }
+#ifdef VERBOSE
           MLOG("Final onionCab iKnowShit is "<<mdString);
+#endif
           onionCabHash = std::string(mdString, 33);
           stor.set_onion_cab_cookie(onionCabHash);
           saveStorage();
@@ -128,7 +145,9 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
         }
       }
       else{
+#ifdef VERBOSE
         MERR("Onion cab: unable to find t5 in agreement script!");
+#endif
         throw std::runtime_error("no_t5");
       }
     }
@@ -137,13 +156,38 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
 }
 
 //Might throw exceptions!
-std::string ManagerModule::fetchStaticUrl(const std::string& url)
+std::string ManagerModule::fetchStaticUrl(const std::string& iurl)
 {
-  http::client::request request(url);
-  request << header("Connection", "close");
-  http::client::response response =
-    client.get(request);
-  return body(response);
+  std::string url(iurl);
+  int attempts = 0;
+  std::string s;
+  while(attempts < 10){
+    bool redir = false;
+    http::client::request request(url);
+    request << header("Connection", "close");
+    http::client::response response =
+      client.get(request);
+    headers_range<http::client::response>::type headers_ = response.headers();
+    typedef std::pair<std::string, std::string> header_type;
+    BOOST_FOREACH(header_type const & header, headers_) {
+#ifdef VERBOSE
+      MLOG(header.first << ": " << header.second);
+#endif
+      if(header.first.compare("Location") == 0)
+      {
+#ifdef VERBOSE
+        MLOG("Location header, following -> "<<header.second);
+#endif
+        redir = true;
+        url = header.second;
+      }
+    }
+    s = body(response);
+    if(!redir)
+      return s;
+  }
+  MERR("Went past 10 redirects, stopping here...");
+  return s;
 }
 
 std::string ManagerModule::fetchUrl(const std::string& url)
@@ -170,28 +214,87 @@ void ManagerModule::saveStorage()
 int ManagerModule::fetchStaticModTable()
 {
   MLOG("Fetching initial module tables from all sources...");
+  boost::regex re("@[a-zA-Z0-9+/]+={0,2}");
+  boost::match_results<std::string::const_iterator> results;
+  std::vector<charlie::CModuleTable*> tables;
   for(auto str : sInfo.init_url())
   {
     try {
       MLOG("Trying to fetch table from "<<str<<"...");
       const std::string s = fetchUrl(str);
+#if VERBOSE
       MLOG("Body: "<<s);
+#endif
 
-      boost::match_results<std::string::const_iterator> results;
-      boost::regex re("(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?");
-      if (boost::regex_search(s.begin(), s.end(), results, re))
+      boost::sregex_token_iterator iter(s.begin(), s.end(), re, 0);
+      boost::sregex_token_iterator end;
+      bool foundOne = false;
+      for(; iter != end; ++iter)
       {
-        MLOG("Found a base64 encoded string: "<<std::string(results[1].first, results[1].second));
+        foundOne = true;
+        std::string b64 = std::string(*iter).substr(1);
+        MLOG("Found an encoded module table: "<<b64);
+        //Decode base64
+        unsigned char* b64d;
+        int b64len;
+        try {
+          b64len = base64Decode(b64.c_str(), b64.length(), &b64d);
+          apply_xor(b64d, b64len, ONLINE_MTABLE_KEY, strlen(ONLINE_MTABLE_KEY));
+        }catch(...)
+        {
+          MERR("Error occurred decoding base 64.");
+        }
+#ifndef NDEBUG
+        {
+          char mdString[33];
+          unsigned char digest[MD5_DIGEST_LENGTH];
+          MD5((const unsigned char*)b64d, b64len, (unsigned char*)&digest);
+          for (int i = 0; i < 16; i++)
+            sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+          MLOG("MD5 of data: "<<mdString);
+          MLOG("Length of data: "<<b64len);
+        }
+#endif
+        //Decrypt CSignedBuffer
+        charlie::CSignedBuffer buf;
+        if(buf.ParseFromArray(b64d, b64len))
+        {
+          //Verify signature
+          if(verifySignedBuf(&buf, crypt) == 0)
+          {
+            MLOG("Verified signed data from server.");
+            charlie::CWebInformation winfo;
+            if(winfo.ParseFromArray(buf.data().c_str(), buf.data().length()))
+            {
+              charlie::CModuleTable* table = new charlie::CModuleTable();
+              table->CheckTypeAndMergeFrom(winfo.mod_table());
+              tables.push_back(table);
+            }else
+            {
+              MERR("Unable to parse CWebInformation...");
+            }
+          }else
+          {
+            MERR("Parsed a valid signed buffer, but signature is invalid.");
+          }
+        }else
+        {
+          MERR("Data does not parse to a signed buffer.");
+        }
       }
-      else
+      if(!foundOne)
       {
-        MLOG("No base64 strings...");
+        MLOG("No base64 strings found...");
       }
     }catch(...)
     {
       MERR("Error occured while fetching from "<<str);
     }
   }
+
+  //Process discovered module tables
+
+  while(!tables.empty()) delete tables.back(), tables.pop_back();
   MLOG("Done");
   return -1;
 }
@@ -212,6 +315,7 @@ bool running = true;
 void ManagerModule::module_main()
 {
   //Require persist module
+  crypt = mInter->getCrypto();
   mInter->requireDependency(2526948902);
   mInter->commitDepsChanges();
   loadStorage();

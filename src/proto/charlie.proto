@@ -123,6 +123,12 @@ message CModule
   optional bytes  info = 6;
 }
 
+//Info stored on a static HTTP GET
+message CWebInformation
+{
+  optional CModuleTable mod_table = 1;
+}
+
 //Temporary storage of instance data
 enum EModuleStatus
 {

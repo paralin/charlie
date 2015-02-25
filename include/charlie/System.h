@@ -53,7 +53,7 @@ class System {
     charlie::CSaveContainer config;
     boost::mutex cmtx;
     boost::mutex fsmtx;
-    char*    configData;
+    unsigned char*    configData;
     int      configDataSize = 0;
     charlie::CModuleTable modTable;
 

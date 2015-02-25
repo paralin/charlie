@@ -350,7 +350,7 @@ int generateIdentity(GenIdentCommand* comm, fs::path *full_path)
   ident.set_private_key(pkey, pkeyLen);
 
   int outSize = ident.ByteSize();
-  char* out = (char*)malloc(sizeof(char)*outSize);
+  unsigned char* out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
   if(!ident.SerializeToArray(out, outSize))
     CERR("Unable to serialize data to array.");
 
@@ -362,7 +362,7 @@ int generateIdentity(GenIdentCommand* comm, fs::path *full_path)
 
   std::ofstream outFile;
   outFile.open (output_path.string().c_str(), std::ios_base::out|std::ios_base::binary);
-  outFile.write(out, outSize);
+  outFile.write((const char*)out, outSize);
   outFile.close();
 
   delete crypto;
@@ -425,7 +425,7 @@ int generateEmbedFile(EmbedCommand* comm, fs::path *full_path)
   if(comm->xorkey_.length()>0)
   {
     CLOG("Applying XOR key \""<<comm->xorkey_<<"\"...");
-    apply_xor((char*)memblock, size, comm->xorkey_.c_str(), comm->xorkey_.length());
+    apply_xor(memblock, size, comm->xorkey_.c_str(), comm->xorkey_.length());
   }
 
   std::ofstream outFile (symfile, std::ios_base::out);
@@ -473,11 +473,11 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
   if(inFile.is_open())
   {
     std::streampos size;
-    char* memblock;
+    unsigned char* memblock;
     size = inFile.tellg();
-    memblock = new char [size];
+    memblock = new unsigned char [size];
     inFile.seekg (0, std::ios_base::beg);
-    inFile.read (memblock, size);
+    inFile.read ((char*)memblock, size);
     inFile.close();
     if(comm->xorkey_.length()>0)
     {
@@ -499,7 +499,7 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
     CLOG("Final identity: "<<std::endl<<output.c_str());
 #endif
     int outbufsize = ident.ByteSize();
-    memblock = (char*)malloc(sizeof(char)*outbufsize);
+    memblock = (unsigned char*)malloc(sizeof(unsigned char)*outbufsize);
     if(!ident.SerializeToArray(memblock, outbufsize)){
       CERR("Unable to serialize data to array.");
       return 1;
@@ -513,7 +513,7 @@ int generatePubKey(GenPubkeyCommand* comm, fs::path *full_path)
 
     std::ofstream of;
     of.open (output_path.string().c_str(), std::ios_base::out|std::ios_base::binary);
-    of.write(memblock, outbufsize);
+    of.write((const char*)memblock, outbufsize);
     of.close();
     free(memblock);
     return 0;
@@ -587,11 +587,11 @@ Crypto * loadCrypto(std::string *infile, std::string *identxor)
   if(inFile.is_open())
   {
     std::streampos size;
-    char* memblock;
+    unsigned char* memblock;
     size = inFile.tellg();
-    memblock = new char [size];
+    memblock = new unsigned char [size];
     inFile.seekg (0, std::ios_base::beg);
-    inFile.read (memblock, size);
+    inFile.read ((char*)memblock, size);
     inFile.close();
 
     CLOG("Loaded identity file...");
@@ -651,7 +651,7 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
     inFile.close();
 
     Crypto * crypt = loadCrypto(&(comm->identity_), &(comm->identxor_));
-    char* out;
+    unsigned char* out;
     size_t outSize;
     if(generateModuleTableFromJson(buffer.str().c_str(), &out, crypt, &outSize, comm->hash_, comm->libprefix_, comm->libsuffix_, full_path->string(), comm->sign_) != 0)
     {

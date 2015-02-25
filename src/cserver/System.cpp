@@ -1,5 +1,7 @@
+#include <Common.h>
 #include <cserver/System.h>
 #include <cserver/ModuleTable.h>
+#include <charlie/xor.h>
 #include <stdio.h>
 #include <gmodule.h>
 #include <iostream>
@@ -7,6 +9,10 @@
 #include <charlie/base64.h>
 #include <sstream>
 #include <boost/network/protocol/http/server.hpp>
+
+#ifndef NDEBUG
+#include <openssl/md5.h>
+#endif
 
 #define RFAIL(fcn, msg) res=fcn;if(res!=0){CERR(msg);return res;}
 #ifdef WIN32
@@ -49,11 +55,11 @@ int System::loadCrypto()
   if(inFile.is_open())
   {
     std::streampos size;
-    char* memblock;
     size = inFile.tellg();
-    memblock = new char [size];
+    unsigned char* memblock;
+    memblock = new unsigned char [size];
     inFile.seekg (0, std::ios_base::beg);
-    inFile.read (memblock, size);
+    inFile.read ((char*)memblock, size);
     inFile.close();
 
     CLOG("Loaded identity file...");
@@ -107,20 +113,62 @@ int System::main(int argc, const char* argv[])
     buffer << inFile.rdbuf();
     inFile.close();
 
-    char* output;
-    size_t outputSize;
-    if(generateModuleTableFromJson(buffer.str().c_str(), &output, crypt, &outputSize, true, std::string(G_MODULE_PREFIX), std::string(".")+std::string(G_MODULE_SUFFIX), std::string("./modules/linux"), true) == 0)
+    try{
+      charlie::CModuleTable* table = generateModuleTableFromJson2(buffer.str().c_str(), crypt, std::string(G_MODULE_PREFIX), std::string(".")+std::string(G_MODULE_SUFFIX), std::string("./modules/linux"), true);
+      charlie::CWebInformation info;
+      info.set_allocated_mod_table(table);
+      size_t outSize = info.ByteSize();
+      unsigned char* out = (unsigned char*)malloc(outSize*sizeof(unsigned char));
+      if(info.SerializeToArray(out, outSize))
+      {
+        unsigned char* sig;
+        size_t sigLen = (size_t)crypt->digestSign((const unsigned char*)out, outSize, &sig, false);
+        if(sigLen == FAILURE)
+        {
+          CERR("Unable to sign the table.");
+        }else
+        {
+          charlie::CSignedBuffer buf;
+          buf.set_data(out, outSize);
+          buf.set_sig(sig, sigLen);
+          free(out);
+          free(sig);
+          outSize = buf.ByteSize();
+          out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
+          if(!buf.SerializeToArray(out, outSize))
+          {
+            CERR("Unable to serialize the signature to a array.");
+          }
+          else
+          {
+#ifndef NDEBUG
+            {
+              char mdString[33];
+              unsigned char digest[MD5_DIGEST_LENGTH];
+              MD5((const unsigned char*)out, outSize, (unsigned char*)&digest);
+              for (int i = 0; i < 16; i++)
+                sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+              CLOG("MD5 of data: "<<mdString);
+              CLOG("Length of data: "<<outSize);
+            }
+#endif
+            apply_xor(out, outSize, ONLINE_MTABLE_KEY, strlen(ONLINE_MTABLE_KEY));
+            char* b64o = base64Encode((const unsigned char*)out, outSize);
+            handler.info = std::string("@")+std::string(b64o);
+            free(b64o);
+            CLOG(handler.info);
+          }
+        }
+        free(out);
+      }
+      else
+      {
+        CERR("Unable to serialize web info to array");
+      }
+    }catch(...)
     {
-      char* b64o = base64Encode((const unsigned char*)output, outputSize);
-      handler.info = std::string(b64o);
-      CLOG(b64o);
-      free(b64o);
+      CERR("Unable to generate module table.");
     }
-    else
-    {
-      CERR("Unable to generate module table");
-    }
-    free(output);
   }else
   {
     CERR("Can't find test modtable json");

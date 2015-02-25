@@ -40,6 +40,7 @@ namespace modules
       ManagerInter* pInter;
       boost::network::http::client client;
       CManagerStorage stor;
+      Crypto* crypt;
 
       std::string onionCabHash;
     };

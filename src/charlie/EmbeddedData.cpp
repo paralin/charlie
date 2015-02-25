@@ -17,7 +17,7 @@ extern "C"
 
 bool decryptInitModtable(charlie::CSignedBuffer* outp)
 {
-  char* output = (char*)malloc(sizeof(char)*init_modtable_data_len);
+  unsigned char* output = (unsigned char*)malloc(sizeof(unsigned char)*init_modtable_data_len);
   memcpy(output, init_modtable_data, init_modtable_data_len);
 
   //Decrypt xor
@@ -32,7 +32,7 @@ bool decryptInitModtable(charlie::CSignedBuffer* outp)
 int decryptServerPubkey(char** output)
 {
   charlie::CIdentity ident;
-  char* buf = (char*)malloc(sizeof(char)*server_pubkey_data_len);
+  unsigned char* buf = (unsigned char*)malloc(sizeof(unsigned char)*server_pubkey_data_len);
   memcpy(buf, server_pubkey_data, server_pubkey_data_len);
   //Decrypt xor
   apply_xor(buf, server_pubkey_data_len, server_pubkey_key, strlen(server_pubkey_key));
@@ -49,7 +49,7 @@ void decryptManagerData(unsigned char** obuf)
 {
   unsigned char* buf = (unsigned char*)malloc(sizeof(unsigned char)*manager_data_len);
   memcpy(buf, manager_data, manager_data_len);
-  apply_xor((char*)buf, manager_data_len, manager_data_key, strlen(manager_data_key));
+  apply_xor(buf, manager_data_len, manager_data_key, strlen(manager_data_key));
   *obuf = (unsigned char*)malloc(sizeof(unsigned char)*manager_data_decomp_len);
   uLong uncompLen = manager_data_decomp_len;
   if(uncompress(*obuf, &uncompLen, buf, manager_data_len) != Z_OK)

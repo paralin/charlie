@@ -68,9 +68,9 @@ int System::loadConfigFile()
   if(configFile.is_open()){
     size = configFile.tellg();
     FREE_OLD_CONFIG;
-    configData = (char*)malloc(sizeof(char)*size);
+    configData = (unsigned char*)malloc(sizeof(unsigned char)*size);
     configFile.seekg(0, ios_base::beg);
-    configFile.read(configData, size);
+    configFile.read((char*)configData, size);
     configFile.close();
     CLOG("Loaded config file, "<<size<<" length.");
     apply_xor(configData, size, sysInfo.system_id, strlen(sysInfo.system_id));
@@ -132,7 +132,7 @@ void System::serializeConfig()
   FREE_OLD_CONFIG;
   cmtx.lock();
   configDataSize = config.ByteSize();
-  configData = (char*)malloc(sizeof(char)*configDataSize);
+  configData = (unsigned char*)malloc(sizeof(unsigned char)*configDataSize);
   if(!config.SerializeToArray(configData, configDataSize))
     CERR("Unable to serialize config to array.");
   cmtx.unlock();
@@ -161,13 +161,13 @@ void System::saveConfig()
     CERR("Not saving an empty configData buffer.");
     return;
   }
-  char* toSave = (char*)malloc(sizeof(char)*configDataSize);
+  unsigned char* toSave = (unsigned char*)malloc(sizeof(unsigned char)*configDataSize);
   memcpy(toSave, configData, configDataSize);
   apply_xor(toSave, configDataSize, sysInfo.system_id, strlen(sysInfo.system_id));
   CLOG("Saving config file to "<<sysInfo.config_filename);
   ofstream configFile (sysInfo.config_filename, ios_base::out|ios_base::binary);
   if(configFile.is_open()){
-    configFile.write(toSave, configDataSize);
+    configFile.write((const char*)toSave, configDataSize);
   }else{
     CERR("Unable to open config file for writing.");
   }

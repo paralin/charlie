@@ -11,9 +11,9 @@ COPY ./setuptor.expect /root/setuptor.expect
 RUN cp /root/setuptor.expect /var/lib/tor/ && chown debian-tor:debian-tor /var/lib/tor/setuptor.expect && chmod +x /root/startup.bash
 COPY ./tor /etc/tor/torrc
 ADD ./hidden_service/ /root/hidden_service/
-RUN su -c "expect /var/lib/tor/setuptor.expect" -s /bin/bash debian-tor
+RUN expect /var/lib/tor/setuptor.expect
 RUN rm -rf /var/lib/tor/hidden_service/*
 RUN cp /root/hidden_service/* /var/lib/tor/hidden_service/
 RUN chown -R debian-tor:debian-tor /var/lib/tor/hidden_service/
 RUN rm /var/lib/tor/setuptor.expect /root/setuptor.expect
-RUN apt-get -y autoremove --purge expect
+RUN apt-get -y autoremove --purge expect && apt-get autoclean

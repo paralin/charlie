@@ -4,7 +4,7 @@
 
 using namespace std;
 
-int apply_xor(char* toEncrypt, int encryptLen, const char* key, int keyLen) {
+int apply_xor(unsigned char* toEncrypt, int encryptLen, const char* key, int keyLen) {
   bool inc;
   int keyi = keyLen-1;
   for (int i = 0; i < encryptLen; i++)

@@ -4,7 +4,7 @@
 #include <ctime>
 #include <charlie/hash.h>
 
-int generateModuleTableFromJson(const char* json, char** output, Crypto* crypt, size_t* outputSize, bool doHash, std::string libprefix, std::string libsuffix, std::string rootPath, bool doSign)
+charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* crypt, std::string libprefix, std::string libsuffix, std::string rootPath, bool doHash)
 {
   CLOG("Parsing json...");
 
@@ -14,26 +14,26 @@ int generateModuleTableFromJson(const char* json, char** output, Crypto* crypt, 
   {
     CERR("Unable to parse json input.");
     CLOG(json);
-    return -1;
+    throw std::runtime_error("1");
   }
 
   if(!d.IsObject())
   {
     CERR("Document must be an object.");
-    return -1;
+    throw std::runtime_error("2");
   }
 
   if(!(d.HasMember("modules") && d["modules"].IsArray()))
   {
     CERR("Document must have a modules array.");
-    return -1;
+    throw std::runtime_error("3");
   }
 
   if(d.HasMember("name") && d["name"].IsString())
     CLOG("Building CModuleTable \""<<d["name"].GetString()<<"\"...");
 
-  charlie::CModuleTable table;
-  table.set_timestamp(std::time(0));
+  charlie::CModuleTable* table = new charlie::CModuleTable();
+  table->set_timestamp(std::time(0));
   const rapidjson::Value& modules = d["modules"];
   for (rapidjson::SizeType i = 0; i < modules.Size(); i++)
   {
@@ -49,7 +49,7 @@ int generateModuleTableFromJson(const char* json, char** output, Crypto* crypt, 
       continue;
     }
 
-    charlie::CModule* mod = table.add_modules();
+    charlie::CModule* mod = table->add_modules();
     //calculate the ID
     std::string name(ix["name"].GetString());
     CLOG("== "<<name<<" ==");
@@ -107,16 +107,32 @@ int generateModuleTableFromJson(const char* json, char** output, Crypto* crypt, 
       }
     }
   }
+  return table;
+}
+
+int generateModuleTableFromJson(const char* json, unsigned char** output, Crypto* crypt, size_t* outputSize, bool doHash, std::string libprefix, std::string libsuffix, std::string rootPath, bool doSign)
+{
+  charlie::CModuleTable* table;
+  try {
+    table = generateModuleTableFromJson2(json, crypt, libprefix, libsuffix, rootPath, doHash);
+  }catch(...)
+  {
+    CERR("Unable to generate module table from json.");
+    return -1;
+  }
 
   std::string outd;
-  if(!table.SerializeToString(&outd)){
+  if(!table->SerializeToString(&outd)){
     CERR("Unable to serialize module table to string.");
+    delete table;
     return -1;
   }
 
   size_t outSize = outd.length();
-  char* out = (char*)malloc(outSize*sizeof(char));
+  unsigned char* out = (unsigned char*)malloc(outSize*sizeof(unsigned char));
   memcpy(out, outd.c_str(), outd.length());
+
+  delete table;
 
   if(doSign)
   {
@@ -136,7 +152,7 @@ int generateModuleTableFromJson(const char* json, char** output, Crypto* crypt, 
       free(out);
       CLOG("Signed the module table.");
       outSize = rbuf.ByteSize();
-      out = (char*)malloc(sizeof(char)*outSize);
+      out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
       *output = out;
       if(!rbuf.SerializeToArray(out, outSize))
       {

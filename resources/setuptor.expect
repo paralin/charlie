@@ -1,5 +1,10 @@
 set timeout 120
-spawn tor
+spawn service tor start
+expect eof
+spawn tail -f /var/log/tor/log
 expect "Bootstrapped 100%: Done"
 send \003
+expect eof
+spawn service tor stop
+spawn /bin/bash -c "kill `pidof tor`"
 expect eof

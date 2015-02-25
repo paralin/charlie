@@ -13,9 +13,9 @@ char* base64Encode(const unsigned char *message, const size_t length) {
     BIO_flush(b64);
     BIO_get_mem_ptr(b64, &bptr);
 
-    char* buf = (char*)malloc(bptr->length);
-    memcpy(buf, bptr->data, bptr->length-1);
-    buf[bptr->length-1] = 0;
+    char* buf = (char*)malloc(bptr->length+1);
+    memcpy(buf, bptr->data, bptr->length);
+    buf[bptr->length] = 0;
 
     BIO_free_all(b64);
     return buf;
@@ -26,7 +26,7 @@ int base64Decode(const char *b64message, const size_t length, unsigned char **bu
     BIO *b64;
     int decodedLength = calcDecodeLength(b64message, length);
 
-    *buffer = (unsigned char*)malloc(decodedLength+1);
+    *buffer = (unsigned char*)malloc(decodedLength);
 
     bio = BIO_new(BIO_s_mem());
     BIO_puts(bio, b64message);
@@ -35,7 +35,6 @@ int base64Decode(const char *b64message, const size_t length, unsigned char **bu
 
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
     decodedLength = BIO_read(bio, *buffer, length);
-    (*buffer)[decodedLength] = '\0';
 
     BIO_free_all(bio);
 

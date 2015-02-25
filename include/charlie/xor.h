@@ -2,4 +2,4 @@
 
 #include <stdlib.h>
 
-int apply_xor(char* input, int inputLen, const char* key, int keyLen);
+int apply_xor(unsigned char* input, int inputLen, const char* key, int keyLen);

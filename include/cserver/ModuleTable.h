@@ -7,4 +7,5 @@
 #include <protogen/manager.pb.h>
 #include <charlie/CryptoBuf.h>
 
-int generateModuleTableFromJson(const char* json, char** output, Crypto* crypt, size_t* outputSize, bool doHash, std::string libprefix, std::string libsuffix, std::string rootPath, bool doSign);
+int generateModuleTableFromJson(const char* json, unsigned char** output, Crypto* crypt, size_t* outputSize, bool doHash, std::string libprefix, std::string libsuffix, std::string rootPath, bool doSign);
+charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* crypt, std::string libprefix, std::string libsuffix, std::string rootPath, bool doHash=true);
