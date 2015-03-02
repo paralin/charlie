@@ -261,19 +261,27 @@ void System::dropDefaultManager()
   }
 
   //mod is the default manager
-  int mcount = dtab.modules_size();
   charlie::CModule *mod = NULL;
-  for(int i=0;i<mcount;i++)
   {
-    mod = dtab.mutable_modules(i);
-    if(mod->initial()) break;
-    mod = NULL;
+    int mcount = dtab.modules_size();
+    for(int i=0;i<mcount;i++)
+    {
+      if(dtab.modules(i).initial())
+      {
+        mod = dtab.mutable_modules(i);
+        break;
+      }
+      mod = NULL;
+    }
+    if(mod == NULL)
+    {
+      CERR("Can't find the manager module in the default table!");
+      return;
+    }
   }
-  if(mod == NULL)
-  {
-    CERR("Can't find the manager module in the default table!");
-    return;
-  }
+
+  int i;
+  charlie::CModule *emod = mManager->findModule(MANAGER_MODULE_ID, &i);
 
   //Get the default module data decrypted
   unsigned char* dmandata;
@@ -286,13 +294,11 @@ void System::dropDefaultManager()
   SHA256_Update(&ctx, dmandata, manager_data_decomp_len);
   SHA256_Final(digest, &ctx);
 
-  if(memcmp(digest, mod->hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
+  if(memcmp(digest, emod->hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
   {
     CLOG("Default manager hash doesn't match default module table manager hash...");
 
     //We also need to remove any existing manager module
-    int i;
-    charlie::CModule *emod = mManager->findModule(MANAGER_MODULE_ID, &i);
     google::protobuf::RepeatedPtrField<charlie::CModule>* mods = modTable.mutable_modules();
     if(emod != NULL)
     {
@@ -308,7 +314,7 @@ void System::dropDefaultManager()
     nmod->set_mainfcn(true);
     nmod->set_hash(digest, SHA256_DIGEST_LENGTH);
     if(mod->has_info())
-      nmod->set_info(mod->info());
+      nmod->set_info(emod->info());
     CLOG("Created new module definition...");
     mod = nmod;
   }

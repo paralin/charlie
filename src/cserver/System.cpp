@@ -9,6 +9,7 @@
 #include <charlie/base64.h>
 #include <sstream>
 #include <boost/network/protocol/http/server.hpp>
+#include <ctime>
 
 #ifndef NDEBUG
 #include <openssl/md5.h>
@@ -113,28 +114,24 @@ int System::main(int argc, const char* argv[])
     buffer << inFile.rdbuf();
     inFile.close();
 
-    try{
+    try
+    {
       charlie::CModuleTable* table = generateModuleTableFromJson2(buffer.str().c_str(), crypt, std::string(G_MODULE_PREFIX), std::string(".")+std::string(G_MODULE_SUFFIX), std::string("./modules/linux"), true);
       charlie::CWebInformation info;
-      info.set_allocated_mod_table(table);
-      size_t outSize = info.ByteSize();
-      unsigned char* out = (unsigned char*)malloc(outSize*sizeof(unsigned char));
-      if(info.SerializeToArray(out, outSize))
+      info.set_timestamp(std::time(0));
+
+      charlie::CSignedBuffer* mbuf = new charlie::CSignedBuffer();
+      table->SerializeToString(mbuf->mutable_data());
+      if(updateSignedBuf(mbuf, crypt) == SUCCESS)
       {
-        unsigned char* sig;
-        size_t sigLen = (size_t)crypt->digestSign((const unsigned char*)out, outSize, &sig, false);
-        if(sigLen == FAILURE)
+        info.set_allocated_mod_table(mbuf);
+
+        charlie::CSignedBuffer buf;
+        info.SerializeToString(buf.mutable_data());
+        if(updateSignedBuf(&buf, crypt) == SUCCESS)
         {
-          CERR("Unable to sign the table.");
-        }else
-        {
-          charlie::CSignedBuffer buf;
-          buf.set_data(out, outSize);
-          buf.set_sig(sig, sigLen);
-          free(out);
-          free(sig);
-          outSize = buf.ByteSize();
-          out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
+          size_t outSize = buf.ByteSize();
+          unsigned char* out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
           if(!buf.SerializeToArray(out, outSize))
           {
             CERR("Unable to serialize the signature to a array.");
@@ -157,13 +154,13 @@ int System::main(int argc, const char* argv[])
             handler.info = std::string("@")+std::string(b64o);
             free(b64o);
             CLOG(handler.info);
+            free(out);
           }
+        }else{
+          CERR("Can't sign web info.");
         }
-        free(out);
-      }
-      else
-      {
-        CERR("Unable to serialize web info to array");
+      }else{
+        CERR("Can't sign module table.");
       }
     }catch(...)
     {

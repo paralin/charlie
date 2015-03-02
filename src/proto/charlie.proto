@@ -126,7 +126,10 @@ message CModule
 //Info stored on a static HTTP GET
 message CWebInformation
 {
-  optional CModuleTable mod_table = 1;
+  //optional CModuleTable mod_table = 1;
+  //We have to use a csignedbuffer...
+  optional int64 timestamp = 1;
+  optional CSignedBuffer mod_table = 2;
 }
 
 //Temporary storage of instance data

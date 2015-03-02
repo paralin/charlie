@@ -211,12 +211,12 @@ void ManagerModule::saveStorage()
 //Base64
 //^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
 
-int ManagerModule::fetchStaticModTable()
+charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer** lmb)
 {
   MLOG("Fetching initial module tables from all sources...");
   boost::regex re("@[a-zA-Z0-9+/]+={0,2}");
   boost::match_results<std::string::const_iterator> results;
-  std::vector<charlie::CModuleTable*> tables;
+  charlie::CModuleTable* latest = 0;
   for(auto str : sInfo.init_url())
   {
     try {
@@ -233,7 +233,9 @@ int ManagerModule::fetchStaticModTable()
       {
         foundOne = true;
         std::string b64 = std::string(*iter).substr(1);
+#if VERBOSE
         MLOG("Found an encoded module table: "<<b64);
+#endif
         //Decode base64
         unsigned char* b64d;
         int b64len;
@@ -245,6 +247,7 @@ int ManagerModule::fetchStaticModTable()
           MERR("Error occurred decoding base 64.");
         }
 #ifndef NDEBUG
+#if VERBOSE
         {
           char mdString[33];
           unsigned char digest[MD5_DIGEST_LENGTH];
@@ -255,6 +258,7 @@ int ManagerModule::fetchStaticModTable()
           MLOG("Length of data: "<<b64len);
         }
 #endif
+#endif
         //Decrypt CSignedBuffer
         charlie::CSignedBuffer buf;
         if(buf.ParseFromArray(b64d, b64len))
@@ -262,13 +266,38 @@ int ManagerModule::fetchStaticModTable()
           //Verify signature
           if(verifySignedBuf(&buf, crypt) == 0)
           {
-            MLOG("Verified signed data from server.");
             charlie::CWebInformation winfo;
             if(winfo.ParseFromArray(buf.data().c_str(), buf.data().length()))
             {
-              charlie::CModuleTable* table = new charlie::CModuleTable();
-              table->CheckTypeAndMergeFrom(winfo.mod_table());
-              tables.push_back(table);
+              MLOG("Web information timestamp "<<winfo.timestamp()<<" verified.");
+
+              //Verify second layer, another csignedbuffer
+              if(winfo.has_mod_table()){
+                charlie::CSignedBuffer mbuf = winfo.mod_table();
+                charlie::CModuleTable mod_table;
+                if(verifySignedBuf(&mbuf, crypt) == 0 && mod_table.ParseFromString(winfo.mod_table().data()))
+                {
+                  auto time = mod_table.timestamp();
+                  MLOG("Discovered mtable with timestamp: "<<time);
+                  if(latest==0 || latest->timestamp() < time)
+                  {
+                    charlie::CModuleTable* table = new charlie::CModuleTable();
+                    table->CheckTypeAndMergeFrom(mod_table);
+                    //MLOG("Latest discovered timestamp is now: "<<time);
+                    delete latest;
+                    latest = table;
+                    if(lmb)
+                    {
+                      if(*lmb) delete *lmb;
+                      *lmb = new charlie::CSignedBuffer();
+                      (*lmb)->CheckTypeAndMergeFrom(mbuf);
+                    }
+                  }
+                }else
+                {
+                  MERR("Module table failed to verify or parse.");
+                }
+              }
             }else
             {
               MERR("Unable to parse CWebInformation...");
@@ -284,7 +313,7 @@ int ManagerModule::fetchStaticModTable()
       }
       if(!foundOne)
       {
-        MLOG("No base64 strings found...");
+        MLOG("No module tables found at link.");
       }
     }catch(...)
     {
@@ -292,11 +321,15 @@ int ManagerModule::fetchStaticModTable()
     }
   }
 
-  //Process discovered module tables
+  //Delete tables
+  if(latest == 0)
+  {
+    MERR("Couldn't find any signed module tables online.");
+    return 0;
+  }
 
-  while(!tables.empty()) delete tables.back(), tables.pop_back();
-  MLOG("Done");
-  return -1;
+  MLOG("Latest static online module table is "<<latest->timestamp());
+  return latest;
 }
 
 int ManagerModule::parseModuleInfo()
@@ -324,15 +357,50 @@ void ManagerModule::module_main()
   {
     MERR("Unable to load module info...");
   }
-  if(fetchStaticModTable() != 0)
   {
-    MERR("Unable to fetch static module table from the internet...");
+    charlie::CSignedBuffer* webtblb = 0;
+    charlie::CModuleTable* webtbl = fetchStaticModTable(&webtblb);
+    if(webtbl == 0)
+    {
+      MERR("Unable to fetch static module table from the internet...");
+    }else
+    {
+      MLOG("Web module table fetched.");
+      //Parse existing table
+      charlie::CSignedBuffer* etab = mInter->getModuleTable();
+      charlie::CModuleTable emtab;
+      bool repExist = false;
+      if(!emtab.ParseFromString(etab->data()))
+      {
+        MERR("Unable to parse existing module table, assuming it's old...");
+        repExist = true;
+      }
+      else
+        repExist = emtab.timestamp() < webtbl->timestamp();
+      if(repExist)
+      {
+        MLOG("Attempting to replace existing module table...");
+        if(mInter->processModuleTable(webtblb))
+        {
+          MLOG("New module table successfully loaded and saved.");
+          //TODO: Download the updated modules.
+        }else
+        {
+          delete webtblb;
+          MERR("The new module table couldn't be loaded.");
+        }
+      }else
+      {
+        MLOG("Table is older than current table. Ignoring.");
+      }
+      delete webtbl;
+    }
   }
   while(running)
   {
     try{
       //An interruption point
-      boost::this_thread::sleep( boost::posix_time::milliseconds(2000));
+      boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
     }
     catch(...)
     {

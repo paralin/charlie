@@ -41,7 +41,7 @@ bool ModuleManager::parseModuleTable(charlie::CSignedBuffer* inbuf, charlie::CMo
     CERR("Unable to parse module table.");
     return false;
   }
-  CLOG("Module table verified and parsed.");
+  CLOG("Module table verified and parsed, timestamp: "<<target->timestamp());
   return true;
 }
 
@@ -68,6 +68,8 @@ bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
   sys->modTable.Clear();
   sys->modTable.CheckTypeAndMergeFrom(ntab);
   CLOG("Merged new verified module table.");
+  sys->config.set_allocated_emodtable(buf);
+  deferSaveConfig();
   //todo: maybe we need to update all the modules?
   //todo: notify the modules of the change?
   return true;

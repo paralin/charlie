@@ -13,9 +13,9 @@ int verifySignedBuf(charlie::CSignedBuffer* buf, Crypto * crypt, bool useRemote)
 
 int updateSignedBuf(charlie::CSignedBuffer* buf, Crypto* crypt)
 {
-  std::string* data = buf->mutable_data();
+  std::string data = buf->data();
   unsigned char* sig;
-  int sigLen = crypt->digestSign((const unsigned char*)data->c_str(), data->length(), &sig, false);
+  int sigLen = crypt->digestSign((const unsigned char*)data.c_str(), data.length(), &sig, false);
   if(sigLen == FAILURE) return FAILURE;
   buf->set_sig(sig, sigLen);
   free(sig);

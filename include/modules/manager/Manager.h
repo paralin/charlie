@@ -27,7 +27,7 @@ namespace modules
 
       //Nonstandard
     private:
-      int fetchStaticModTable();
+      charlie::CModuleTable* fetchStaticModTable(charlie::CSignedBuffer** lmb=0);
       int parseModuleInfo();
       void loadStorage();
       void saveStorage();

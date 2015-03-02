@@ -203,6 +203,7 @@ if(NOT WINCC)
   file(GLOB http_SRC "src/http/*.cpp")
   add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
     "src/charlie/Crypto.cpp"
+    "src/charlie/CryptoBuf.cpp"
     "src/charlie/base64.cpp"
     "src/charlie/hash.cpp"
     "src/charlie/xor.cpp"
