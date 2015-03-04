@@ -344,6 +344,98 @@ void ManagerModule::loadStorage()
   if(data != NULL) stor.ParseFromString(*data);
 }
 
+int ManagerModule::updateTableFromInternet(charlie::CModuleTable **wtbl)
+{
+  charlie::CSignedBuffer* webtblb = 0;
+  charlie::CModuleTable* webtbl = fetchStaticModTable(&webtblb);
+  if(webtbl != 0)
+  {
+    int status = 0;
+    MLOG("Web module table fetched.");
+    //Parse existing table
+    charlie::CSignedBuffer* etab = mInter->getModuleTable();
+    charlie::CModuleTable emtab;
+    bool repExist = false;
+    if(!emtab.ParseFromString(etab->data()))
+    {
+      MERR("Unable to parse existing module table, assuming it's old...");
+      repExist = true;
+    }
+    else
+      repExist = emtab.timestamp() < webtbl->timestamp();
+    if(repExist)
+    {
+      MLOG("Attempting to replace existing module table...");
+      if(mInter->processModuleTable(webtblb))
+      {
+        MLOG("New module table successfully loaded and saved.");
+        if(wtbl != 0) *wtbl = webtbl;
+      }else
+      {
+        MERR("The new module table couldn't be loaded.");
+        status = -1;
+      }
+    }else
+    {
+      MLOG("Table is older than current table. Ignoring.");
+      status = 1;
+    }
+    if(wtbl == 0)
+      delete webtbl;
+    return status;
+  }
+  return -1;
+}
+
+int ManagerModule::downloadModules(charlie::CModuleTable* table)
+{
+  //We need to parse it ourselves
+  bool delTab = false;
+  if(table == 0)
+  {
+    charlie::CSignedBuffer* etab = mInter->getModuleTable();
+    charlie::CModuleTable* emtab = new charlie::CModuleTable();
+    if(!emtab->ParseFromString(etab->data()))
+    {
+      MERR("Unable to parse the existing module table in downloadModules.");
+      return -1;
+    }
+    table = emtab;
+    delTab = true;
+  }
+
+  // Now print out the acquire methods
+  {
+    int mcount = table->modules_size();
+    for(int i=0;i<mcount;i++)
+    {
+      const charlie::CModule mod = table->modules(i);
+      int acqs = mod.acquire_size();
+      MLOG("Module "<<mod.id()<<" has "<<acqs<<" acquire methods...");
+      for(int ia=0;ia<acqs;ia++)
+      {
+        const charlie::CModuleAcquire acq = mod.acquire(ia);
+        switch(acq.type())
+        {
+          case charlie::HTTP_GET:
+            charlie::CHttpGetInfo nfo;
+            if(nfo.ParseFromString(acq.data()))
+            {
+              MLOG("Fetching via HTTP: "<<nfo.url());
+            }else
+            {
+              MERR("Unable to parse http get info.");
+            }
+            break;
+        }
+      }
+    }
+  }
+
+  // Cleanup
+  if(delTab) delete table;
+}
+
 bool running = true;
 void ManagerModule::module_main()
 {
@@ -358,42 +450,13 @@ void ManagerModule::module_main()
     MERR("Unable to load module info...");
   }
   {
-    charlie::CSignedBuffer* webtblb = 0;
-    charlie::CModuleTable* webtbl = fetchStaticModTable(&webtblb);
-    if(webtbl == 0)
+    charlie::CModuleTable* tbl;
+    if(updateTableFromInternet(&tbl) != 0)
     {
-      MERR("Unable to fetch static module table from the internet...");
+      MERR("Unable to fetch (a newer?) static module table from the internet...");
     }else
     {
-      MLOG("Web module table fetched.");
-      //Parse existing table
-      charlie::CSignedBuffer* etab = mInter->getModuleTable();
-      charlie::CModuleTable emtab;
-      bool repExist = false;
-      if(!emtab.ParseFromString(etab->data()))
-      {
-        MERR("Unable to parse existing module table, assuming it's old...");
-        repExist = true;
-      }
-      else
-        repExist = emtab.timestamp() < webtbl->timestamp();
-      if(repExist)
-      {
-        MLOG("Attempting to replace existing module table...");
-        if(mInter->processModuleTable(webtblb))
-        {
-          MLOG("New module table successfully loaded and saved.");
-          //TODO: Download the updated modules.
-        }else
-        {
-          delete webtblb;
-          MERR("The new module table couldn't be loaded.");
-        }
-      }else
-      {
-        MLOG("Table is older than current table. Ignoring.");
-      }
-      delete webtbl;
+      downloadModules();
     }
   }
   while(running)

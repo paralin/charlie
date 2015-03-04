@@ -88,7 +88,6 @@ message CModuleTable
 enum CAcquireType
 {
   HTTP_GET     = 0;
-  TOR_HTTP_GET = 1;
 }
 
 message CModuleAcquire
@@ -99,12 +98,8 @@ message CModuleAcquire
 
 message CHttpGetInfo
 {
-  optional string url = 1;
-}
-
-message CTorHttpGetInfo
-{
-  optional string url = 1;
+  optional string url   = 1;
+  optional bool use_tor = 2;
 }
 
 message CModule
