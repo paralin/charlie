@@ -1,10 +1,10 @@
 all: debug
-debug: makedbg compile finalize
-release: makerel compile finalize
+debug: makedbg finalize
+release: makerel finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
-finalize:
+finalize: compile
 	strip -s -S --strip-dwo --strip-unneeded -x -X -R .note -R .comment build/charlie
 	mkdir -p bin/client bin/server bin/server/modules/linux bin/server/modules/windows bin/utils
 	cp build/charlie bin/client
@@ -18,6 +18,7 @@ finalize:
 	cp resources/startup.bash bin/
 	cp resources/setuptor.expect bin/
 	cp resources/tor/hidden_service/ bin/ -r
+	cp Dockerfile bin
 
 setupmxe:
 	git submodule update --init
@@ -73,16 +74,20 @@ proto:
 valgrind: makedbg compile
 	cd build && valgrind --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../valgrind.supp ./charlie
 
-dimage: debug
-	cp Dockerfile bin
+dimage: debug finalize
 	sudo docker build -t charlie/cserver ./bin/
 
 drun:
 	-sudo docker rm -f cserver
-	sudo docker run -dt --name cserver charlie/cserver /bin/bash -c  "/root/startup.bash"
+	sudo docker run -dt --name cserver charlie/cserver
 
 dbash:
 	sudo docker exec -it cserver /bin/bash
 
 dcleanall:
 	sudo docker rm -f `sudo docker ps --no-trunc -aq`
+
+push: finalize
+	@if [ ! -d "../charliebin/" ]; then echo "Charlie binary repository does not exist." && exit 5; fi
+	rsync -rav --exclude='.git/' --exclude="client/" --delete bin/ ../charliebin/
+	cd ../charliebin/ && git add -A && git commit -am "$(m)" && git push deis master

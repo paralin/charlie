@@ -17,3 +17,5 @@ RUN cp /root/hidden_service/* /var/lib/tor/hidden_service/
 RUN chown -R debian-tor:debian-tor /var/lib/tor/hidden_service/
 RUN rm /var/lib/tor/setuptor.expect /root/setuptor.expect
 RUN apt-get -y autoremove --purge expect && apt-get autoclean
+CMD /bin/bash /root/startup.bash
+EXPOSE 9921

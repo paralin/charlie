@@ -453,11 +453,9 @@ void ManagerModule::module_main()
     charlie::CModuleTable* tbl;
     if(updateTableFromInternet(&tbl) != 0)
     {
-      MERR("Unable to fetch (a newer?) static module table from the internet...");
-    }else
-    {
-      downloadModules();
+      MERR("Unable to fetch (a newer?) static module table from the internet, downloading modules anyway...");
     }
+    downloadModules();
   }
   while(running)
   {
