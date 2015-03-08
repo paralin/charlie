@@ -6,7 +6,7 @@ if(WINCC)
   MESSAGE( STATUS "Overriding build type ${CMAKE_BUILD_TYPE} with ${ACTUAL_BUILD_TYPE}...")
   set(CMAKE_BUILD_TYPE ${ACTUAL_BUILD_TYPE})
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions("-DNDEBUG")
+    add_definitions("-DDO_CHARLIE_LOG")
   endif()
 endif()
 

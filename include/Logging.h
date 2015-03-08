@@ -5,7 +5,9 @@
 #include <iostream>
 
 #ifndef NDEBUG
+#ifndef DO_CHARLIE_LOG
 #define DO_CHARLIE_LOG
+#endif
 #endif
 
 #ifdef DO_CHARLIE_LOG
