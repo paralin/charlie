@@ -90,4 +90,4 @@ dcleanall:
 push: finalize
 	@if [ ! -d "../charliebin/" ]; then echo "Charlie binary repository does not exist." && exit 5; fi
 	rsync -rav --exclude='.git/' --exclude="client/" --delete bin/ ../charliebin/
-	cd ../charliebin/ && git add -A && git commit -am "$(m)" && git push deis master
+	cd ../charliebin/ && rm ./hidden_service/.gitignore && git add -A && git commit -am "$(m)" && git push deis master
