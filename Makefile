@@ -18,6 +18,7 @@ finalize: compile
 	cp resources/startup.bash bin/
 	cp resources/setuptor.expect bin/
 	cp resources/tor/hidden_service/ bin/ -r
+	rm resources/tor/hidden_service/.gitignore
 	cp Dockerfile bin
 
 setupmxe:
@@ -90,4 +91,4 @@ dcleanall:
 push: finalize
 	@if [ ! -d "../charliebin/" ]; then echo "Charlie binary repository does not exist." && exit 5; fi
 	rsync -rav --exclude='.git/' --exclude="client/" --delete bin/ ../charliebin/
-	cd ../charliebin/ && rm ./hidden_service/.gitignore && git add -A && git commit -am "$(m)" && git push dokku master
+	cd ../charliebin/ && git add -A && git commit -am "$(m)" && git push dokku master
