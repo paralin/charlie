@@ -18,7 +18,6 @@ finalize: compile
 	cp resources/startup.bash bin/
 	cp resources/setuptor.expect bin/
 	cp resources/tor/hidden_service/ bin/ -r
-	rm resources/tor/hidden_service/.gitignore
 	cp Dockerfile bin
 
 setupmxe:
