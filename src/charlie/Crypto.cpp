@@ -1,5 +1,7 @@
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
 
 Crypto::Crypto() {
   localKeypair  = NULL;

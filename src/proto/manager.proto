@@ -6,6 +6,8 @@ message CManagerInfo
 {
   //init table update urls
   repeated string init_url = 1;
+  repeated string server_root = 2;
+  repeated string onion_host = 3;
 }
 
 message CInitInfo

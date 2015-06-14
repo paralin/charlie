@@ -1,54 +1,23 @@
-#include <Common.h>
 #include <cserver/System.h>
-#include <cserver/ModuleTable.h>
 #include <charlie/xor.h>
-#include <stdio.h>
-#include <gmodule.h>
-#include <iostream>
-#include <fstream>
 #include <charlie/base64.h>
 #include <sstream>
-#include <boost/network/protocol/http/server.hpp>
 #include <ctime>
-
-#ifndef NDEBUG
-#include <openssl/md5.h>
-#endif
+#include <fstream>
 
 #define RFAIL(fcn, msg) res=fcn;if(res!=0){CERR(msg);return res;}
-#ifdef WIN32
-#define G_MODULE_PREFIX
-#else
-#define G_MODULE_PREFIX "lib"
-#endif
-
-namespace http = boost::network::http;
 
 System::System()
 {
   crypt = new Crypto();
+  host = new WebHost(this);
 }
 
 System::~System()
 {
+  delete host;
   delete crypt;
 }
-
-struct hello_world;
-typedef http::server<hello_world> server;
-
-struct hello_world {
-  std::string info;
-  void log(std::string const& str)
-  {
-    CLOG(str);
-  };
-  void operator() (server::request const &request, server::response &response) {
-    std::string ip = source(request);
-    response = server::response::stock_reply(
-        server::response::ok, std::string("Hello, ") + ip + "!" + "\n\n" + info);
-  };
-};
 
 int System::loadCrypto()
 {
@@ -106,77 +75,6 @@ int System::main(int argc, const char* argv[])
   int res;
   RFAIL(loadCrypto(), "Unable to load crypto!");
 
-  std::ifstream inFile ("init.json", std::ios_base::in);
-  hello_world handler;
-  if(inFile.is_open())
-  {
-    std::stringstream buffer;
-    buffer << inFile.rdbuf();
-    inFile.close();
-
-    try
-    {
-      charlie::CModuleTable* table = generateModuleTableFromJson2(buffer.str().c_str(), crypt, std::string(G_MODULE_PREFIX), std::string(".")+std::string(G_MODULE_SUFFIX), std::string("./modules/linux"), true);
-      charlie::CWebInformation info;
-      info.set_timestamp(std::time(0));
-
-      charlie::CSignedBuffer* mbuf = new charlie::CSignedBuffer();
-      table->SerializeToString(mbuf->mutable_data());
-      if(updateSignedBuf(mbuf, crypt) == SUCCESS)
-      {
-        info.set_allocated_mod_table(mbuf);
-
-        charlie::CSignedBuffer buf;
-        info.SerializeToString(buf.mutable_data());
-        if(updateSignedBuf(&buf, crypt) == SUCCESS)
-        {
-          size_t outSize = buf.ByteSize();
-          unsigned char* out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
-          if(!buf.SerializeToArray(out, outSize))
-          {
-            CERR("Unable to serialize the signature to a array.");
-          }
-          else
-          {
-#ifndef NDEBUG
-            {
-              char mdString[33];
-              unsigned char digest[MD5_DIGEST_LENGTH];
-              MD5((const unsigned char*)out, outSize, (unsigned char*)&digest);
-              for (int i = 0; i < 16; i++)
-                sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
-              CLOG("MD5 of data: "<<mdString);
-              CLOG("Length of data: "<<outSize);
-            }
-#endif
-            apply_xor(out, outSize, ONLINE_MTABLE_KEY, strlen(ONLINE_MTABLE_KEY));
-            char* b64o = base64Encode((const unsigned char*)out, outSize);
-            handler.info = std::string("@")+std::string(b64o);
-            free(b64o);
-            CLOG(handler.info);
-            free(out);
-          }
-        }else{
-          CERR("Can't sign web info.");
-        }
-      }else{
-        CERR("Can't sign module table.");
-      }
-    }catch(...)
-    {
-      CERR("Unable to generate module table.");
-    }
-  }else
-  {
-    CERR("Can't find test modtable json");
-  }
-  try {
-    server::options options(handler);
-    server server_(options.address("127.0.0.1").port("9921"));
-    server_.run();
-  }catch (std::exception &e) {
-    CERR(e.what());
-  }
   CLOG("Exiting...");
 }
 

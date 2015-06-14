@@ -54,4 +54,9 @@ proto
 setupmxe
 makemxe
 makemxer
+makeboost
+makessl
+makecppnetlib
+makeprotolib
+makeboostnetlib
 bin/

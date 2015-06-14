@@ -1,8 +1,12 @@
+#define BOOST_NETWORK_ENABLE_HTTPS
 #include <Common.h>
 #include <Module.h>
 #include <Logging.h>
+
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+
 #include <protogen/manager.pb.h>
-#define BOOST_NETWORK_ENABLE_HTTPS
 #include <boost/network/protocol/http.hpp>
 #include "ManagerInter.h"
 

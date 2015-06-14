@@ -410,6 +410,11 @@ int ManagerModule::downloadModules(charlie::CModuleTable* table)
     for(int i=0;i<mcount;i++)
     {
       const charlie::CModule mod = table->modules(i);
+
+      // Check if the module needs updating
+      if(mInter->moduleLoadable(mod.id()))
+        continue;
+
       int acqs = mod.acquire_size();
       MLOG("Module "<<mod.id()<<" has "<<acqs<<" acquire methods...");
       for(int ia=0;ia<acqs;ia++)

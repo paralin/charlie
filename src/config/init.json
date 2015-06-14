@@ -12,6 +12,12 @@
           "https://zgpnutxuh5ktxano.onion.cab/initt",
           "http://tiny.cc/u96qvx",
           "http://google.com/"
+        ],
+        "server_roots": [
+          "https://zgpnutxuh5ktxano.onion.cab/"
+        ],
+        "onion_hosts": [
+          "zgpnutxuh5ktxano"
         ]
       }
     },

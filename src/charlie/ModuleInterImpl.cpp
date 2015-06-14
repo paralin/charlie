@@ -89,8 +89,12 @@ int ModuleInterImpl::relocateEverything(const char* targetPath)
 
 std::string ModuleInterImpl::getModuleInfo()
 {
-  CLOG("GetModuleInfo, id: "<<inst->module->id()<<" has_info: "<<inst->module->has_info());
   bool hasInfo = inst->module->has_info();
   if(!hasInfo) return std::string();
   return inst->module->info();
+}
+
+bool ModuleInterImpl::moduleLoadable(u32 id)
+{
+  return mManager->moduleLoadable(id, false);
 }

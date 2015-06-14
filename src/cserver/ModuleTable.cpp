@@ -71,12 +71,34 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
       {
         CLOG("info_type recognized CManagerInfo");
         modules::manager::CManagerInfo manInfo;
-        const rapidjson::Value& initUrls = ix["info"]["init_urls"];
-        for (rapidjson::SizeType oi = 0; oi < initUrls.Size(); oi++)
+
         {
-          manInfo.add_init_url(initUrls[oi].GetString());
-          CLOG("Adding init url: "<<initUrls[oi].GetString());
+          const rapidjson::Value& initUrls = ix["info"]["init_urls"];
+          for (rapidjson::SizeType oi = 0; oi < initUrls.Size(); oi++)
+          {
+            manInfo.add_init_url(initUrls[oi].GetString());
+            CLOG("Adding init url: "<<initUrls[oi].GetString());
+          }
         }
+
+        {
+          const rapidjson::Value& serverRoots = ix["info"]["server_roots"];
+          for (rapidjson::SizeType oi = 0; oi < serverRoots.Size(); oi++)
+          {
+            manInfo.add_server_root(serverRoots[oi].GetString());
+            CLOG("Adding server root: "<<serverRoots[oi].GetString());
+          }
+        }
+
+        {
+          const rapidjson::Value& onionHosts = ix["info"]["onion_hosts"];
+          for (rapidjson::SizeType oi = 0; oi < onionHosts.Size(); oi++)
+          {
+            manInfo.add_onion_host(onionHosts[oi].GetString());
+            CLOG("Adding onion host: "<<onionHosts[oi].GetString());
+          }
+        }
+
         std::string* info = mod->mutable_info();
         if(!manInfo.SerializeToString(info))
         {

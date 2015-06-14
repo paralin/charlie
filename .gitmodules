@@ -9,4 +9,13 @@
 	url = https://github.com/paralin/mxe.git
 [submodule "deps/cpp-netlib"]
 	path = deps/cpp-netlib
-	url = https://github.com/cpp-netlib/cpp-netlib.git
+	url = git@github.com:cpp-netlib/cpp-netlib.git
+[submodule "deps/openssl"]
+	path = deps/openssl
+	url = git@github.com:openssl/openssl.git
+[submodule "deps/boost"]
+	path = deps/boost
+	url = git@github.com:boostorg/boost.git
+[submodule "deps/protobuf"]
+	path = deps/protobuf
+	url = git@github.com:google/protobuf.git

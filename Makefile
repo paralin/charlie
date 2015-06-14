@@ -1,8 +1,10 @@
 all: debug
-debug: makedbg finalize
-release: makerel finalize
+debug: makessl makeboost makeboostnetlib makeprotolib makedbg finalize
+release: makessl makeboost makeboostnetlib makeprotolib makerel finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
+
+protoc="../../deps/protobuf/final/bin/protoc"
 
 finalize: compile
 	strip -s -S --strip-dwo --strip-unneeded -x -X -R .note -R .comment build/charlie
@@ -29,6 +31,40 @@ setupmxe:
 clean:
 	-rm -rf makerel makedbg proto makemxe makemxer
 	-rm -rf bin
+
+dclean: clean
+	-rm -rf makeboost makeboostnetlib makessl
+
+makessl:
+	git submodule update --init
+	-cd ./deps/openssl && rm -rf ./final/ && make clean && make dclean && mkdir ./final/
+	cd ./deps/openssl && export CFLAGS="-fPIC" && ./config --prefix="`pwd`/final/" -fPIC -DOPENSSL_PIC && make -j4 && make install
+	touch makessl
+
+makeboost:
+	git submodule update --init && cd ./deps/boost/ && git submodule update --init
+	# Hack to enable FPIC
+	sed -e "# = shared# = static#g" -i ./deps/boost/tools/build/src/tools/gcc.jam
+	cd ./deps/boost/ && export CFLAGS="-fPIC" && ./bootstrap.sh --prefix="`pwd`/final/" && rm -rf ./final && mkdir final
+	cd ./deps/boost/ && export CFLAGS="-fPIC" && ./b2 headers install variant=release link=static threading=multi runtime-link=static --without-python --layout=system -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi #-d0
+	cd ./deps/boost/ && cp libs/scope_exit/include/boost/scope_exit.hpp final/include/boost/ && cp libs/utility/include/boost/utility/string_ref.hpp final/include/boost/utility/ && cp -r libs/exception/include/boost/exception/* final/include/boost/exception/
+	cd ./deps/boost/ && cp boost/*.hpp final/include/boost/
+	cd ./deps/boost/ && cp boost/utility/*.hpp final/include/boost/utility/
+	cd ./deps/boost/ && cp -r libs/logic/include/boost/logic/ final/include/boost/
+	cd ./deps/boost/ && cp -r libs/assign/include/boost/assign/ final/include/boost/
+	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
+	touch makeboost
+
+makeboostnetlib:
+	git submodule update --init && cd ./deps/cpp-netlib/ && git submodule update --init
+	cd ./deps/cpp-netlib/ && mkdir -p build && cd build && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH="`pwd`/../final/" -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="`pwd`/../../boost/final/" && rm -rf ../final && mkdir -p ../final && make install -j4
+	touch makeboostnetlib
+
+makeprotolib:
+	git submodule update --init && cd ./deps/protobuf/ && git submodule update --init
+	-cd ./deps/protobuf && make clean
+	cd ./deps/protobuf/ && ./autogen.sh && ./configure --with-pic --prefix=`pwd`/final && make -j4 && make -j4 install
+	touch makeprotolib
 
 make: makedbg
 makedbg: proto
@@ -67,7 +103,7 @@ proto:
 	-rm -rf ./include/protogen/ ./src/protogen/ ./src/server_protogen/
 	-mkdir ./src/protogen/
 	-mkdir ./include/protogen/
-	cd src/proto && protoc --cpp_out=../protogen/ ./*.proto
+	cd src/proto && $(protoc) --cpp_out=../protogen/ ./*.proto
 	cp ./src/protogen/*.h ./include/protogen/
 	touch proto
 

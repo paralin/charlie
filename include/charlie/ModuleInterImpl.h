@@ -43,6 +43,8 @@ class ModuleInterImpl : public modules::ModuleInterface
 
     std::string getModuleInfo();
 
+    bool moduleLoadable(u32 id);
+
   private:
     ModuleManager *mManager;
     ModuleInstance * inst;

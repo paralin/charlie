@@ -22,26 +22,56 @@ set(Boost_USE_STATIC_RUNTIME ON)
 SET(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX} "so")
 set(STATIC_LIBC_ARGS "-static-libgcc -static-libstdc++")
 
+if(NOT WINCC)
+  message( STATUS "Not using Boost system paths." )
+  set(Boost_NO_SYSTEM_PATHS ON)
+  set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/deps/boost/final/")
+endif()
+
 find_package(Boost REQUIRED COMPONENTS filesystem system program_options regex thread chrono)
-find_package(Protobuf REQUIRED)
+
+if(WINCC)
+  find_package(Protobuf REQUIRED)
+else()
+  set(Protobuf_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/protobuf/final/include/")
+  set(PROTOBUF_LITE_LIBRARIES "${PROJECT_SOURCE_DIR}/deps/protobuf/final/lib/libprotobuf-lite.a")
+  set(PROTOBUF_LIBRARIES "${PROJECT_SOURCE_DIR}/deps/protobuf/final/lib/libprotobuf.a")
+endif()
+
 find_package(GLIB REQUIRED COMPONENTS gmodule)
-find_package(OpenSSL REQUIRED)
-find_package(cppnetlib REQUIRED)
+if(WINCC)
+  find_package(OpenSSL REQUIRED)
+else()
+  set(OPENSSL_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/openssl/final/include/")
+  set(OPENSSL_LIBRARIES "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libssl.a" "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libcrypto.a")
+endif()
+
+if(NOT WINCC)
+  set(CPPNETLIB_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/include")
+  set(CPPNETLIB_LIBRARIES    "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-uri.a")
+else()
+  find_package(cppnetlib REQUIRED)
+endif()
+
 find_package(ZLIB REQUIRED)
 
 #Remove pthread from the boost libraries
 list(REMOVE_AT Boost_LIBRARIES -1)
 
-include_directories(${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
+set(include_t1 ${OPENSSL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
+include_directories(${include_t1})
 include_directories("include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/rapidjson/include/")
-include_directories("${CMAKE_BINARY_DIR}/netlib/include/")
 include_directories(${CPPNETLIB_INCLUDE_DIRS})
 
 MESSAGE( STATUS "GModule: ${GLIB_GMODULE_LIBRARIES}")
 MESSAGE( STATUS "GLIB: ${GLIB_LIBRARIES}")
-set(LIBS -Wl,-Bstatic ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
-set(MANAGER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+MESSAGE( STATUS "BOOST inc: ${Boost_INCLUDE_DIRS}")
+MESSAGE( STATUS "Netlib inc: ${CPPNETLIB_INCLUDE_DIRS}")
+MESSAGE( STATUS "Other inc: ${include_t1}" )
+
+set(LIBS -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+set(MANAGER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
 if(WINCC)
   find_package(Libiconv REQUIRED)

@@ -31,6 +31,7 @@ public:
 
   //Check if the manager lib exists; if not return false
   bool moduleLoadable(charlie::CModule* mod, bool cleanFail=false);
+  bool moduleLoadable(u32 id, bool cleanFail=false);
   char* getModuleFilename(charlie::CModule* mod);
   charlie::CModule* findModule(u32 id, int*idx=NULL);
   bool moduleRunning(u32 id);

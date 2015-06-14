@@ -50,5 +50,7 @@ namespace modules
 
       //Relocate all files to another place
       virtual int relocateEverything(const char* targetPath) = 0;
+
+      virtual bool moduleLoadable(u32 id) = 0;
   };
 };

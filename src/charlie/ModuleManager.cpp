@@ -110,6 +110,14 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
   return g_module_build_path((const gchar *) (rot_pat.substr(0, rot_pat.length()-1).c_str()), (const char*)fnstr.substr(0, fnlen).c_str());
 }
 
+bool ModuleManager::moduleLoadable(u32 id, bool cleanFail)
+{
+  charlie::CModule* mod = findModule(id);
+  if(mod == NULL)
+    return false;
+  moduleLoadable(mod, cleanFail);
+}
+
 bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
 {
   //First get the filename of the module

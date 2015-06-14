@@ -7,9 +7,9 @@ SET(CPPNETLIB_FOUND FALSE)
 if(NOT CPPNETLIB_PATH)
     find_path(CPPNETLIB_PATH include/boost/network.hpp
       HINTS ${CPPNETLIB_ROOT} $ENV{CPPNETLIB_ROOT}
-        /usr/local/
-        /usr/
-        /
+      /usr/local/
+      /usr/
+       /
     )
 endif ()
 
@@ -20,15 +20,15 @@ if(CPPNETLIB_PATH)
     mark_as_advanced (CPPNETLIB_INCLUDE_DIR)
 
     find_library(CPPNETLIB_LIBRARY1 NAMES cppnetlib-client-connections
-	HINTS ${CPPNETLIB_ROOT} $ENV{CPPNETLIB_ROOT}
+      HINTS "${CPPNETLIB_PATH}/../../" ${CPPNETLIB_ROOT} $ENV{CPPNETLIB_ROOT}
         PATHS ${CPPNETLIB_PATH}/lib64 ${CPPNETLIB_PATH}/lib
     )
     find_library(CPPNETLIB_LIBRARY2 NAMES cppnetlib-server-parsers
-        HINTS ${CPPNETLIB_ROOT} $ENV{CPPNETLIB_ROOT}
+        HINTS "${CPPNETLIB_PATH}/../../" ${CPPNETLIB_ROOT} $ENV{CPPNETLIB_ROOT}
         PATHS ${CPPNETLIB_PATH}/lib64 ${CPPNETLIB_PATH}/lib
     )
     find_library(CPPNETLIB_LIBRARY3 NAMES cppnetlib-uri
-        HINTS ${CPPNETLIB_ROOT} $ENV{CPPNETLIB_ROOT}
+        HINTS "${CPPNETLIB_PATH}/../../" ${CPPNETLIB_ROOT} $ENV{CPPNETLIB_ROOT}
         PATHS ${CPPNETLIB_PATH}/lib64 ${CPPNETLIB_PATH}/lib
     )
     SET(CPPNETLIB_LIBRARIES ${CPPNETLIB_LIBRARY1} ${CPPNETLIB_LIBRARY2} ${CPPNETLIB_LIBRARY3})
