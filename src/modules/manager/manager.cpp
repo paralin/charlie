@@ -21,6 +21,7 @@ ManagerModule::ManagerModule()
 {
   http::client::options options;
   options.follow_redirects(true);
+  options.timeout(10);
   client = boost::network::http::client(options);
   MLOG("Manager module constructed...");
   pInter = new ManagerInter(this);
