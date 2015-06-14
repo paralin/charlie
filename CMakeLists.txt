@@ -48,7 +48,7 @@ endif()
 
 if(NOT WINCC)
   set(CPPNETLIB_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/include")
-  set(CPPNETLIB_LIBRARIES    "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-uri.a")
+  set(CPPNETLIB_LIBRARIES    "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-uri.a" "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-server-parsers.a" "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-client-connections.a")
 else()
   find_package(cppnetlib REQUIRED)
 endif()

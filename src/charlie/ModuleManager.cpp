@@ -250,7 +250,7 @@ void ModuleManager::evaluateRequirements()
   }
 
   //Now merge solutions and solmods
-  for (auto &any : solmods )
+  for (auto &any : solmods)
     solution.insert(any.first);
 
   CLOG("MLOAD count: "<<solution.size());

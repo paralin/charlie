@@ -1,13 +1,15 @@
 all: debug
 debug: makessl makeboost makeboostnetlib makeprotolib makedbg finalize
-release: makessl makeboost makeboostnetlib makeprotolib makerel finalize
+release: makessl makeboost makeboostnetlib makeprotolib makerel strip finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
 protoc="../../deps/protobuf/final/bin/protoc"
 
-finalize: compile
+strip: compile
 	strip -s -S --strip-dwo --strip-unneeded -x -X -R .note -R .comment build/charlie
+
+finalize: compile
 	mkdir -p bin/client bin/server bin/server/modules/linux bin/server/modules/windows bin/utils
 	cp build/charlie bin/client
 	-cp build/*.so  bin/server/modules/linux/

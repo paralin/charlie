@@ -75,6 +75,8 @@ int System::main(int argc, const char* argv[])
   int res;
   RFAIL(loadCrypto(), "Unable to load crypto!");
 
+  host->mainThread();
+
   CLOG("Exiting...");
 }
 
