@@ -47,8 +47,8 @@ makeboost:
 	git submodule update --init && cd ./deps/boost/ && git submodule update --init
 	# Hack to enable FPIC
 	sed -e "# = shared# = static#g" -i ./deps/boost/tools/build/src/tools/gcc.jam
-	cd ./deps/boost/ && export CFLAGS="-fPIC" && ./bootstrap.sh --prefix="`pwd`/final/" && rm -rf ./final && mkdir final
-	cd ./deps/boost/ && export CFLAGS="-fPIC" && ./b2 headers install variant=release link=static threading=multi runtime-link=static --without-python --layout=system -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi #-d0
+	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/" && rm -rf ./final && mkdir final
+	cd ./deps/boost/ && ./b2 headers install variant=release link=static threading=multi runtime-link=static --without-python --layout=system -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi #-d0
 	cd ./deps/boost/ && cp libs/scope_exit/include/boost/scope_exit.hpp final/include/boost/ && cp libs/utility/include/boost/utility/string_ref.hpp final/include/boost/utility/ && cp -r libs/exception/include/boost/exception/* final/include/boost/exception/
 	cd ./deps/boost/ && cp boost/*.hpp final/include/boost/
 	cd ./deps/boost/ && cp boost/utility/*.hpp final/include/boost/utility/
@@ -59,7 +59,7 @@ makeboost:
 
 makeboostnetlib:
 	git submodule update --init && cd ./deps/cpp-netlib/ && git submodule update --init
-	cd ./deps/cpp-netlib/ && mkdir -p build && cd build && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX:PATH="`pwd`/../final/" -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="`pwd`/../../boost/final/" && rm -rf ../final && mkdir -p ../final && make install -j4
+	cd ./deps/cpp-netlib/ && mkdir -p build && cd build && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-D__FILE__=\\\"\\\" -Wno-builtin-macro-redefined" -DCMAKE_INSTALL_PREFIX:PATH="`pwd`/../final/" -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="`pwd`/../../boost/final/" && rm -rf ../final && mkdir -p ../final && make install -j4
 	touch makeboostnetlib
 
 makeprotolib:

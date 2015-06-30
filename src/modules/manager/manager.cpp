@@ -11,18 +11,20 @@
 #include <charlie/xor.h>
 #include <charlie/CryptoBuf.h>
 
-#undef VERBOSE
-//#define VERBOSE 1
+#define INIT_HTTP_CLIENT \
+  http::client::options options;\
+  options.follow_redirects(true);\
+  options.timeout(10);\
+  http::client client = http::client(options);
+
+//#undef VERBOSE
+#define VERBOSE 1
 
 using namespace modules::manager;
 using namespace boost::network;
 
 ManagerModule::ManagerModule()
 {
-  http::client::options options;
-  options.follow_redirects(true);
-  options.timeout(10);
-  client = boost::network::http::client(options);
   MLOG("Manager module constructed...");
   pInter = new ManagerInter(this);
 }
@@ -51,6 +53,8 @@ void ManagerModule::releaseDependency(u32 id)
 
 std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
 {
+  INIT_HTTP_CLIENT;
+
   bool hasRehashed = false;
 
   /*
@@ -74,13 +78,28 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
 #endif
       request << header("Cookie", cookie.c_str());
     }
+#ifdef VERBOSE
+    else
+    {
+      MLOG("Will fetch onion.cab cookies.");
+    }
+#endif
     request << header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
     request << header("Accept-Encoding", "identity");
     request << header("Accept-Language", "en-US,en;q=0.8,ru;q=0.6");
-    request << header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36");
+    request << header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.125 Safari/537.36");
     request << header("Connection", "close");
+    request << header("Referer", url.c_str());
+#ifdef VERBOSE
+    MLOG("Fetching "<<url);
+#endif
+
     http::client::response response = client.get(request);
     const std::string s = body(response);
+
+#ifdef VERBOSE
+    MLOG("Onion.cab response: "<<s);
+#endif
 
     if(s.find("loadAgreement()")!=std::string::npos)
     {
@@ -159,6 +178,8 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
 //Might throw exceptions!
 std::string ManagerModule::fetchStaticUrl(const std::string& iurl)
 {
+  INIT_HTTP_CLIENT;
+
   std::string url(iurl);
   int attempts = 0;
   std::string s;
@@ -243,9 +264,12 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
         try {
           b64len = base64Decode(b64.c_str(), b64.length(), &b64d);
           apply_xor(b64d, b64len, ONLINE_MTABLE_KEY, strlen(ONLINE_MTABLE_KEY));
-        }catch(...)
+        }catch(const std::exception &exc)
         {
           MERR("Error occurred decoding base 64.");
+#ifdef VERBOSE
+          MERR(exc.what());
+#endif
         }
 #ifndef NDEBUG
 #if VERBOSE
@@ -316,9 +340,12 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
       {
         MLOG("No module tables found at link.");
       }
-    }catch(...)
+    }catch(const std::exception &exc)
     {
       MERR("Error occured while fetching from "<<str);
+#ifdef VERBOSE
+      MERR(exc.what());
+#endif
     }
   }
 

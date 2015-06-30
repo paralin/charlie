@@ -10,6 +10,8 @@
 #include <boost/network/protocol/http.hpp>
 #include "ManagerInter.h"
 
+using namespace boost::network;
+
 namespace modules
 {
   namespace manager
@@ -44,7 +46,6 @@ namespace modules
       ModuleInterface* mInter;
       CManagerInfo sInfo;
       ManagerInter* pInter;
-      boost::network::http::client client;
       CManagerStorage stor;
       Crypto* crypt;
 
