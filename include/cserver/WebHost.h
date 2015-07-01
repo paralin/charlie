@@ -6,10 +6,7 @@
 #include <charlie/base64.h>
 #include <charlie/xor.h>
 #include <protogen/charlie.pb.h>
-#include <boost/network/protocol/http/server.hpp>
-
-struct server_def;
-typedef boost::network::http::server<server_def> server;
+#include <mongoose.h>
 
 class System;
 class WebHost {
@@ -19,7 +16,7 @@ class WebHost {
 
     void mainThread();
 
-    void processRequest(server::request const &request, server::response &response);
+    struct mg_server* server;
 
   private:
     std::string info;

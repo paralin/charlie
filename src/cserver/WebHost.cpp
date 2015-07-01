@@ -16,18 +16,18 @@
 
 #include <boost/thread/thread.hpp>
 
-namespace http = boost::network::http;
+static int ev_handler(struct mg_connection *conn, enum mg_event ev) {
+  if (ev == MG_REQUEST) {
+    mg_send_header(conn, "Content-Type", "text/plain");
+    mg_printf_data(conn, "- %s", (char *) conn->server_param);
+    return MG_TRUE;
+  } else if (ev == MG_AUTH) {
+    return MG_TRUE;
+  } else {
+    return MG_FALSE;
+  }
+}
 
-struct server_def {
-  WebHost* web;
-  void log(std::string const& str)
-  {
-    CLOG(str);
-  };
-  void operator() (server::request const &request, server::response &response) {
-    web->processRequest(request, response);
-  };
-};
 
 WebHost::WebHost(System* sys)
 {
@@ -36,20 +36,13 @@ WebHost::WebHost(System* sys)
 
 WebHost::~WebHost()
 {
+  if(this->server) mg_destroy_server(&this->server);
 }
 
-void WebHost::processRequest(server::request const &request, server::response &response)
-{
-  CLOG(request.method<<" "<<request.destination);
-  response = server::response::stock_reply(server::response::ok, info);
-  CLOG("... responded with init table");
-}
 
 void WebHost::mainThread()
 {
   std::ifstream inFile ("init.json", std::ios_base::in);
-  server_def handler;
-  handler.web = this;
 
   if(inFile.is_open())
   {
@@ -114,11 +107,12 @@ void WebHost::mainThread()
     CERR("Can't find test modtable json");
   }
   try {
-    server::options options(handler);
-    server server_(options
-        .address("127.0.0.1")
-        .port("9921"));
-    server_.run();
+    // Run the server
+    this->server = mg_create_server((void*)this->info.c_str(), ev_handler);
+    mg_set_option(this->server, "listening_port", "9921");
+
+    CLOG("Server listening on localhost:9921");
+    for (;;) mg_poll_server((struct mg_server *) this->server, 1000);
   }catch (std::exception &e) {
     CERR(e.what());
   }
