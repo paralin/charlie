@@ -3,6 +3,7 @@
 #include <modules/manager/Manager.h>
 #include <boost/thread.hpp>
 #include <boost/regex.hpp>
+#include <charlie/curl.h>
 #include <stdexcept>
 #include <algorithm>
 #include <openssl/md5.h>
@@ -11,17 +12,10 @@
 #include <charlie/xor.h>
 #include <charlie/CryptoBuf.h>
 
-#define INIT_HTTP_CLIENT \
-  http::client::options options;\
-  options.follow_redirects(true);\
-  options.timeout(10);\
-  http::client client = http::client(options);
-
-//#undef VERBOSE
-#define VERBOSE 1
+#undef VERBOSE
+//#define VERBOSE 1
 
 using namespace modules::manager;
-using namespace boost::network;
 
 ManagerModule::ManagerModule()
 {
@@ -53,9 +47,8 @@ void ManagerModule::releaseDependency(u32 id)
 
 std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
 {
-  INIT_HTTP_CLIENT;
-
   bool hasRehashed = false;
+  CURLcode ccode;
 
   /*
    * Send the request, if we get a tttt= rehash
@@ -63,20 +56,24 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
    */
   while(true)
   {
-    http::client::request request(url);
     if(onionCabHash.empty() && stor.has_onion_cab_cookie())
     {
       onionCabHash = std::string(stor.onion_cab_cookie());
       MLOG("Loaded onion.cab cookie from storage: "<<onionCabHash);
     }
+
+    struct curl_slist *headers=NULL;
+
     std::string cookie;
+    std::string cookiehdr;
     if(!onionCabHash.empty())
     {
       cookie = std::string("onion_cab_iKnowShit=")+onionCabHash+";";
 #ifdef VERBOSE
       MLOG("Using header: Cookie: "<<cookie);
 #endif
-      request << header("Cookie", cookie.c_str());
+      cookiehdr = std::string("Cookie: ")+cookie;
+      headers = curl_slist_append(headers, cookiehdr.c_str());
     }
 #ifdef VERBOSE
     else
@@ -84,18 +81,31 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
       MLOG("Will fetch onion.cab cookies.");
     }
 #endif
-    request << header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-    request << header("Accept-Encoding", "identity");
-    request << header("Accept-Language", "en-US,en;q=0.8,ru;q=0.6");
-    request << header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.125 Safari/537.36");
-    request << header("Connection", "close");
-    request << header("Referer", url.c_str());
+
+    headers = curl_slist_append(headers, "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+    headers = curl_slist_append(headers, "Accept-Encoding: identity");
+    headers = curl_slist_append(headers, "Accept-Language: en-US,en;q=0.8,ru;q=0.6");
+    headers = curl_slist_append(headers, "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.125 Safari/537.36");
+    headers = curl_slist_append(headers, "Connection: close");
+
 #ifdef VERBOSE
     MLOG("Fetching "<<url);
 #endif
 
-    http::client::response response = client.get(request);
-    const std::string s = body(response);
+    std::ostringstream oss;
+    std::string s;
+
+    if(CURLE_OK == (ccode = curl_read(url.c_str(), oss, headers)))
+      s = oss.str();
+    else
+    {
+      curl_slist_free_all(headers);
+      throw std::runtime_error(std::string("curle_not_ok: ")+curl_easy_strerror(ccode));
+    }
+    oss.str(std::string());
+    oss.clear();
+
+    curl_slist_free_all(headers);
 
 #ifdef VERBOSE
     MLOG("Onion.cab response: "<<s);
@@ -108,8 +118,9 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
         MERR("Onion cab still not accepting our verification hash.");
         throw std::runtime_error("onion_cab");
       }
+
       hasRehashed = true;
-      boost::match_results<std::string::const_iterator> results;
+      boost::match_results<std::string::iterator> results;
 
       //Find the  value
       boost::regex t5r("(var ttttt=)('.*?')");
@@ -121,11 +132,17 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
 #ifdef VERBOSE
         MLOG("t5 value: "<<t5);
 #endif
-        //Fetch tk3 value
-        request = http::client::request("https://onion.cab/js/jQuery.js");
-        request << header("Connection", "close");
-        response = client.get(request);
-        const std::string jqs = body(response);
+
+        // Fetch tk3 value
+        // Probably better to not hardcode this url
+        std::string jqs;
+        if(CURLE_OK == (ccode = curl_read("https://onion.cab/js/jQuery.js", oss)))
+          jqs = oss.str();
+        else
+          throw std::runtime_error(std::string("curle_not_ok: ")+curl_easy_strerror(ccode));
+
+        oss.str(std::string());
+        oss.clear();
 
         //Find tk3
         if (boost::regex_search(jqs.begin(), jqs.end(), results, tk3r))
@@ -157,6 +174,7 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
           onionCabHash = std::string(mdString, 33);
           stor.set_onion_cab_cookie(onionCabHash);
           saveStorage();
+
           continue;
         }else
         {
@@ -171,44 +189,22 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
         throw std::runtime_error("no_t5");
       }
     }
+
     return s;
   }
 }
 
-//Might throw exceptions!
-std::string ManagerModule::fetchStaticUrl(const std::string& iurl)
+std::string ManagerModule::fetchStaticUrl(const std::string& url)
 {
-  INIT_HTTP_CLIENT;
-
-  std::string url(iurl);
-  int attempts = 0;
+  std::ostringstream oss;
   std::string s;
-  while(attempts < 10){
-    bool redir = false;
-    http::client::request request(url);
-    request << header("Connection", "close");
-    http::client::response response =
-      client.get(request);
-    headers_range<http::client::response>::type headers_ = response.headers();
-    typedef std::pair<std::string, std::string> header_type;
-    BOOST_FOREACH(header_type const & header, headers_) {
-#ifdef VERBOSE
-      MLOG(header.first << ": " << header.second);
-#endif
-      if(header.first.compare("Location") == 0)
-      {
-#ifdef VERBOSE
-        MLOG("Location header, following -> "<<header.second);
-#endif
-        redir = true;
-        url = header.second;
-      }
-    }
-    s = body(response);
-    if(!redir)
-      return s;
-  }
-  MERR("Went past 10 redirects, stopping here...");
+  CURLcode ccode;
+
+  if(CURLE_OK == (ccode = curl_read(url.c_str(), oss)))
+    s = oss.str();
+  else
+    throw std::runtime_error(std::string("curle_not_ok")+curl_easy_strerror(ccode));
+
   return s;
 }
 
@@ -244,6 +240,7 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
     try {
       MLOG("Trying to fetch table from "<<str<<"...");
       const std::string s = fetchUrl(str);
+
 #if VERBOSE
       MLOG("Body: "<<s);
 #endif
@@ -477,6 +474,9 @@ void ManagerModule::module_main()
   mInter->requireDependency(2526948902);
   mInter->commitDepsChanges();
   loadStorage();
+
+  curl_global_init(CURL_GLOBAL_ALL);
+
   //mInter->relocateEverything("/tmp/testdir/");
   if(parseModuleInfo() != 0)
   {

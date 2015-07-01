@@ -46,32 +46,36 @@ else()
   set(OPENSSL_LIBRARIES "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libssl.a" "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libcrypto.a")
 endif()
 
-if(NOT WINCC)
-  set(CPPNETLIB_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/include")
-  set(CPPNETLIB_LIBRARIES    "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-uri.a" "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-server-parsers.a" "${PROJECT_SOURCE_DIR}/deps/cpp-netlib/final/lib/libcppnetlib-client-connections.a")
-else()
-  find_package(cppnetlib REQUIRED)
-endif()
-
 find_package(ZLIB REQUIRED)
+
+set(CURL_STATICLIB true)
+set(BUILD_CURL_EXE false)
+set(BUILD_CURL_TESTS false)
+set(HTTP_ONLY true)
+set(CURL_ZLIB false)
+set(CMAKE_USE_OPENSSL true)
+add_subdirectory(deps/curl)
+set_target_properties(libcurl PROPERTIES COMPILE_FLAGS "-fPIC")
+
+find_package(GSS REQUIRED)
 
 #Remove pthread from the boost libraries
 list(REMOVE_AT Boost_LIBRARIES -1)
 
-set(include_t1 ${OPENSSL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
+set(include_t1 ${CURL_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
 include_directories(${include_t1})
 include_directories("include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/rapidjson/include/")
-include_directories(${CPPNETLIB_INCLUDE_DIRS})
 
 MESSAGE( STATUS "GModule: ${GLIB_GMODULE_LIBRARIES}")
 MESSAGE( STATUS "GLIB: ${GLIB_LIBRARIES}")
 MESSAGE( STATUS "BOOST inc: ${Boost_INCLUDE_DIRS}")
-MESSAGE( STATUS "Netlib inc: ${CPPNETLIB_INCLUDE_DIRS}")
 MESSAGE( STATUS "Other inc: ${include_t1}" )
+MESSAGE( STATUS "GSS libs: ${GSS_LIBRARIES}" )
 
+set(CURL_LIBRARIES_DEPS ${GSS_LIBRARIES} libcurl ${GSS_LIBRARIES})
 set(LIBS -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
-set(MANAGER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+set(MANAGER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
 if(WINCC)
   find_package(Libiconv REQUIRED)
@@ -228,8 +232,9 @@ set_target_properties(charlie PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(charlie ${LIBS})
 
 # Now let's compile the server
-if(NOT WINCC)
-  set(SERVER_LIBS -Wl,-Bstatic ${CPPNETLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+# Server's currently broken, don't compile
+if(NOT WINCC AND FALSE)
+  set(SERVER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
   file(GLOB cserver_SRC "src/cserver/*.cpp")
   file(GLOB protogen_SRC "src/protogen/*.cc")

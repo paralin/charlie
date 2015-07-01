@@ -19,3 +19,9 @@
 [submodule "deps/protobuf"]
 	path = deps/protobuf
 	url = git@github.com:google/protobuf.git
+[submodule "deps/curlcpp"]
+	path = deps/curlcpp
+	url = https://github.com/JosephP91/curlcpp.git
+[submodule "deps/curl"]
+	path = deps/curl
+	url = https://github.com/bagder/curl.git

@@ -1,6 +1,6 @@
 all: debug
-debug: makessl makeboost makeboostnetlib makeprotolib makedbg finalize
-release: makessl makeboost makeboostnetlib makeprotolib makerel strip finalize
+debug: makessl makeboost makeprotolib makedbg finalize
+release: makessl makeboost makeprotolib makerel strip finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
@@ -14,7 +14,7 @@ finalize: compile
 	cp build/charlie bin/client
 	-cp build/*.so  bin/server/modules/linux/
 	-cp build/*.dll bin/server/modules/windows/
-	cp build/cserver bin/server
+	-cp build/cserver bin/server
 	cp build/server_identity bin/server
 	cp src/config/init.json bin/server/
 	cp build/cutils bin/utils
@@ -26,7 +26,7 @@ finalize: compile
 
 setupmxe:
 	git submodule update --init
-	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf cpp-netlib
+	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf
 	sed -i '/set(CMAKE_BUILD_TYPE Release)/d' ./deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake
 	touch setupmxe
 
@@ -35,7 +35,7 @@ clean:
 	-rm -rf bin
 
 dclean: clean
-	-rm -rf makeboost makeboostnetlib makessl
+	-rm -rf makeboost makessl
 
 makessl:
 	git submodule update --init
@@ -56,11 +56,6 @@ makeboost:
 	cd ./deps/boost/ && cp -r libs/assign/include/boost/assign/ final/include/boost/
 	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
 	touch makeboost
-
-makeboostnetlib:
-	git submodule update --init && cd ./deps/cpp-netlib/ && git submodule update --init
-	cd ./deps/cpp-netlib/ && mkdir -p build && cd build && cmake .. -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-D__FILE__=\\\"\\\" -Wno-builtin-macro-redefined" -DCMAKE_INSTALL_PREFIX:PATH="`pwd`/../final/" -DBoost_NO_SYSTEM_PATHS=ON -DBOOST_ROOT="`pwd`/../../boost/final/" && rm -rf ../final && mkdir -p ../final && make install -j4
-	touch makeboostnetlib
 
 makeprotolib:
 	git submodule update --init && cd ./deps/protobuf/ && git submodule update --init
