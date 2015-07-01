@@ -1,27 +1,36 @@
 [submodule "dependencies/websocketpp"]
 	path = dependencies/websocketpp
 	url = git@github.com:zaphoyd/websocketpp.git
+  ignore = dirty
 [submodule "deps/rapidjson"]
 	path = deps/rapidjson
 	url = https://github.com/miloyip/rapidjson
+  ignore = dirty
 [submodule "deps/mxe"]
 	path = deps/mxe
 	url = https://github.com/paralin/mxe.git
+  ignore = dirty
 [submodule "deps/cpp-netlib"]
 	path = deps/cpp-netlib
 	url = git@github.com:cpp-netlib/cpp-netlib.git
+  ignore = dirty
 [submodule "deps/openssl"]
 	path = deps/openssl
 	url = git@github.com:openssl/openssl.git
+  ignore = dirty
 [submodule "deps/boost"]
 	path = deps/boost
 	url = git@github.com:boostorg/boost.git
+  ignore = dirty
 [submodule "deps/protobuf"]
 	path = deps/protobuf
 	url = git@github.com:google/protobuf.git
+  ignore = dirty
 [submodule "deps/curlcpp"]
 	path = deps/curlcpp
 	url = https://github.com/JosephP91/curlcpp.git
+  ignore = dirty
 [submodule "deps/curl"]
 	path = deps/curl
 	url = https://github.com/bagder/curl.git
+  ignore = dirty
