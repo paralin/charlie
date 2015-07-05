@@ -9,11 +9,10 @@
       "info_type": "CManagerInfo",
       "info": {
         "init_urls": [
-          "https://zgpnutxuh5ktxano.onion.cab/initt",
-          "http://tiny.cc/u96qvx"
+          "http://localhost:9921/initt"
         ],
         "server_roots": [
-          "https://zgpnutxuh5ktxano.onion.cab/"
+          "http://localhost:9921/"
         ],
         "onion_hosts": [
           "zgpnutxuh5ktxano"

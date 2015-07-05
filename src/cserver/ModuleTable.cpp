@@ -4,6 +4,9 @@
 #include <ctime>
 #include <charlie/hash.h>
 
+#include <iostream>
+#include <string>
+
 charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* crypt, std::string libprefix, std::string libsuffix, std::string rootPath, bool doHash)
 {
   CLOG("Parsing json...");
@@ -64,6 +67,40 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
     {
       mod->set_initial(ix["initial"].GetBool());
     }
+    if(ix.HasMember("acquire") && ix["acquire"].IsArray())
+    {
+      const rapidjson::Value& acquires = ix["acquire"];
+      for(rapidjson::SizeType oi = 0; oi < acquires.Size(); oi++)
+      {
+        charlie::CModuleAcquire* acq = mod->add_acquire();
+        int acqti = (int)acquires[oi]["type"].GetInt();
+        switch(acqti)
+        {
+          case (int)charlie::HTTP_GET:
+          {
+            std::string httpg = acquires[oi]["data"].GetString();
+            CLOG("Adding HTTPGET acquire to "<<httpg<<"...");
+            acq->set_type((charlie::CAcquireType)acqti);
+            acq->set_data(httpg);
+            break;
+          }
+          case (int)charlie::HTTP_SIGNED:
+          {
+            std::string httpg = acquires[oi]["data"].GetString();
+            CLOG("Adding HTTPSIGNED acquire to "<<httpg<<"...");
+            acq->set_type((charlie::CAcquireType)acqti);
+            acq->set_data(httpg);
+            break;
+          }
+          default:
+          {
+            CLOG("Unknown acquire method: "<<acqti);
+            mod->mutable_acquire()->RemoveLast();
+            break;
+          }
+        }
+      }
+    }
     if(ix.HasMember("info") && ix["info"].IsObject() && ix.HasMember("info_type") && ix["info_type"].IsString())
     {
       std::string ityp (ix["info_type"].GetString());
@@ -110,7 +147,14 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
     if(doHash)
     {
       //gchar* filename = g_module_build_path((const gchar *) full_path->string().c_str(), name.c_str());
-      std::string fns = rootPath+"/"+libprefix+name+libsuffix;
+      std::ostringstream fss;
+      fss << rootPath;
+      fss << "/";
+      fss << libprefix;
+      fss << mod->id();
+      fss << libsuffix;
+      std::string fns = fss.str();
+
       const char* filename = fns.c_str();
       CLOG("filename: "<<filename);
       unsigned char* digest;

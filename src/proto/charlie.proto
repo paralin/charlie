@@ -87,19 +87,16 @@ message CModuleTable
 
 enum CAcquireType
 {
+  // Simple get request
   HTTP_GET     = 0;
+  // Signed CDownloadRequest
+  HTTP_SIGNED  = 1;
 }
 
 message CModuleAcquire
 {
   optional CAcquireType type = 1;
   optional bytes        data = 2;
-}
-
-message CHttpGetInfo
-{
-  optional string url   = 1;
-  optional bool use_tor = 2;
 }
 
 message CModule

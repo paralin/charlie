@@ -25,6 +25,8 @@ class ModuleInterImpl : public modules::ModuleInterface
     //Returns a copy of the verified module table data
     charlie::CSignedBuffer* getModuleTable();
 
+    std::string getModuleFilename(charlie::CModule* mod);
+
     Crypto* getCrypto();
     SystemInfo* getSysInfo();
 

@@ -37,7 +37,8 @@ namespace modules
       std::string fetchStaticUrl(const std::string& url);
       std::string fetchOnionCabUrl(const std::string& url);
       int updateTableFromInternet(charlie::CModuleTable **wtbl = 0);
-      int downloadModules(charlie::CModuleTable* table = 0);
+      void downloadModules(charlie::CModuleTable* table = 0);
+      int fetchModuleFromUrl(const charlie::CModule& mod, std::string url);
 
       ModuleInterface* mInter;
       CManagerInfo sInfo;

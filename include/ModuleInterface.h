@@ -33,6 +33,9 @@ namespace modules
       //Get module info
       virtual std::string getModuleInfo() = 0;
 
+      //Get module filename
+      virtual std::string getModuleFilename(charlie::CModule* mod) = 0;
+
       //Updates signature and saves storage.
       virtual void saveStorage(std::string& data) = 0;
 

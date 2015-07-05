@@ -25,7 +25,7 @@ int sha256File(const char* path, unsigned char** digest, char** fileData)
   {
     size_t size = inFile.tellg();
     inFile.seekg (0, std::ios::beg);
-    *digest = (unsigned char*)malloc(sizeof(unsigned char)*size);
+    *digest = (unsigned char*)malloc(sizeof(unsigned char)*SHA256_DIGEST_LENGTH);
     if(saveData) *fileData = (char*)malloc(sizeof(char)*size);
     SHA256_CTX ctx;
     SHA256_Init(&ctx);

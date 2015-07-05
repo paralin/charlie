@@ -11,7 +11,7 @@ strip: compile
 
 finalize: compile
 	mkdir -p bin/client bin/server bin/server/modules/linux bin/server/modules/windows bin/utils
-	cp build/charlie bin/client
+	-cp build/charlie bin/client/charlie
 	-cp build/*.so  bin/server/modules/linux/
 	-cp build/*.dll bin/server/modules/windows/
 	-cp build/cserver bin/server
@@ -47,8 +47,8 @@ makeboost:
 	git submodule update --init && cd ./deps/boost/ && git submodule update --init
 	# Hack to enable FPIC
 	sed -e "# = shared# = static#g" -i ./deps/boost/tools/build/src/tools/gcc.jam
-	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/" && rm -rf ./final && mkdir final
-	cd ./deps/boost/ && ./b2 headers install variant=release link=static threading=multi runtime-link=static --without-python --layout=system -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi #-d0
+	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/" && rm -rf ./final && mkdir -p final/include/boost
+	cd ./deps/boost/ && ./b2 headers install cxxflags="-std=c++11" linkflags="-std=c++11" variant=release link=static threading=multi runtime-link=static --without-python --layout=system -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine #-d0
 	cd ./deps/boost/ && cp libs/scope_exit/include/boost/scope_exit.hpp final/include/boost/ && cp libs/utility/include/boost/utility/string_ref.hpp final/include/boost/utility/ && cp -r libs/exception/include/boost/exception/* final/include/boost/exception/
 	cd ./deps/boost/ && cp boost/*.hpp final/include/boost/
 	cd ./deps/boost/ && cp boost/utility/*.hpp final/include/boost/utility/

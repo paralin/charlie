@@ -1,20 +1,23 @@
 {
-  "name": "startup module table",
+  "name": "served module table",
   "modules": [
     {
       "name": "manager",
       "mainfcn": true,
       "initial": true,
-      "acquire": [],
+      "acquire": [
+        {
+          "type": 1,
+          "data": "*/ereq/"
+        }
+      ],
       "info_type": "CManagerInfo",
       "info": {
         "init_urls": [
-          "https://zgpnutxuh5ktxano.onion.cab/initt",
-          "http://tiny.cc/u96qvx",
-          "http://google.com/"
+          "http://localhost:9921/"
         ],
         "server_roots": [
-          "https://zgpnutxuh5ktxano.onion.cab/"
+          "http://localhost:9921/"
         ],
         "onion_hosts": [
           "zgpnutxuh5ktxano"
@@ -25,7 +28,12 @@
       "name": "persist",
       "mainfcn": false,
       "initial": false,
-      "acquire": []
+      "acquire": [
+        {
+          "type": 1,
+          "data": "*/ereq/"
+        }
+      ]
     }
   ]
 }

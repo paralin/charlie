@@ -19,3 +19,9 @@ message CManagerStorage
 {
   optional string onion_cab_cookie = 1;
 }
+
+// A request to download a module
+message CDownloadRequest
+{
+  optional uint32 id = 1;
+}

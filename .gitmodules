@@ -26,10 +26,6 @@
 	path = deps/protobuf
 	url = git@github.com:google/protobuf.git
   ignore = dirty
-[submodule "deps/curlcpp"]
-	path = deps/curlcpp
-	url = https://github.com/JosephP91/curlcpp.git
-  ignore = dirty
 [submodule "deps/curl"]
 	path = deps/curl
 	url = https://github.com/bagder/curl.git
@@ -37,3 +33,4 @@
 [submodule "deps/mongoose"]
 	path = deps/mongoose
 	url = https://github.com/cesanta/mongoose.git
+  ignore = dirty

@@ -12,6 +12,8 @@
 #include <charlie/xor.h>
 #include <charlie/CryptoBuf.h>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #undef VERBOSE
 //#define VERBOSE 1
 
@@ -412,7 +414,26 @@ int ManagerModule::updateTableFromInternet(charlie::CModuleTable **wtbl)
   return -1;
 }
 
-int ManagerModule::downloadModules(charlie::CModuleTable* table)
+int ManagerModule::fetchModuleFromUrl(const charlie::CModule& mod, std::string url)
+{
+  // Calculate target filename
+  std::string fn(mInter->getModuleFilename((charlie::CModule*)&mod));
+
+  // Download to the file
+  std::ofstream of;
+  of.open(fn.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+  CURLcode res(CURLE_FAILED_INIT);
+  if(of.is_open())
+  {
+    res = curl_read(url, of);
+    of.close();
+  }else
+    CERR("Unable to open file "<<fn<<" to download module "<<mod.id()<<"!");
+
+  return (int)res;
+}
+
+void ManagerModule::downloadModules(charlie::CModuleTable* table)
 {
   //We need to parse it ourselves
   bool delTab = false;
@@ -423,15 +444,16 @@ int ManagerModule::downloadModules(charlie::CModuleTable* table)
     if(!emtab->ParseFromString(etab->data()))
     {
       MERR("Unable to parse the existing module table in downloadModules.");
-      return -1;
+      return;
     }
     table = emtab;
     delTab = true;
   }
 
-  // Now print out the acquire methods
+  // Now acquire via acquire methods
   {
     int mcount = table->modules_size();
+    std::string reqd;
     for(int i=0;i<mcount;i++)
     {
       const charlie::CModule mod = table->modules(i);
@@ -442,23 +464,53 @@ int ManagerModule::downloadModules(charlie::CModuleTable* table)
 
       int acqs = mod.acquire_size();
       MLOG("Module "<<mod.id()<<" has "<<acqs<<" acquire methods...");
+
+      // Build a signed download request
+      CDownloadRequest req;
+      req.set_id(mod.id());
+      req.SerializeToString(&reqd);
+      charlie::CRSABuffer reqs;
+      if(encryptRsaBuf(&reqs, this->crypt, (const unsigned char*)reqd.c_str(), reqd.length()) != SUCCESS)
+      {
+        MERR("Unable to RSA encrypt request for module "<<mod.id()<<"!");
+        continue;
+      }
+      reqs.SerializeToString(&reqd);
+
+      // Serialize to base64
+      char* reqb = base64Encode((const unsigned char*)reqd.c_str(), reqd.length());
+      std::string reqbs(reqb);
+      free(reqb);
+
+      bool loaded;
       for(int ia=0;ia<acqs;ia++)
       {
+        if(loaded) continue;
         const charlie::CModuleAcquire acq = mod.acquire(ia);
         switch(acq.type())
         {
           case charlie::HTTP_GET:
-            charlie::CHttpGetInfo nfo;
-            if(nfo.ParseFromString(acq.data()))
-            {
-              MLOG("Fetching via HTTP: "<<nfo.url());
-            }else
-            {
-              MERR("Unable to parse http get info.");
-            }
+          {
+            std::string url = acq.data();
+            MLOG("Fetching via HTTP: "<<url);
             break;
+          }
+          case charlie::HTTP_SIGNED:
+          {
+            std::string url = acq.data()+reqbs;
+
+            if(boost::starts_with(url, "*"))
+            {
+              url = url.substr(1);
+              for(auto sr : sInfo.server_root())
+                if(loaded = (fetchModuleFromUrl(mod, sr+url) == CURLE_OK)) break;
+            }else
+              loaded = (fetchModuleFromUrl(mod, url) == CURLE_OK);
+          }
         }
       }
+      if(!loaded)
+        MERR("Unable to find a valid acquire for "<<mod.id()<<"!");
     }
   }
 
@@ -487,7 +539,8 @@ void ManagerModule::module_main()
     if(updateTableFromInternet(&tbl) != 0)
     {
       MERR("Unable to fetch (a newer?) static module table from the internet, downloading modules anyway...");
-    }
+    }else
+      parseModuleInfo();
     downloadModules();
   }
   while(running)

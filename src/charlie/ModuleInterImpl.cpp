@@ -94,6 +94,14 @@ std::string ModuleInterImpl::getModuleInfo()
   return inst->module->info();
 }
 
+std::string ModuleInterImpl::getModuleFilename(charlie::CModule* mod)
+{
+  char* fn = mManager->getModuleFilename(mod);
+  std::string res(fn);
+  free(fn);
+  return res;
+}
+
 bool ModuleInterImpl::moduleLoadable(u32 id)
 {
   return mManager->moduleLoadable(id, false);

@@ -48,13 +48,13 @@ endif()
 
 find_package(ZLIB REQUIRED)
 
-set(BUILD_CURL_EXE OFF)
-set(BUILD_CURL_TESTS OFF)
-set(HTTP_ONLY ON)
-set(CURL_ZLIB OFF)
-set(CMAKE_USE_OPENSSL ON)
-set(CURL_STATICLIB ON)
-set(ENABLE_MANUAL OFF)
+set(HTTP_ONLY ON CACHE BOOL "Use http only")
+set(CURL_STATICLIB ON CACHE BOOL "Use static library")
+set(BUILD_CURL_EXE OFF CACHE BOOL "Build executable")
+set(BUILD_CURL_TESTS OFF CACHE BOOL "Build tests")
+set(CURL_ZLIB OFF CACHE BOOL "Use zlib")
+set(CMAKE_USE_OPENSSL ON CACHE BOOL "Use OpenSSL")
+set(ENABLE_MANUAL OFF CACHE BOOL "Enable manual compilation")
 add_subdirectory(deps/curl)
 set_target_properties(libcurl PROPERTIES COMPILE_FLAGS "-fPIC")
 
@@ -77,7 +77,7 @@ MESSAGE( STATUS "GSS libs: ${GSS_LIBRARIES}" )
 
 set(CURL_LIBRARIES_DEPS ${GSS_LIBRARIES} libcurl ${GSS_LIBRARIES})
 set(LIBS -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
-set(MANAGER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+set(MANAGER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
 # Compile mongoose
 add_library(mongoose STATIC "${PROJECT_SOURCE_DIR}/deps/mongoose/mongoose.c")
@@ -148,11 +148,15 @@ add_library(manager SHARED ${manager_SRC}
   "src/charlie/Crypto.cpp"
   "src/charlie/CryptoBuf.cpp"
   "charlie.pb.redacted.cc"
-  "manager.pb.redacted.cc")
+  "manager.pb.redacted.cc"
+  )
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)
 target_link_libraries(manager ${MANAGER_LIBS})
+add_custom_command(TARGET manager POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:manager> ${CMAKE_SHARED_LIBRARY_PREFIX}3133916783${CMAKE_SHARED_LIBRARY_SUFFIX}
+)
 
 # Build persist
 #file(GLOB persist_SRC "src/modules/persist/*.cpp")
@@ -239,7 +243,7 @@ target_link_libraries(charlie ${LIBS})
 # Now let's compile the server
 # Server's currently broken, don't compile
 if(NOT WINCC)
-  set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+  set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
   file(GLOB cserver_SRC "src/cserver/*.cpp")
   file(GLOB protogen_SRC "src/protogen/*.cc")
@@ -256,3 +260,5 @@ if(NOT WINCC)
   set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
   set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
  endif()
+
+

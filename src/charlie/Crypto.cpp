@@ -31,7 +31,7 @@ Crypto::~Crypto() {
   free(rsaDecryptCtx);
 }
 
-int Crypto::rsaEncrypt(const unsigned char *msg, size_t msgLen, unsigned char **encMsg, unsigned char **ek, size_t *ekl, unsigned char **iv, size_t *ivl, bool useRemote) {
+int Crypto::rsaEncrypt(const unsigned char *msg, size_t msgLen, unsigned char **encMsg, unsigned char **ek, int *ekl, unsigned char **iv, int *ivl, bool useRemote) {
   size_t encMsgLen = 0;
   size_t blockLen  = 0;
 

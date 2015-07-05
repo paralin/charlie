@@ -17,8 +17,9 @@ class WebHost {
     void mainThread();
 
     struct mg_server* server;
-
-  private:
     std::string info;
+
     System* sys;
+
+    charlie::CModuleTable* table;
 };

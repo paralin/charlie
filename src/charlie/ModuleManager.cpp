@@ -79,29 +79,24 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
 {
   //The filename is based on the hash of the file xor by sysid
   const unsigned char* digest = (const unsigned char*)mod->hash().c_str();
-  /*
-  std::ostringstream ss;
-  ss << mod->id();
-  std::string s = ss.str();
-  unsigned char digest[SHA256_DIGEST_LENGTH];
-  SHA256_CTX ctx;
-  SHA256_Init(&ctx);
-  SHA256_Update(&ctx, s.c_str(), s.length());
-  SHA256_Final(digest, &ctx);
-  */
+
   char mdString[SHA256_DIGEST_LENGTH*2+1];
   size_t keyi=0;
   size_t keylen = strlen(sysInfo->system_id);
+
+  // Apply the XOR
   for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
   {
     sprintf(&mdString[i*2], "%02x", (unsigned int)(digest[i])^(unsigned int)sysInfo->system_id[keyi]);
     keyi++;
     if(keyi >= keylen) keyi = 0;
   }
+
   //Calculate filename length
   //First grab the 0-9 value of the first
   int first = (((int)mdString[0])%10);
   if(first < 2) first = 2;
+
   //now scale from 2-9 to 5-12
   int fnlen = (int)(((float)(first/9.0f))*7.0f + 5.0f);
   std::string fnstr (mdString);
@@ -115,7 +110,7 @@ bool ModuleManager::moduleLoadable(u32 id, bool cleanFail)
   charlie::CModule* mod = findModule(id);
   if(mod == NULL)
     return false;
-  moduleLoadable(mod, cleanFail);
+  return moduleLoadable(mod, cleanFail);
 }
 
 bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
@@ -129,16 +124,17 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
     free(path);
     return false;
   }
+
   //Hash the path
   unsigned char* digest;
-  if(sha256File(path, &digest)!=0){
+  if(sha256File(path, &digest) != 0){
     free(path);
     return false;
   }
 
   //Check if it matches the module def
   const char* hash = mod->hash().c_str();
-  if(memcmp(hash, digest, SHA256_DIGEST_LENGTH)!=0)
+  if(memcmp(hash, digest, SHA256_DIGEST_LENGTH) != 0)
   {
     CERR("Module digest for ["<<mod->id()<<"] doesn't match.");
     if(cleanFail)
