@@ -4,6 +4,8 @@ release: makessl makeboost makeprotolib makerel strip finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
+.PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run
+
 protoc="../../deps/protobuf/final/bin/protoc"
 
 strip: compile
@@ -24,11 +26,12 @@ finalize: compile
 	cp resources/tor/hidden_service/ bin/ -r
 	cp Dockerfile bin
 
-setupmxe:
+.setupmxe:
 	git submodule update --init
 	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf
 	sed -i '/set(CMAKE_BUILD_TYPE Release)/d' ./deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake
-	touch setupmxe
+	touch .setupmxe
+setupmxe: .setupmxe
 
 clean:
 	-rm -rf makerel makedbg proto makemxe makemxer
@@ -37,13 +40,14 @@ clean:
 dclean: clean
 	-rm -rf makeboost makessl
 
-makessl:
+.makessl:
 	git submodule update --init
 	-cd ./deps/openssl && rm -rf ./final/ && make clean && make dclean && mkdir ./final/
 	cd ./deps/openssl && export CFLAGS="-fPIC" && ./config --prefix="`pwd`/final/" -fPIC -DOPENSSL_PIC && make -j4 && make install
-	touch makessl
+	touch .makessl
+makessl: .makessl
 
-makeboost:
+.makeboost:
 	git submodule update --init && cd ./deps/boost/ && git submodule update --init
 	# Hack to enable FPIC
 	sed -e "# = shared# = static#g" -i ./deps/boost/tools/build/src/tools/gcc.jam
@@ -55,24 +59,28 @@ makeboost:
 	cd ./deps/boost/ && cp -r libs/logic/include/boost/logic/ final/include/boost/
 	cd ./deps/boost/ && cp -r libs/assign/include/boost/assign/ final/include/boost/
 	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
-	touch makeboost
+	touch .makeboost
+makeboost: .makeboost
 
-makeprotolib:
+.makeprotolib:
 	git submodule update --init && cd ./deps/protobuf/ && git submodule update --init
 	-cd ./deps/protobuf && make clean
 	cd ./deps/protobuf/ && ./autogen.sh && ./configure --with-pic --prefix=`pwd`/final && make -j4 && make -j4 install
 	touch makeprotolib
+makeprotolib: .makeprotolib
 
 make: makedbg
-makedbg: proto
+.makedbg: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug
 	touch makedbg
-makerel: proto
+makedbg: .makedbg
+.makerel: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
-	touch makerel
-makemxe: proto
+	touch .makerel
+makerel: .makerel
+.makemxe: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug
 	cd build && make cutils
@@ -81,8 +89,9 @@ makemxe: proto
 	-mkdir build
 	mv ./cutils ./build/cutils
 	cd build && cmake .. -DACTUAL_BUILD_TYPE=Debug -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
-	touch makemxe
-makemxer: proto
+	touch .makemxe
+makemxe: .makemxe
+.makemxer: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
 	cd build && make cutils
@@ -91,18 +100,20 @@ makemxer: proto
 	-mkdir build
 	mv ./cutils ./build/cutils
 	cd build && cmake .. -DACTUAL_BUILD_TYPE=Release -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes -DCNDEBUG
-	touch makemxer
+	touch .makemxer
+makemxer: .makemxer
 compile:
 	cd build && make -j4
 run: all
 	cd build && ./charlie
-proto:
+.proto:
 	-rm -rf ./include/protogen/ ./src/protogen/ ./src/server_protogen/
 	-mkdir ./src/protogen/
 	-mkdir ./include/protogen/
 	cd src/proto && $(protoc) --cpp_out=../protogen/ ./*.proto
 	cp ./src/protogen/*.h ./include/protogen/
-	touch proto
+	touch .proto
+proto: .proto
 
 valgrind: makedbg compile
 	cd build && valgrind --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../valgrind.supp ./charlie

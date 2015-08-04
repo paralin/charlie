@@ -15,6 +15,8 @@ namespace modules
     public:
       //Request that a module be loaded
       virtual void requireDependency(u32 id) = 0;
+
+      //Release a load request
       virtual void releaseDependency(u32 id) = 0;
 
       //Immediately commit changes
@@ -54,6 +56,7 @@ namespace modules
       //Relocate all files to another place
       virtual int relocateEverything(const char* targetPath) = 0;
 
+      // Verify a module is loadable
       virtual bool moduleLoadable(u32 id) = 0;
   };
 };

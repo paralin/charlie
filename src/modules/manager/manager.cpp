@@ -483,9 +483,8 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
       free(reqb);
 
       bool loaded;
-      for(int ia=0;ia<acqs;ia++)
+      for(int ia=0;ia<acqs&&!loaded;ia++)
       {
-        if(loaded) continue;
         const charlie::CModuleAcquire acq = mod.acquire(ia);
         switch(acq.type())
         {
@@ -493,29 +492,45 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
           {
             std::string url = acq.data();
             MLOG("Fetching via HTTP: "<<url);
+            loaded = (fetchModuleFromUrl(mod, url) == CURLE_OK);
             break;
           }
           case charlie::HTTP_SIGNED:
           {
             std::string url = acq.data()+reqbs;
+            MLOG("Fetching via signed HTTP request: "<<url);
 
             if(boost::starts_with(url, "*"))
             {
               url = url.substr(1);
               for(auto sr : sInfo.server_root())
-                if(loaded = (fetchModuleFromUrl(mod, sr+url) == CURLE_OK)) break;
+                if((loaded = (fetchModuleFromUrl(mod, sr+url) == CURLE_OK))) break;
             }else
               loaded = (fetchModuleFromUrl(mod, url) == CURLE_OK);
+
+            if(loaded)
+            {
+              // Check if module loadable
+              MLOG(mod.id()<<" downloaded, verifying...");
+              if(!mInter->moduleLoadable(mod.id()))
+              {
+                MERR("Module "<<mod.id()<<" download wasn't valid.");
+                loaded = false;
+              }
+            }
           }
         }
       }
       if(!loaded)
-        MERR("Unable to find a valid acquire for "<<mod.id()<<"!");
+      {MERR("Unable to find a valid acquire for "<<mod.id()<<"!")}
+      else
+      {MLOG("Successfully downloaded "<<mod.id()<<"!")}
     }
   }
 
   // Cleanup
   if(delTab) delete table;
+  mInter->triggerModuleRecheck();
 }
 
 bool running = true;
