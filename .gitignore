@@ -60,3 +60,6 @@ makecppnetlib
 makeprotolib
 makeboostnetlib
 bin/
+.makeboost
+.makessl
+.proto
