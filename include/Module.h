@@ -14,8 +14,13 @@
 #endif
 
 #ifdef CHARLIE_MODULE
+#ifdef CHARLIE_MODULE_NAME
+#define MLOG(msg) CLOG("["<<CHARLIE_MODULE_NAME<<"] "<<msg);
+#define MERR(msg) CERR("["<<CHARLIE_MODULE_NAME<<"]! "<<msg);
+#else
 #define MLOG(msg) CLOG("["<<MODULE_ID<<"m] "<<msg);
 #define MERR(msg) CERR("["<<MODULE_ID<<"m]! "<<msg);
+#endif
 #endif
 
 namespace modules

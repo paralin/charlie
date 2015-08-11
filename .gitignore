@@ -65,3 +65,4 @@ bin/
 .proto
 .makerel
 .makedbg
+.makeprotolib

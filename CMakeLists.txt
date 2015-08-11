@@ -150,7 +150,7 @@ add_library(manager SHARED ${manager_SRC}
   "charlie.pb.redacted.cc"
   "manager.pb.redacted.cc"
   )
-set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
+set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"manager\"'")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)
 target_link_libraries(manager ${MANAGER_LIBS})
@@ -161,7 +161,7 @@ add_custom_command(TARGET manager POST_BUILD
 # Build persist
 file(GLOB persist_SRC "src/modules/persist/*.cpp")
 add_library(persist SHARED ${persist_SRC} "charlie.pb.redacted.cc")
-set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS}")
+set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"persist\"'")
 set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(persist -Wl,-Bstatic  ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
 add_custom_command(TARGET persist POST_BUILD
