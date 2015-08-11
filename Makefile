@@ -50,14 +50,9 @@ makessl: .makessl
 .makeboost:
 	git submodule update --init && cd ./deps/boost/ && git submodule update --init
 	# Hack to enable FPIC
-	sed -e "# = shared# = static#g" -i ./deps/boost/tools/build/src/tools/gcc.jam
-	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/" && rm -rf ./final && mkdir -p final/include/boost
-	cd ./deps/boost/ && ./b2 headers install cxxflags="-std=c++11" linkflags="-std=c++11" variant=release link=static threading=multi runtime-link=static --without-python --layout=system -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine #-d0
-	cd ./deps/boost/ && cp libs/scope_exit/include/boost/scope_exit.hpp final/include/boost/ && cp libs/utility/include/boost/utility/string_ref.hpp final/include/boost/utility/ && cp -r libs/exception/include/boost/exception/* final/include/boost/exception/
-	cd ./deps/boost/ && cp boost/*.hpp final/include/boost/
-	cd ./deps/boost/ && cp boost/utility/*.hpp final/include/boost/utility/
-	cd ./deps/boost/ && cp -r libs/logic/include/boost/logic/ final/include/boost/
-	cd ./deps/boost/ && cp -r libs/assign/include/boost/assign/ final/include/boost/
+	sed -i -e "s# \= shared# \= static#g" ./deps/boost/tools/build/src/tools/gcc.jam
+	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/"
+	cd ./deps/boost/ && ./b2 install --layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine headers
 	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
 	touch .makeboost
 makeboost: .makeboost
