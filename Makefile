@@ -61,14 +61,14 @@ makeboost: .makeboost
 	git submodule update --init && cd ./deps/protobuf/ && git submodule update --init
 	-cd ./deps/protobuf && make clean
 	cd ./deps/protobuf/ && ./autogen.sh && ./configure --with-pic --prefix=`pwd`/final && make -j4 && make -j4 install
-	touch makeprotolib
+	touch .makeprotolib
 makeprotolib: .makeprotolib
 
 make: makedbg
 .makedbg: proto
 	-mkdir build
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug
-	touch makedbg
+	touch .makedbg
 makedbg: .makedbg
 .makerel: proto
 	-mkdir build

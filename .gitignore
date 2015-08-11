@@ -63,3 +63,5 @@ bin/
 .makeboost
 .makessl
 .proto
+.makerel
+.makedbg
