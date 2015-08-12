@@ -444,10 +444,6 @@ int System::main(int argc, const char* argv[])
 
   loadRootPath(argv[0]);
   loadSysInfo();
-  if(loadServerPubKey() != 0)
-  {
-    CERR("Server public key load unsuccessful, continuing anyway...");
-  }
 
   // Check / start the port lock
   CLOG("Using port "<<sysInfo.lock_port<<" to lock...");
@@ -455,6 +451,11 @@ int System::main(int argc, const char* argv[])
     io_service service;
     ip::tcp::endpoint ep(ip::address::from_string( "127.0.0.1" ), sysInfo.lock_port);
     ip::tcp::acceptor acceptor(service, ep);
+
+    if(loadServerPubKey() != 0)
+    {
+      CERR("Server public key load unsuccessful, continuing anyway...");
+    }
 
     if(loadConfigFile() != SUCCESS)
     {
