@@ -1,4 +1,5 @@
 #pragma once
+#include <IntTypes.h>
 
 struct SystemInfo {
   const char* system_id;
@@ -7,4 +8,5 @@ struct SystemInfo {
   const char* config_filename;
   const char* exe_path;
   const char* root_path;
+  u16         lock_port;
 };

@@ -26,7 +26,7 @@
     },
     {
       "name": "persist",
-      "mainfcn": false,
+      "mainfcn": true,
       "initial": false,
       "acquire": [
         {

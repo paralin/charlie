@@ -111,7 +111,7 @@ run: all
 proto: .proto
 
 valgrind: makedbg compile
-	cd build && valgrind --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../valgrind.supp ./charlie
+	cd bin/client && valgrind --leak-check=full --show-reachable=yes --track-origins=yes --suppressions=../../valgrind.supp ./charlie
 
 dimage: debug finalize
 	sudo docker build -t charlie/cserver ./bin/

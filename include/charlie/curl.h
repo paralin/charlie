@@ -20,7 +20,7 @@ static size_t data_write(void* buf, size_t size, size_t nmemb, void* userp)
   return 0;
 }
 
-CURLcode curl_read(const std::string& url, std::ostream& os, struct curl_slist * headers = NULL, long timeout = 30)
+CURLcode curl_read(const std::string& url, std::ostream& os, long* status_code = NULL, struct curl_slist * headers = NULL, long timeout = 30)
 {
   CURLcode code(CURLE_FAILED_INIT);
   CURL* curl = curl_easy_init();
@@ -39,6 +39,10 @@ CURLcode curl_read(const std::string& url, std::ostream& os, struct curl_slist *
         && (headers == NULL || CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers))))
     {
       code = curl_easy_perform(curl);
+      if(status_code)
+      {
+        curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, status_code);
+      }
     }
     curl_easy_cleanup(curl);
   }

@@ -23,12 +23,19 @@ ManagerModule::ManagerModule()
 {
   MLOG("Manager module constructed...");
   pInter = new ManagerInter(this);
+  aboutToRelocate = false;
+}
+
+ManagerModule::~ManagerModule()
+{
+  delete pInter;
 }
 
 void ManagerModule::shutdown()
 {
   MLOG("Shutting down manager module..");
   delete pInter;
+  loadedModules.clear();
 }
 
 void ManagerModule::setModuleInterface(ModuleInterface* inter)
@@ -39,12 +46,28 @@ void ManagerModule::setModuleInterface(ModuleInterface* inter)
 
 void ManagerModule::injectDependency(u32 id, void* dep)
 {
+  if(!dep) return;
+
   MLOG("Dep injected "<<id);
+  switch(id)
+  {
+    case (u32)2526948902:
+      persist = (modules::persist::PersistInter*)dep;
+      break;
+  }
+  loadedModules[id] = (ModuleAPI*)dep;
 }
 
 void ManagerModule::releaseDependency(u32 id)
 {
   MLOG("Dep released "<<id);
+  switch(id)
+  {
+    case (u32)2526948902:
+      persist = NULL;
+      break;
+  }
+  loadedModules.erase(id);
 }
 
 std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
@@ -97,7 +120,7 @@ std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
     std::ostringstream oss;
     std::string s;
 
-    if(CURLE_OK == (ccode = curl_read(url.c_str(), oss, headers)))
+    if(CURLE_OK == (ccode = curl_read(url.c_str(), oss, NULL, headers)))
       s = oss.str();
     else
     {
@@ -423,18 +446,27 @@ int ManagerModule::fetchModuleFromUrl(const charlie::CModule& mod, std::string u
   std::ofstream of;
   of.open(fn.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
   CURLcode res(CURLE_FAILED_INIT);
+  long status_code;
   if(of.is_open())
   {
-    res = curl_read(url, of);
+    res = curl_read(url, of, &status_code);
     of.close();
   }else
     CERR("Unable to open file "<<fn<<" to download module "<<mod.id()<<"!");
 
-  return (int)res;
+  return status_code != 200l ? status_code : (int)res;
 }
 
 void ManagerModule::downloadModules(charlie::CModuleTable* table)
 {
+  if(aboutToRelocate)
+  {
+    // Probably will never happen
+    MLOG("About to relocate anyway, skipping module download.");
+    return;
+  }
+
+  boost::mutex::scoped_lock lock(relocateMtx);
   //We need to parse it ourselves
   bool delTab = false;
   if(table == 0)
@@ -544,7 +576,6 @@ void ManagerModule::module_main()
 
   curl_global_init(CURL_GLOBAL_ALL);
 
-  //mInter->relocateEverything("/tmp/testdir/");
   if(parseModuleInfo() != 0)
   {
     MERR("Unable to load module info...");
@@ -570,6 +601,14 @@ void ManagerModule::module_main()
       break;
     }
   }
+  curl_global_cleanup();
+}
+
+bool ManagerModule::prepareToRelocate()
+{
+  boost::mutex::scoped_lock lock(relocateMtx);
+  if(aboutToRelocate) return false;
+  return aboutToRelocate = true;
 }
 
 void* ManagerModule::getPublicInterface()
@@ -580,6 +619,15 @@ void* ManagerModule::getPublicInterface()
 ManagerInter::ManagerInter(ManagerModule* mod)
 {
   this->mod = mod;
+}
+
+ManagerInter::~ManagerInter()
+{
+}
+
+bool ManagerInter::prepareToRelocate()
+{
+  return mod->prepareToRelocate();
 }
 
 CHARLIE_CONSTRUCT(ManagerModule);

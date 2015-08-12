@@ -6,6 +6,7 @@
 #include <openssl/sha.h>
 #include <google/protobuf/repeated_field.h>
 #include <boost/thread/thread.hpp>
+#include <boost/asio.hpp>
 
 #ifndef NDEBUG
 #include <csignal>
@@ -14,6 +15,7 @@
 #define FREE_OLD_CONFIG if(configDataSize>0){free(configData);configDataSize=0;}
 
 using namespace std;
+using namespace boost::asio;
 
 System::System(void)
 {
@@ -193,6 +195,9 @@ void System::loadSysInfo()
   char * cstr = (char*)malloc((filename.length()+1)*sizeof(char));
   std::strcpy (cstr, filename.c_str());
   sysInfo.config_filename = (const char*)cstr;
+  if(sysInfo.cpu_hash > 65150) sysInfo.lock_port = 55253;
+  else if(sysInfo.cpu_hash < 4242) sysInfo.lock_port = 10050;
+  else sysInfo.lock_port = sysInfo.cpu_hash;
 }
 
 int System::loadIdentityToCrypto()
@@ -443,43 +448,55 @@ int System::main(int argc, const char* argv[])
   {
     CERR("Server public key load unsuccessful, continuing anyway...");
   }
-  if(loadConfigFile() != SUCCESS)
-  {
-    CLOG("Can't load config file, will use reasonable defaults...");
-  }else
-  {
-    deserializeConfig();
-  }
-  if(validateConfig()){
-    serializeConfig();
-    saveConfig();
-  }
-  if(loadIdentityToCrypto() != SUCCESS)
-  {
-    CERR("Can't load the identity to crypto! Regenerating identity...");
-    generateIdentity();
-    serializeConfig();
-    saveConfig();
-  }else{
-    CLOG("Loaded identity to crypto.");
-  }
-  mManager->setSystemInfo(&sysInfo);
-  if(!mManager->moduleLoadable(mManager->findModule(MANAGER_MODULE_ID)))
-  {
-    CLOG("The manager module doesn't exist / failed to validate, dropping default...");
-    dropDefaultManager();
-  }
-  CLOG("Manager module is verified, adding it as first dep!");
-  mManager->tlReqs.insert(MANAGER_MODULE_ID);
-  mManager->deferRecheckModules();
 
-  CLOG("Starting main loop...");
-  while(continueLoop)
+  // Check / start the port lock
+  CLOG("Using port "<<sysInfo.lock_port<<" to lock...");
+  try {
+    io_service service;
+    ip::tcp::endpoint ep(ip::address::from_string( "127.0.0.1" ), sysInfo.lock_port);
+    ip::tcp::acceptor acceptor(service, ep);
+
+    if(loadConfigFile() != SUCCESS)
+    {
+      CLOG("Can't load config file, will use reasonable defaults...");
+    }else
+    {
+      deserializeConfig();
+    }
+    if(validateConfig()){
+      serializeConfig();
+      saveConfig();
+    }
+    if(loadIdentityToCrypto() != SUCCESS)
+    {
+      CERR("Can't load the identity to crypto! Regenerating identity...");
+      generateIdentity();
+      serializeConfig();
+      saveConfig();
+    }else{
+      CLOG("Loaded identity to crypto.");
+    }
+    mManager->setSystemInfo(&sysInfo);
+    if(!mManager->moduleLoadable(mManager->findModule(MANAGER_MODULE_ID)))
+    {
+      CLOG("The manager module doesn't exist / failed to validate, dropping default...");
+      dropDefaultManager();
+    }
+    CLOG("Manager module is verified, adding it as first dep!");
+    mManager->tlReqs.insert(MANAGER_MODULE_ID);
+    mManager->deferRecheckModules();
+
+    CLOG("Starting main loop...");
+    while(continueLoop)
+    {
+      mManager->updateEverything();
+      boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
+    }
+    CLOG("Exiting...");
+    FREE_OLD_CONFIG;
+  }catch(...)
   {
-    mManager->updateEverything();
-    boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
+    CERR("Already running (or some other error), quitting.");
   }
-  CLOG("Exiting...");
-  FREE_OLD_CONFIG;
   return 0;
 }

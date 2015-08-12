@@ -7,8 +7,6 @@
 #include <vector>
 #include <ModuleInterface.h>
 
-#define VISIBLE __attribute__ ((visibility ("default")))
-
 #ifndef MODULE_ID
 #define MODULE_ID 0
 #endif
