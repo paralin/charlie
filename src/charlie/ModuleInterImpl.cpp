@@ -82,9 +82,9 @@ void ModuleInterImpl::triggerModuleRecheck()
   mManager->deferRecheckModules();
 }
 
-int ModuleInterImpl::relocateEverything(const char* targetPath)
+int ModuleInterImpl::relocateEverything(const char* targetPath, const char* targetExecutableName)
 {
-  return mManager->sys->relocateEverything(targetPath);
+  return mManager->sys->relocateEverything(targetPath, targetExecutableName);
 }
 
 std::string ModuleInterImpl::getModuleInfo()

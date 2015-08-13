@@ -53,7 +53,7 @@ namespace modules
       virtual SystemInfo* getSysInfo() = 0;
 
       //Relocate all files to another place
-      virtual int relocateEverything(const char* targetPath) = 0;
+      virtual int relocateEverything(const char* targetPath, const char* targetExecutableName) = 0;
 
       // Verify a module is loadable
       virtual bool moduleLoadable(u32 id) = 0;

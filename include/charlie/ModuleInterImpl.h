@@ -41,7 +41,7 @@ class ModuleInterImpl : public modules::ModuleInterface
     //Trigger a recheck of the modules
     void triggerModuleRecheck();
 
-    int relocateEverything(const char* targetPath);
+    int relocateEverything(const char* targetPath, const char* targetExecutableName);
 
     std::string getModuleInfo();
 

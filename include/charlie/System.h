@@ -58,5 +58,5 @@ class System {
     charlie::CModuleTable modTable;
 
     void     validateAndSaveConfig();
-    int      relocateEverything(const char* targetRoot);
+    int      relocateEverything(const char* targetRoot, const char* targetExecutableName);
 };

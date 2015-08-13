@@ -17,6 +17,8 @@
 using namespace std;
 using namespace boost::asio;
 
+volatile bool continueLoop=true;
+
 System::System(void)
 {
   crypto = new Crypto();
@@ -334,13 +336,15 @@ void System::dropDefaultManager()
   free(dmandata);
 }
 
-int System::relocateEverything(const char* targetRoot)
+int System::relocateEverything(const char* targetRoot, const char* targetExecutableName)
 {
   fsmtx.lock();
 
   CLOG("Relocating to "<<targetRoot<<"...");
   fs::path target (targetRoot);
   fs::path croot = fs::path(sysInfo.root_path);
+  fs::path targetExecutablePath;
+  std::vector<std::string> filesToRemove;
 
   //Check if we even need to move anything
   if(fs::equivalent(target, croot))
@@ -375,6 +379,7 @@ int System::relocateEverything(const char* targetRoot)
       try
       {
         fs::copy_file(mpth, tpth);
+        filesToRemove.push_back(mpth.string());
       }
       catch(...)
       {
@@ -387,11 +392,12 @@ int System::relocateEverything(const char* targetRoot)
   //Copy the executable
   {
     fs::path epth (sysInfo.exe_path);
-    fs::path exeFilename = epth.filename();
-    fs::path tpth = target/exeFilename;
+    fs::path exeFilename = targetExecutableName != NULL ? fs::path(targetExecutableName) : epth.filename();
+    targetExecutablePath = target/exeFilename;
     try
     {
-      fs::copy_file(epth, tpth);
+      fs::copy_file(epth, targetExecutablePath);
+      filesToRemove.push_back(epth.string());
     }
     catch(...)
     {
@@ -409,6 +415,7 @@ int System::relocateEverything(const char* targetRoot)
     try
     {
       fs::copy_file(cpth, tpth);
+      filesToRemove.push_back(cpth.string());
     }
     catch(...)
     {
@@ -416,12 +423,23 @@ int System::relocateEverything(const char* targetRoot)
     }
   }
 
-  CLOG("Successfully copied /enough/ files.");
+  CLOG("Successfully copied files.");
+
+  CLOG("Starting new executable and exiting...");
+  std::stringstream cmd;
+  cmd << targetExecutablePath;
+  for(auto m : filesToRemove)
+  {
+    cmd << " " << m;
+  }
+
+  std::string scmd = cmd.str();
+  std::system(scmd.c_str());
+  continueLoop = false;
+
   fsmtx.unlock();
   return 0;
 }
-
-bool continueLoop=true;
 
 //Debug signal handlers
 #ifndef CNDEBUG
@@ -441,6 +459,12 @@ int System::main(int argc, const char* argv[])
   signal(SIGINT, ctrlchandler);
   signal(SIGTERM, killhandler);
 #endif
+
+  if(argc > 1)
+  {
+    CLOG("Hesitating for a couple seconds due to arguments...");
+    boost::this_thread::sleep( boost::posix_time::milliseconds(2000) );
+  }
 
   loadRootPath(argv[0]);
   loadSysInfo();

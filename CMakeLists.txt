@@ -159,7 +159,7 @@ add_custom_command(TARGET manager POST_BUILD
 )
 
 # Build persist
-file(GLOB persist_SRC "src/modules/persist/*.cpp")
+file(GLOB_RECURSE persist_SRC "src/modules/persist/*.cpp")
 add_library(persist SHARED ${persist_SRC} "charlie.pb.redacted.cc")
 set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"persist\"'")
 set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})

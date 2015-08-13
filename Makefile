@@ -4,7 +4,7 @@ release: makessl makeboost makeprotolib makerel strip finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
-.PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run
+.PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run server client
 
 protoc="../../deps/protobuf/final/bin/protoc"
 
@@ -130,3 +130,9 @@ push: finalize
 	@if [ ! -d "../charliebin/" ]; then echo "Charlie binary repository does not exist." && exit 5; fi
 	rsync -rav --exclude='.git/' --exclude="client/" --delete bin/ ../charliebin/
 	cd ../charliebin/ && git add -A && git commit -am "$(m)" && git push dokku master
+
+server: all
+	cd ./bin/server/ && ./cserver
+
+client: all
+	cd ./bin/client/ && ./charlie

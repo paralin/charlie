@@ -7,6 +7,7 @@
 #include "PersistMethod.h"
 #include <modules/manager/ManagerInter.h>
 #include <boost/thread/mutex.hpp>
+#include <boost/filesystem.hpp>
 
 namespace modules
 {
@@ -23,6 +24,9 @@ namespace modules
       void injectDependency(u32 id, void* dep);
       void releaseDependency(u32 id);
       void* getPublicInterface();
+
+      // Start migrating to that path.
+      void startMigrateTo(boost::filesystem::path& path, std::string& targetExecutableName);
 
     private:
       modules::manager::ManagerInter* manager;
