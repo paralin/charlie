@@ -46,6 +46,8 @@ else()
   set(OPENSSL_LIBRARIES "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libssl.a" "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libcrypto.a")
 endif()
 
+set(PROCESS_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/process/")
+
 find_package(ZLIB REQUIRED)
 
 set(HTTP_ONLY ON CACHE BOOL "Use http only")
@@ -63,7 +65,7 @@ find_package(GSS REQUIRED)
 #Remove pthread from the boost libraries
 list(REMOVE_AT Boost_LIBRARIES -1)
 
-set(include_t1 ${CURL_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
+set(include_t1 ${CURL_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${PROCESS_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS} ${Protobuf_INCLUDE_DIRS} ${THREADS_PTHREADS_INCLUDE_DIR})
 include_directories(${include_t1})
 include_directories("include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/rapidjson/include/")

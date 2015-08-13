@@ -32,6 +32,10 @@ class System {
 
     SystemInfo sysInfo;
 
+    bool startSubprocess = false;
+    std::string subprocessPath;
+    std::vector<std::string> subprocessArgs;
+
   private:
     void     loadRootPath(const char* arvg0);
     void     loadSysInfo();

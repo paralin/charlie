@@ -6,8 +6,8 @@
 #ifndef CHARLIE_MODULE
 #define MLOG(msg) CLOG("["<<module->id()<<"i] "<<msg);
 #define MERR(msg) CERR("["<<module->id()<<"i]! "<<msg);
-#define EMPTYCATCH(sect) try{sect;}catch(...){}
 #endif
+#define EMPTYCATCH(sect) try{sect;}catch(...){}
 
 ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleManager* man)
 {
@@ -42,7 +42,7 @@ void ModuleInstance::unload()
           MERR("Waited for 5 seconds but it hasn't exited.");
       }
     }
-    EMPTYCATCH(delete mainThread;);
+    EMPTYCATCH(delete mainThread)
     mainThread = NULL;
   }
   if(baseModule != NULL)
@@ -50,12 +50,13 @@ void ModuleInstance::unload()
     try{
       if(mManager != NULL)
         mManager->onModuleReleased(module->id());
-      EMPTYCATCH(baseModule->shutdown(););
+      EMPTYCATCH(baseModule->shutdown())
       delete baseModule;
       MLOG("Deleted baseModule");
-    }catch(...)
+    }catch(std::exception& e)
     {
       MERR("Unable to delete module, might be a memory leak.");
+      MERR(e.what());
     }
     baseModule = NULL;
   }

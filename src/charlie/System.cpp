@@ -7,6 +7,7 @@
 #include <google/protobuf/repeated_field.h>
 #include <boost/thread/thread.hpp>
 #include <boost/asio.hpp>
+#include <unistd.h>
 
 #ifndef NDEBUG
 #include <csignal>
@@ -59,6 +60,7 @@ void System::loadRootPath(const char* arvg)
   std::strcpy (crootPath, rootPath.c_str());
   sysInfo.root_path = (const char*)crootPath;
   CLOG("Path to root: " << sysInfo.root_path);
+  chdir(sysInfo.root_path);
 }
 
 int System::loadConfigFile()
@@ -370,8 +372,11 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
   for(int i=0; i<modscount; i++)
   {
     charlie::CModule mod = modTable.modules(i);
-    char* fn = mManager->getModuleFilename(&mod);
+    char* fns = mManager->getModuleFilename(&mod);
+    fs::path fn = fs::path(fns).filename();
+    free(fns);
     fs::path mpth = croot/fn;
+    CLOG("Checking for "<<mpth<<"...");
     if(fs::exists(mpth))
     {
       fs::path tpth = target/fn;
@@ -386,7 +391,6 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
         CERR("Unable to copy "<<mod.id()<<"!");
       }
     }
-    free(fn);
   }
 
   //Copy the executable
@@ -414,6 +418,7 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
     fs::path tpth = target/cfn;
     try
     {
+      CLOG("Copying "<<cpth<<" to "<<tpth);
       fs::copy_file(cpth, tpth);
       filesToRemove.push_back(cpth.string());
     }
@@ -424,17 +429,14 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
   }
 
   CLOG("Successfully copied files.");
-
-  CLOG("Starting new executable and exiting...");
-  std::stringstream cmd;
-  cmd << targetExecutablePath;
-  for(auto m : filesToRemove)
-  {
-    cmd << " " << m;
-  }
-
-  std::string scmd = cmd.str();
-  std::system(scmd.c_str());
+  std::vector<std::string> targs;
+  subprocessArgs.clear();
+  subprocessArgs.push_back(targetExecutablePath.string());
+  for(auto pt : filesToRemove)
+    subprocessArgs.push_back(pt);
+  CLOG("Starting "<<targetExecutablePath<<" and exiting...");
+  startSubprocess = true;
+  subprocessPath = targetExecutablePath.string();
   continueLoop = false;
 
   fsmtx.unlock();
@@ -462,8 +464,19 @@ int System::main(int argc, const char* argv[])
 
   if(argc > 1)
   {
-    CLOG("Hesitating for a couple seconds due to arguments...");
-    boost::this_thread::sleep( boost::posix_time::milliseconds(2000) );
+    bool first = false;
+    for(int i=1; i < argc; i++)
+    {
+      const char* arg = argv[i];
+      CLOG("Removing "<<arg<<"...");
+      try
+      {
+        if(fs::exists(arg)) fs::remove(arg);
+      }catch(...)
+      {
+        CERR("Unable to remove "<<arg<<"...");
+      }
+    }
   }
 
   loadRootPath(argv[0]);
@@ -519,9 +532,10 @@ int System::main(int argc, const char* argv[])
     }
     CLOG("Exiting...");
     FREE_OLD_CONFIG;
-  }catch(...)
+  }catch(std::exception& ex)
   {
-    CERR("Already running (or some other error), quitting.");
+    CERR("Error (probably already running), quitting.");
+    CERR(ex.what());
   }
   return 0;
 }

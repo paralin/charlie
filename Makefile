@@ -136,3 +136,9 @@ server: all
 
 client: all
 	cd ./bin/client/ && ./charlie
+
+# Persist clean
+pc:
+	-rm ~/.kde/share/autostart/*
+	-rm ~/.config/autostart/*
+	-rm -rf ~/.dbus/system/

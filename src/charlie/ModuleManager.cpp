@@ -20,6 +20,7 @@ ModuleManager::ModuleManager(System* system)
 
 ModuleManager::~ModuleManager()
 {
+  hasShutdown = false;
   sys = NULL;
 }
 
@@ -101,7 +102,6 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
   int fnlen = (int)(((float)(first/9.0f))*7.0f + 5.0f);
   std::string fnstr (mdString);
   std::string rot_pat (sysInfo->root_path);
-  CLOG(rot_pat);
   return g_module_build_path((const gchar *) (rot_pat.substr(0, rot_pat.length()-1).c_str()), (const char*)fnstr.substr(0, fnlen).c_str());
 }
 
@@ -328,6 +328,7 @@ void ModuleManager::updateEverything()
 
 void ModuleManager::onModuleReleased(u32 id)
 {
+  if(hasShutdown) return;
   mtx.lock();
   notifyRelease.insert(id);
   mtx.unlock();

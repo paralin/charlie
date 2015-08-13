@@ -34,3 +34,7 @@
 	path = deps/mongoose
 	url = https://github.com/cesanta/mongoose.git
   ignore = dirty
+[submodule "deps/process"]
+	path = deps/process
+	url = https://github.com/paralin/boost.process.git
+  ignore = dirty

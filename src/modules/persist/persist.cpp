@@ -25,7 +25,6 @@ PersistModule::~PersistModule()
 void PersistModule::shutdown()
 {
   MLOG("Shutting down persist module..");
-  delete pInter;
 }
 
 void PersistModule::setModuleInterface(ModuleInterface* inter)

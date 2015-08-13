@@ -34,7 +34,6 @@ ManagerModule::~ManagerModule()
 void ManagerModule::shutdown()
 {
   MLOG("Shutting down manager module..");
-  delete pInter;
   loadedModules.clear();
 }
 
