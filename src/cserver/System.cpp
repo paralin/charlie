@@ -63,7 +63,7 @@ int System::loadCrypto()
   }
   else
   {
-    CERR("Can't open file "<<inFile<<"...");
+    CERR("Can't open file server_identity...");
     return -1;
   }
 

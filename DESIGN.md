@@ -1,6 +1,12 @@
 # CNC
 Central server, running through a SOCKS5 proxy or not, communicates through a bare socket with protobuf
+
 The public key is encoded into the binary where might add additional encryption down the line.
+
+**NOTE**: Since the beginning of this project I've decided to use what
+is currently called the "server identity" as just the key used to sign the
+online module tables. These can come through anywhere. "server_keys"
+are the public keys trusted as command servers.
 
 Message header is message ID, message length, and signed hash of the message itself.
 
@@ -16,9 +22,9 @@ It is expected that the **core** will remain the same always.
 Furthermore all of the components have a version #. Every single component is signed and verified before being loaded.
 
 Core list of modules is
-    - Comms - Direct
-    - Comms - TOR
-    - Info (can gather system info)
+    - Manager
+    - Persist
+    - Client
 
 # Module Table
 Core data table (signed, especially when stored).

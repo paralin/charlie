@@ -19,7 +19,7 @@ set(THREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-SET(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX} "so")
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX} "so")
 set(STATIC_LIBC_ARGS "-static-libgcc -static-libstdc++")
 
 if(NOT WINCC)
@@ -48,19 +48,30 @@ endif()
 
 set(PROCESS_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/process/")
 
-find_package(ZLIB REQUIRED)
+if(WINCC)
+  find_package(ZLIB REQUIRED)
+else()
+  set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/deps/zlib/final/)
+  add_subdirectory(deps/zlib)
+  # Might not be necessary
+  set_target_properties(zlibstatic PROPERTIES COMPILE_FLAGS "-fPIC")
+  set(ZLIB_LIBRARIES zlibstatic)
+  set(ZLIB_INCLUDE_DIRS ${CMAKE_INSTALL_PREFIX}/include)
+endif()
 
-set(HTTP_ONLY ON CACHE BOOL "Use http only")
-set(CURL_STATICLIB ON CACHE BOOL "Use static library")
-set(BUILD_CURL_EXE OFF CACHE BOOL "Build executable")
-set(BUILD_CURL_TESTS OFF CACHE BOOL "Build tests")
-set(CURL_ZLIB OFF CACHE BOOL "Use zlib")
-set(CMAKE_USE_OPENSSL ON CACHE BOOL "Use OpenSSL")
-set(ENABLE_MANUAL OFF CACHE BOOL "Enable manual compilation")
+set(HTTP_ONLY ON CACHE BOOL "")
+set(CURL_STATICLIB ON CACHE BOOL "")
+set(BUILD_CURL_EXE OFF CACHE BOOL "")
+set(BUILD_CURL_TESTS OFF CACHE BOOL "")
+set(CURL_ZLIB ON CACHE BOOL "")
+set(CMAKE_USE_LIBSSH2 OFF CACHE BOOL "")
+set(CMAKE_USE_OPENSSL ON CACHE BOOL "")
+set(ENABLE_MANUAL OFF CACHE BOOL "")
+set(CURL_DISABLE_CRYPTO_AUTH ON CACHE BOOL "")
+# See #558 on curl
+set(CURL_DISABLE_VERBOSE_STRINGS OFF CACHE BOOL "")
 add_subdirectory(deps/curl)
 set_target_properties(libcurl PROPERTIES COMPILE_FLAGS "-fPIC")
-
-find_package(GSS REQUIRED)
 
 #Remove pthread from the boost libraries
 list(REMOVE_AT Boost_LIBRARIES -1)
@@ -75,14 +86,11 @@ MESSAGE( STATUS "GModule: ${GLIB_GMODULE_LIBRARIES}")
 MESSAGE( STATUS "GLIB: ${GLIB_LIBRARIES}")
 MESSAGE( STATUS "BOOST inc: ${Boost_INCLUDE_DIRS}")
 MESSAGE( STATUS "Other inc: ${include_t1}" )
-MESSAGE( STATUS "GSS libs: ${GSS_LIBRARIES}" )
 
-set(CURL_LIBRARIES_DEPS ${GSS_LIBRARIES} libcurl ${GSS_LIBRARIES})
+#set(CURL_LIBRARIES_DEPS ${GSS_LIBRARIES} libcurl ${GSS_LIBRARIES})
+set(CURL_LIBRARIES_DEPS libcurl)
 set(LIBS -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 set(MANAGER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
-
-# Compile mongoose
-add_library(mongoose STATIC "${PROJECT_SOURCE_DIR}/deps/mongoose/mongoose.c")
 
 if(WINCC)
   find_package(Libiconv REQUIRED)
@@ -248,6 +256,9 @@ target_link_libraries(charlie ${LIBS})
 # Now let's compile the server
 # Server's currently broken, don't compile
 if(NOT WINCC)
+  # Compile mongoose
+  add_library(mongoose STATIC "${PROJECT_SOURCE_DIR}/deps/mongoose/mongoose.c")
+
   set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
   file(GLOB cserver_SRC "src/cserver/*.cpp")

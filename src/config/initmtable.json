@@ -16,7 +16,8 @@
         ],
         "onion_hosts": [
           "zgpnutxuh5ktxano"
-        ]
+        ],
+        "server_keys": []
       }
     }
   ]

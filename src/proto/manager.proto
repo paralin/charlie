@@ -8,6 +8,7 @@ message CManagerInfo
   repeated string init_url = 1;
   repeated string server_root = 2;
   repeated string onion_host = 3;
+  repeated string server_key = 4;
 }
 
 message CInitInfo

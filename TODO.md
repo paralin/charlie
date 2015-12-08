@@ -6,3 +6,5 @@
    themselves for commands, but the person sending the commands.
  - Build a framework for hiding file templates better (i.e. autostart
    file)
+
+Think about using torpeer type stuff.

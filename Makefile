@@ -44,6 +44,8 @@ dclean: clean
 	git submodule update --init
 	-cd ./deps/openssl && rm -rf ./final/ && make clean && make dclean && mkdir ./final/
 	cd ./deps/openssl && export CFLAGS="-fPIC" && ./config --prefix="`pwd`/final/" -fPIC -DOPENSSL_PIC && make -j4 && make install
+	# Small hack, just comment out all the find_package in curl
+	sed -i -e "s/ find_package/ #find_package/g" ./deps/curl/CMakeLists.txt
 	touch .makessl
 makessl: .makessl
 
@@ -52,7 +54,7 @@ makessl: .makessl
 	# Hack to enable FPIC
 	sed -i -e "s# \= shared# \= static#g" ./deps/boost/tools/build/src/tools/gcc.jam
 	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/"
-	cd ./deps/boost/ && ./b2 install --layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine headers
+	cd ./deps/boost/ && ./b2 headers install --layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
 	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
 	touch .makeboost
 makeboost: .makeboost
