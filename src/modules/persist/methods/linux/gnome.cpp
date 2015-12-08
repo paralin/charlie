@@ -77,6 +77,7 @@ void PersistAutostart::init(ModuleInterface* inter, PersistModule* persist)
 
 bool PersistAutostart::inUse()
 {
+  // XXX: Also verify that the process is running from here.
   return exists(kdeConfigFilePath) || exists(gnomeConfigFilePath);
 }
 

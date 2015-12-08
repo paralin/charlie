@@ -139,7 +139,7 @@ void PersistModule::module_main()
 
 void PersistModule::startMigrateTo(boost::filesystem::path& path, std::string& targetExecutableName)
 {
-#if NDEBUG
+#if DEBUG
   MLOG("Debug mode, not actually migrating to "<<path.str()<<"...");
 #else
   if(manager->prepareToRelocate()){

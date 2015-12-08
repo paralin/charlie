@@ -13,7 +13,7 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
-#ifndef NDEBUG
+#ifdef DEBUG
 #include <openssl/md5.h>
 #endif
 
@@ -188,7 +188,7 @@ void WebHost::mainThread()
           }
           else
           {
-#ifndef NDEBUG
+#ifdef DEBUG
             {
               char mdString[33];
               unsigned char digest[MD5_DIGEST_LENGTH];

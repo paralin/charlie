@@ -292,7 +292,7 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
           MERR(exc.what());
 #endif
         }
-#ifndef NDEBUG
+#ifdef DEBUG
 #if VERBOSE
         {
           char mdString[33];

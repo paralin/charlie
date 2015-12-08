@@ -56,6 +56,7 @@ makessl: .makessl
 	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/"
 	cd ./deps/boost/ && ./b2 headers install --layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
 	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
+	find ./deps/process/boost/process/ -type f -name '*.hpp' -exec sed -i -e "s/Windows.h/windows.h/g" -e "s/Shellapi.h/shellapi.h/g" {} \;
 	touch .makeboost
 makeboost: .makeboost
 

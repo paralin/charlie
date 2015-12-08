@@ -9,7 +9,7 @@
 #include <boost/asio.hpp>
 #include <unistd.h>
 
-#ifndef NDEBUG
+#ifdef DEBUG
 #include <csignal>
 #endif
 
@@ -444,7 +444,7 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
 }
 
 //Debug signal handlers
-#ifndef CNDEBUG
+#ifdef DEBUG
 void ctrlchandler(int) {
   CLOG("Caught ctrl c, quitting...");
   continueLoop = false;
@@ -457,7 +457,7 @@ void killhandler(int) {
 
 int System::main(int argc, const char* argv[])
 {
-#ifndef CNDEBUG
+#ifdef DEBUG
   signal(SIGINT, ctrlchandler);
   signal(SIGTERM, killhandler);
 #endif

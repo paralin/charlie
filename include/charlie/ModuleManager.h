@@ -14,7 +14,7 @@
 #include <string>
 #include <memory>
 #include <set>
-#include <mutex>
+#include <boost/thread/mutex.hpp>
 
 //Forward declaration
 class System;
@@ -75,6 +75,6 @@ private:
   bool modulesDirty;
   bool configDirty;
 
-  std::mutex mtx;
+  boost::mutex mtx;
   bool hasShutdown = false;
 };

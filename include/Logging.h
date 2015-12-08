@@ -4,7 +4,7 @@
 #include <ostream>
 #include <iostream>
 
-#ifndef NDEBUG
+#ifdef DEBUG
 #ifndef DO_CHARLIE_LOG
 #define DO_CHARLIE_LOG
 #endif
