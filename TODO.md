@@ -6,5 +6,9 @@
    themselves for commands, but the person sending the commands.
  - Build a framework for hiding file templates better (i.e. autostart
    file)
-
-Think about using torpeer type stuff.
+ - Randomly generate the XOR keys for everything to make pattern
+   generation harder.
+ - Implement a compiler in the server to randomize some things within
+   every single build of the executable in order to make things more
+   confusing
+ - Add the llvm obfuscation work in for modules
