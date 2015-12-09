@@ -12,3 +12,11 @@
    every single build of the executable in order to make things more
    confusing
  - Add the llvm obfuscation work in for modules
+
+Important:
+
+ - Add an event system (module table reloaded, module loaded, module
+   unloaded)
+ - Add a method to get the pending modules waiting for load from the
+   module manager and only load the modules that are depended on. This
+   way we don't download things we don't need.
