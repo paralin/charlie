@@ -13,7 +13,7 @@
               "data": "*/ereq/"
             }
           ],
-          "platform": 4
+          "platform": 7
         }
       ],
       "info_type": "CManagerInfo",
@@ -44,7 +44,23 @@
               "data": "*/ereq/"
             }
           ],
-          "platform": 4
+          "platform": 7
+        }
+      ]
+    },
+    {
+      "name": "client",
+      "mainfcn": true,
+      "initial": false,
+      "binary": [
+        {
+          "acquire": [
+            {
+              "type": 1,
+              "data": "*/ereq/"
+            }
+          ],
+          "platform": 7
         }
       ]
     }

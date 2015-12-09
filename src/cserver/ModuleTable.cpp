@@ -76,89 +76,94 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
       for (rapidjson::SizeType oi = 0; oi < binaries.Size(); oi++)
       {
         const rapidjson::Value& bind = binaries[oi];
-        charlie::CModuleBinary* bin = mod->add_binary();
-        if (bind.HasMember("platform") && bind["platform"].IsNumber())
+        u32 platformMask = bind["platform"].GetInt();
+        for (u32 platform = charlie::ESystemPlatform_MIN; platform <= charlie::ESystemPlatform_MAX; platform++)
         {
-          bin->set_platform(bind["platform"].GetInt());
-        }
-        // Filename of library
-        fs::path fns;
-        {
-          std::ostringstream fss;
-          fss << rootPath;
-          fss << "/";
-          fss << platformToPrefix(bin->platform());
-          fss << mod->id();
-          fss << platformToSuffix(bin->platform());
-          fns = fs::path(fss.str());
-        }
-        if (!fs::exists(fns))
-        {
-          CLOG("Expected path: " << fns.string());
-          CERR("Unable to find binary " << fns.filename() << ", excluding.");
-          mod->mutable_binary()->RemoveLast();
-          continue;
-        }
-        if (bind.HasMember("acquire") && bind["acquire"].IsArray())
-        {
-          const rapidjson::Value& acquires = bind["acquire"];
-          for(rapidjson::SizeType oi = 0; oi < acquires.Size(); oi++)
+          if (!charlie::ESystemPlatform_IsValid((int) platform) || !(platformMask & platform))
+            continue;
+
+          charlie::CModuleBinary* bin = mod->add_binary();
+          bin->set_platform(platform);
+
+          // Filename of library
+          fs::path fns;
           {
-            charlie::CModuleAcquire* acq = bin->add_acquire();
-            int acqti = (int)acquires[oi]["type"].GetInt();
-            switch(acqti)
+            std::ostringstream fss;
+            fss << rootPath;
+            fss << "/";
+            fss << platformToPrefix(bin->platform());
+            fss << mod->id();
+            fss << platformToSuffix(bin->platform());
+            fns = fs::path(fss.str());
+          }
+          if (!fs::exists(fns))
+          {
+            CLOG("Expected path: " << fns.string());
+            CERR("Unable to find binary " << fns.filename() << ", excluding.");
+            mod->mutable_binary()->RemoveLast();
+            continue;
+          }
+          if (bind.HasMember("acquire") && bind["acquire"].IsArray())
+          {
+            const rapidjson::Value& acquires = bind["acquire"];
+            for(rapidjson::SizeType oi = 0; oi < acquires.Size(); oi++)
             {
-              case (int)charlie::HTTP_GET:
+              charlie::CModuleAcquire* acq = bin->add_acquire();
+              int acqti = (int)acquires[oi]["type"].GetInt();
+              switch(acqti)
               {
-                std::string httpg = acquires[oi]["data"].GetString();
-                CLOG("Adding HTTPGET acquire to "<<httpg<<" platform "<<bin->platform()<<"...");
-                acq->set_type((charlie::CAcquireType)acqti);
-                acq->set_data(httpg);
-                break;
-              }
-              case (int)charlie::HTTP_SIGNED:
-              {
-                std::string httpg = acquires[oi]["data"].GetString();
-                CLOG("Adding HTTPSIGNED acquire to "<<httpg<<" platform "<<bin->platform()<<"...");
-                acq->set_type((charlie::CAcquireType)acqti);
-                acq->set_data(httpg);
-                break;
-              }
-              default:
-              {
-                CLOG("Unknown acquire method: "<<acqti);
-                bin->mutable_acquire()->RemoveLast();
-                break;
+                case (int)charlie::HTTP_GET:
+                  {
+                    std::string httpg = acquires[oi]["data"].GetString();
+                    CLOG("Adding HTTPGET acquire to "<<httpg<<" platform "<<bin->platform()<<"...");
+                    acq->set_type((charlie::CAcquireType)acqti);
+                    acq->set_data(httpg);
+                    break;
+                  }
+                case (int)charlie::HTTP_SIGNED:
+                  {
+                    std::string httpg = acquires[oi]["data"].GetString();
+                    CLOG("Adding HTTPSIGNED acquire to "<<httpg<<" platform "<<bin->platform()<<"...");
+                    acq->set_type((charlie::CAcquireType)acqti);
+                    acq->set_data(httpg);
+                    break;
+                  }
+                default:
+                  {
+                    CLOG("Unknown acquire method: "<<acqti);
+                    bin->mutable_acquire()->RemoveLast();
+                    break;
+                  }
               }
             }
           }
-        }
-        // Make a new scope
-        {
-          const char* filename = fns.c_str();
-          CLOG("filename: "<<filename);
-          unsigned char* digest;
-          if(sha256File(filename, &digest)!=0)
+          // Make a new scope
           {
-            CERR("Unable to hash file for some reason.");
-          }
-          else
-          {
-            bin->set_hash(digest, SHA256_DIGEST_LENGTH);
-            char mdString[SHA256_DIGEST_LENGTH*2+1];
-            for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-              sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
-            CLOG("digest: "<<mdString);
-            free(digest);
+            const char* filename = fns.c_str();
+            CLOG("filename: "<<filename);
+            unsigned char* digest;
+            if(sha256File(filename, &digest)!=0)
+            {
+              CERR("Unable to hash file for some reason.");
+            }
+            else
+            {
+              bin->set_hash(digest, SHA256_DIGEST_LENGTH);
+              char mdString[SHA256_DIGEST_LENGTH*2+1];
+              for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+                sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+              CLOG("digest: "<<mdString);
+              free(digest);
+            }
           }
         }
       }
     }
     /*
-    if(ix.HasMember("acquire") && ix["acquire"].IsArray())
-    {
-    }
-      */
+       if(ix.HasMember("acquire") && ix["acquire"].IsArray())
+       {
+       }
+       */
     if(ix.HasMember("info") && ix["info"].IsObject() && ix.HasMember("info_type") && ix["info_type"].IsString())
     {
       std::string ityp (ix["info_type"].GetString());

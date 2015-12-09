@@ -75,9 +75,9 @@ message CModuleBinary
 
 enum ESystemPlatform
 {
-  WINDOWS = 0x01;
-  MAC = 0x02;
-  LINUX = 0x04;
+  WINDOWS = 1;
+  MAC = 2;
+  LINUX = 4;
 }
 
 //Info stored on a static HTTP GET
