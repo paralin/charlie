@@ -24,6 +24,7 @@ namespace modules
       void injectDependency(u32 id, void* dep);
       void releaseDependency(u32 id);
       void* getPublicInterface();
+      void handleEvent(u32 event, void* data);
 
       // Start migrating to that path.
       void startMigrateTo(boost::filesystem::path& path, std::string& targetExecutableName);

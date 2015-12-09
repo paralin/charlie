@@ -13,10 +13,10 @@
    confusing
  - Add the llvm obfuscation work in for modules
 
-Important:
+Possible bugs:
 
- - Add an event system (module table reloaded, module loaded, module
-   unloaded)
- - Add a method to get the pending modules waiting for load from the
-   module manager and only load the modules that are depended on. This
-   way we don't download things we don't need.
+ - When the module table is reloaded all of the CModules are probbly
+   released.
+ - The module instances use CModule pointers to hold state. Make sure
+   these CModule state elements are replicated to the new module table
+   and the pointers are updated.

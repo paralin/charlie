@@ -151,6 +151,10 @@ void PersistModule::startMigrateTo(boost::filesystem::path& path, std::string& t
 #endif
 }
 
+void PersistModule::handleEvent(u32 event, void* data)
+{
+}
+
 PersistInter::PersistInter(PersistModule * mod)
 {
   this->mod = mod;

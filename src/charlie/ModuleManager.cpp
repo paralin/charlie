@@ -277,7 +277,22 @@ void ModuleManager::evaluateRequirements()
   for (auto &any : solmods)
     solution.insert(any.first);
 
-  CLOG("MLOAD count: "<<solution.size());
+  // Finally update the dependedUpon
+  for (auto sol : solution)
+    if (dependedUpon.count(sol) == 0)
+    {
+      dependedUpon.insert(sol);
+      dependedUponDirty = true;
+    }
+
+  for (auto sol : dependedUpon)
+    if (solution.count(sol) == 0)
+    {
+      dependedUpon.erase(sol);
+      dependedUponDirty = true;
+    }
+
+  CLOG("Module load solution count: "<<solution.size());
 
   //Now solution is the ids to keep
   for(auto &any : minstances)
@@ -287,8 +302,27 @@ void ModuleManager::evaluateRequirements()
   //Load the modules we do need
   for(auto id : solution){
     if(!moduleRunning(id))
+    {
       if(launchModuleWithChecks(id) != 0)
-      {CLOG("Module "<<id<<" can't be launched yet.");}
+      {
+        CLOG("Module "<<id<<" can't be launched yet.");
+        if (pendingLoad.count(id) == 0)
+        {
+          pendingLoad.insert(id);
+          pendingLoadDirty = true;
+        }
+      } else
+      {
+        pendingLoad.erase(id);
+        pendingLoadDirty = true;
+      }
+    } else {
+      if (pendingLoad.count(id) != 0)
+      {
+        pendingLoad.erase(id);
+        pendingLoadDirty = true;
+      }
+    }
   }
 }
 
@@ -349,9 +383,24 @@ void ModuleManager::updateEverything()
   if(configDirty)
     sys->validateAndSaveConfig();
 
+  if (pendingLoadDirty)
+    transmitEvent(charlie::EVENT_UNRESOLVED_MODULES_UPDATE, &pendingLoad);
+
+  if (dependedUponDirty)
+    transmitEvent(charlie::EVENT_REQUESTED_MODULES_UPDATE, &dependedUpon);
+
   modulesDirty = false;
   configDirty  = false;
+  pendingLoadDirty = false;
+  dependedUponDirty = false;
   mtx.unlock();
+}
+
+void ModuleManager::transmitEvent(charlie::EModuleEvents eve, void* data)
+{
+  for (auto &inst : minstances)
+    if (inst.second->status() >= charlie::MODULE_LOADED)
+      inst.second->transmitEvent(eve, data);
 }
 
 void ModuleManager::onModuleReleased(u32 id)

@@ -97,6 +97,20 @@ enum EModuleStatus
   MODULE_LOADED_RUNNING = 3;
 }
 
+enum EModuleEvents
+{
+  EVENT_MODULE_INITED = 0;
+  EVENT_MODULE_LOADING = 1;
+  EVENT_MODULE_LOADED = 2;
+  EVENT_MODULE_LOADED_RUNNING = 3;
+  EVENT_MODULE_UNLOADING = 4;
+  EVENT_MODULE_UNLOADED = 5;
+  EVENT_MODULE_TABLE_RELOADED = 6;
+  // When the unresolved modules list is updated
+  EVENT_UNRESOLVED_MODULES_UPDATE = 7;
+  EVENT_REQUESTED_MODULES_UPDATE = 8;
+}
+
 message CModuleInstance
 {
   optional uint32 id = 1;

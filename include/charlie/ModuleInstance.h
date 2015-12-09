@@ -26,6 +26,8 @@ public:
   std::set<u32> modReqs;
   void notifyModuleReleased(u32 id);
   void notifyModuleLoaded(u32 mod, void* ptr);
+  charlie::EModuleStatus status();
+  void transmitEvent(charlie::EModuleEvents eve, void* data);
 
   charlie::CModule* module;
   void* publicInterface;

@@ -21,6 +21,7 @@ namespace modules
       void injectDependency(u32 id, void* dep);
       void releaseDependency(u32 id);
       void* getPublicInterface();
+      void handleEvent(u32 event, void* data);
 
     private:
       modules::manager::ManagerInter* manager;

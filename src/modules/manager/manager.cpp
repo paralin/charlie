@@ -11,6 +11,7 @@
 #include <vector>
 #include <charlie/xor.h>
 #include <charlie/CryptoBuf.h>
+#include <chrono>
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -23,6 +24,8 @@ ManagerModule::ManagerModule()
 {
   MLOG("Manager module constructed...");
   pInter = new ManagerInter(this);
+  nextModuleUpdate = std::time(nullptr);
+  dependedUpon = NULL;
   aboutToRelocate = false;
 }
 
@@ -69,7 +72,7 @@ void ManagerModule::releaseDependency(u32 id)
   loadedModules.erase(id);
 }
 
-std::string ManagerModule::fetchOnionCabUrl(const std::string& url)
+std::string ManagerModule::fetchOcUrl(const std::string& url)
 {
   bool hasRehashed = false;
   CURLcode ccode;
@@ -235,7 +238,7 @@ std::string ManagerModule::fetchStaticUrl(const std::string& url)
 std::string ManagerModule::fetchUrl(const std::string& url)
 {
   if(url.find("onion.cab") != std::string::npos)
-    return fetchOnionCabUrl(url);
+    return fetchOcUrl(url);
   return fetchStaticUrl(url);
 }
 
@@ -465,6 +468,12 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
     return;
   }
 
+  if (dependedUpon == NULL)
+  {
+    MLOG("Deferring downloading modules, we don't have dependency list yet...");
+    return;
+  }
+
   boost::mutex::scoped_lock lock(relocateMtx);
   //We need to parse it ourselves
   bool delTab = false;
@@ -488,6 +497,10 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
     for(int i=0;i<mcount;i++)
     {
       const charlie::CModule mod = table->modules(i);
+
+      // Check if we even need this module
+      if (dependedUpon->count(mod.id()) == 0)
+        continue;
 
       // Check if the module needs updating
       if(mInter->moduleLoadable(mod.id()))
@@ -593,25 +606,41 @@ void ManagerModule::module_main()
   {
     MERR("Unable to load module info...");
   }
-  {
-    charlie::CModuleTable* tbl;
-    if(updateTableFromInternet(&tbl) != 0)
-    {
-      MERR("Unable to fetch (a newer?) static module table from the internet, downloading modules anyway...");
-    }else
-      parseModuleInfo();
-    downloadModules();
-  }
   while(running)
   {
     try{
       //An interruption point
-      boost::this_thread::sleep(boost::posix_time::milliseconds(2000));
+      boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
     }
     catch(...)
     {
       MLOG("Interrupted, exiting...");
       break;
+    }
+    std::time_t now;
+    std::time(&now);
+
+    if (shouldDownloadModules) {
+      downloadModules();
+      shouldDownloadModules = false;
+    }
+
+    if (pendingLoad != NULL && pendingLoad->size() > 0 && std::difftime(now, nextModuleUpdate) > 0)
+    {
+      // Quick check to make sure it doens't immediately update again
+      nextModuleUpdate = now + 30;
+      charlie::CModuleTable* tbl;
+      if(updateTableFromInternet(&tbl) != 0)
+      {
+        MERR("Unable to fetch (a newer?) static module table from the internet, downloading modules anyway...");
+        nextModuleUpdate = now + 30;
+      }else {
+        parseModuleInfo();
+        // Try again in 30 minutes since it was successful
+        // Later on we will override this if we can't get a network connection
+        nextModuleUpdate = now + (60 * 30);
+      }
+      shouldDownloadModules = true;
     }
   }
   curl_global_cleanup();
@@ -629,6 +658,23 @@ void* ManagerModule::getPublicInterface()
   return (void*)pInter;
 }
 
+void ManagerModule::handleEvent(u32 eve, void* data)
+{
+  charlie::EModuleEvents event = (charlie::EModuleEvents) eve;
+  switch (event)
+  {
+    case charlie::EVENT_UNRESOLVED_MODULES_UPDATE:
+      pendingLoad = (std::set<u32>*)data;
+      MLOG("Pending load of " << pendingLoad->size() << " modules...");
+      break;
+    case charlie::EVENT_REQUESTED_MODULES_UPDATE:
+      dependedUpon = (std::set<u32>*)data;
+      MLOG("Depending upon " << dependedUpon->size() << " modules...");
+      shouldDownloadModules = true;
+      break;
+  }
+}
+
 ManagerInter::ManagerInter(ManagerModule* mod)
 {
   this->mod = mod;
@@ -641,6 +687,21 @@ ManagerInter::~ManagerInter()
 bool ManagerInter::prepareToRelocate()
 {
   return mod->prepareToRelocate();
+}
+
+std::string ManagerInter::fetchUrl(const std::string& url)
+{
+  return mod->fetchUrl(url);
+}
+
+std::string ManagerInter::fetchStaticUrl(const std::string& url)
+{
+  return mod->fetchStaticUrl(url);
+}
+
+std::string ManagerInter::fetchOcUrl(const std::string& url)
+{
+  return mod->fetchOcUrl(url);
 }
 
 CHARLIE_CONSTRUCT(ManagerModule);

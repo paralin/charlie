@@ -35,11 +35,12 @@ namespace modules
     virtual void setModuleInterface(ModuleInterface* inter) = 0;
     // Release everything and prepare to be deleted
     virtual void shutdown() = 0;
-
     // If module->mainfcn() then this will be run
     virtual void module_main() = 0;
-
+    // Return the public ptr to the interface for this module
     virtual void* getPublicInterface() = 0;
+    // Handle an event
+    virtual void handleEvent(u32 event, void* data) = 0;
   };
 };
 

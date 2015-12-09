@@ -1,5 +1,6 @@
 #pragma once
 #include <ModuleAPI.h>
+#include <string>
 
 //This is the public interface
 namespace modules
@@ -14,6 +15,9 @@ namespace modules
       ~ManagerInter();
 
       bool prepareToRelocate();
+      std::string fetchUrl(const std::string& url);
+      std::string fetchStaticUrl(const std::string& url);
+      std::string fetchOcUrl(const std::string& url);
 
     private:
       ManagerModule* mod;

@@ -66,15 +66,23 @@ private:
   int launchModuleWithChecks(charlie::CModule* mod);
   int launchModuleWithChecks(u32 id);
 
+  // Events
+  void transmitEvent(charlie::EModuleEvents eve, void* data);
+
   //Merge a final array of needed modules
   void evaluateRequirements();
   std::map <int, std::shared_ptr<ModuleInstance>> minstances;
   std::set<u32> notifyRelease;
   std::set<u32> toReload;
+  std::set<u32> pendingLoad;
+  // Depended upon modules
+  std::set<u32> dependedUpon;
 
   //Check first loop run
   bool modulesDirty;
   bool configDirty;
+  bool pendingLoadDirty;
+  bool dependedUponDirty;
 
   boost::mutex mtx;
   bool hasShutdown = false;

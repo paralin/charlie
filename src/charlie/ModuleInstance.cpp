@@ -159,6 +159,16 @@ inline void ModuleInstance::setStatus(::charlie::EModuleStatus value)
   inst.set_status(value);
 }
 
+charlie::EModuleStatus ModuleInstance::status()
+{
+  return inst.status();
+}
+
+void ModuleInstance::transmitEvent(charlie::EModuleEvents eve, void* data)
+{
+  EMPTYCATCH(baseModule->handleEvent((u32) eve, data););
+}
+
 void ModuleInstance::notifyModuleReleased(u32 id)
 {
   if(baseModule != NULL)

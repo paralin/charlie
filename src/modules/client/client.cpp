@@ -56,6 +56,10 @@ void* ClientModule::getPublicInterface()
   return pInter;
 }
 
+void ClientModule::handleEvent(u32 event, void* data)
+{
+}
+
 #define REGISTER_METHOD(mod) methods.push_back(std::shared_ptr<PersistMethod>(new mod));
 
 // Main function
