@@ -46,13 +46,13 @@ const char * const ONLINE_MTABLE_KEY = "xH0KEc9e5cWOx2geoXhBef2Yxy";
 const u32 CHARLIE_PLATFORM =
 #ifdef CHARLIE_LINUX
   0x04
-#elif CHARLIE_OSX
+#elif defined CHARLIE_OSX
   0x02
 /*
 #elif CHARLIE_IOS
   0x??
 */
-#elif CHARLIE_WINDOWS
+#elif defined CHARLIE_WINDOWS
   0x01
 #else
 #error "This platform is not supported. See Common.h."
