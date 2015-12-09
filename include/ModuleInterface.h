@@ -57,5 +57,8 @@ namespace modules
 
       // Verify a module is loadable
       virtual bool moduleLoadable(u32 id) = 0;
+
+      // Select a binary based on platform
+      virtual charlie::CModuleBinary* selectBinary(charlie::CModule* mod) = 0;
   };
 };

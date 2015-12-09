@@ -106,3 +106,8 @@ bool ModuleInterImpl::moduleLoadable(u32 id)
 {
   return mManager->moduleLoadable(id, false);
 }
+
+charlie::CModuleBinary* ModuleInterImpl::selectBinary(charlie::CModule* mod)
+{
+  return ModuleManager::selectBinary(mod);
+}

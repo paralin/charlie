@@ -3,11 +3,14 @@
 #include <rapidjson/stringbuffer.h>
 #include <ctime>
 #include <charlie/hash.h>
-
 #include <iostream>
 #include <string>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 
-charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* crypt, std::string libprefix, std::string libsuffix, std::string rootPath, bool doHash)
+namespace fs = boost::filesystem;
+
+charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* crypt, std::string rootPath)
 {
   CLOG("Parsing json...");
 
@@ -67,40 +70,95 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
     {
       mod->set_initial(ix["initial"].GetBool());
     }
-    if(ix.HasMember("acquire") && ix["acquire"].IsArray())
+    if (ix.HasMember("binary") && ix["binary"].IsArray())
     {
-      const rapidjson::Value& acquires = ix["acquire"];
-      for(rapidjson::SizeType oi = 0; oi < acquires.Size(); oi++)
+      const rapidjson::Value& binaries = ix["binary"];
+      for (rapidjson::SizeType oi = 0; oi < binaries.Size(); oi++)
       {
-        charlie::CModuleAcquire* acq = mod->add_acquire();
-        int acqti = (int)acquires[oi]["type"].GetInt();
-        switch(acqti)
+        const rapidjson::Value& bind = binaries[oi];
+        charlie::CModuleBinary* bin = mod->add_binary();
+        if (bind.HasMember("platform") && bind["platform"].IsNumber())
         {
-          case (int)charlie::HTTP_GET:
+          bin->set_platform(bind["platform"].GetInt());
+        }
+        // Filename of library
+        fs::path fns;
+        {
+          std::ostringstream fss;
+          fss << rootPath;
+          fss << "/";
+          fss << platformToPrefix(bin->platform());
+          fss << mod->id();
+          fss << platformToSuffix(bin->platform());
+          fns = fs::path(fss.str());
+        }
+        if (!fs::exists(fns))
+        {
+          CLOG("Expected path: " << fns.string());
+          CERR("Unable to find binary " << fns.filename() << ", excluding.");
+          mod->mutable_binary()->RemoveLast();
+          continue;
+        }
+        if (bind.HasMember("acquire") && bind["acquire"].IsArray())
+        {
+          const rapidjson::Value& acquires = bind["acquire"];
+          for(rapidjson::SizeType oi = 0; oi < acquires.Size(); oi++)
           {
-            std::string httpg = acquires[oi]["data"].GetString();
-            CLOG("Adding HTTPGET acquire to "<<httpg<<"...");
-            acq->set_type((charlie::CAcquireType)acqti);
-            acq->set_data(httpg);
-            break;
+            charlie::CModuleAcquire* acq = bin->add_acquire();
+            int acqti = (int)acquires[oi]["type"].GetInt();
+            switch(acqti)
+            {
+              case (int)charlie::HTTP_GET:
+              {
+                std::string httpg = acquires[oi]["data"].GetString();
+                CLOG("Adding HTTPGET acquire to "<<httpg<<" platform "<<bin->platform()<<"...");
+                acq->set_type((charlie::CAcquireType)acqti);
+                acq->set_data(httpg);
+                break;
+              }
+              case (int)charlie::HTTP_SIGNED:
+              {
+                std::string httpg = acquires[oi]["data"].GetString();
+                CLOG("Adding HTTPSIGNED acquire to "<<httpg<<" platform "<<bin->platform()<<"...");
+                acq->set_type((charlie::CAcquireType)acqti);
+                acq->set_data(httpg);
+                break;
+              }
+              default:
+              {
+                CLOG("Unknown acquire method: "<<acqti);
+                bin->mutable_acquire()->RemoveLast();
+                break;
+              }
+            }
           }
-          case (int)charlie::HTTP_SIGNED:
+        }
+        // Make a new scope
+        {
+          const char* filename = fns.c_str();
+          CLOG("filename: "<<filename);
+          unsigned char* digest;
+          if(sha256File(filename, &digest)!=0)
           {
-            std::string httpg = acquires[oi]["data"].GetString();
-            CLOG("Adding HTTPSIGNED acquire to "<<httpg<<"...");
-            acq->set_type((charlie::CAcquireType)acqti);
-            acq->set_data(httpg);
-            break;
+            CERR("Unable to hash file for some reason.");
           }
-          default:
+          else
           {
-            CLOG("Unknown acquire method: "<<acqti);
-            mod->mutable_acquire()->RemoveLast();
-            break;
+            bin->set_hash(digest, SHA256_DIGEST_LENGTH);
+            char mdString[SHA256_DIGEST_LENGTH*2+1];
+            for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+              sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+            CLOG("digest: "<<mdString);
+            free(digest);
           }
         }
       }
     }
+    /*
+    if(ix.HasMember("acquire") && ix["acquire"].IsArray())
+    {
+    }
+      */
     if(ix.HasMember("info") && ix["info"].IsObject() && ix.HasMember("info_type") && ix["info_type"].IsString())
     {
       std::string ityp (ix["info_type"].GetString());
@@ -153,43 +211,15 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
         CLOG("has_info: "<<mod->has_info());
       }
     }
-    if(doHash)
-    {
-      //gchar* filename = g_module_build_path((const gchar *) full_path->string().c_str(), name.c_str());
-      std::ostringstream fss;
-      fss << rootPath;
-      fss << "/";
-      fss << libprefix;
-      fss << mod->id();
-      fss << libsuffix;
-      std::string fns = fss.str();
-
-      const char* filename = fns.c_str();
-      CLOG("filename: "<<filename);
-      unsigned char* digest;
-      if(sha256File(filename, &digest)!=0)
-      {
-        CERR("Unable to hash file for some reason.");
-      }
-      else
-      {
-        mod->set_hash(digest, SHA256_DIGEST_LENGTH);
-        char mdString[SHA256_DIGEST_LENGTH*2+1];
-        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-          sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
-        CLOG("digest: "<<mdString);
-        free(digest);
-      }
-    }
   }
   return table;
 }
 
-int generateModuleTableFromJson(const char* json, unsigned char** output, Crypto* crypt, size_t* outputSize, bool doHash, std::string libprefix, std::string libsuffix, std::string rootPath, bool doSign)
+int generateModuleTableFromJson(const char* json, unsigned char** output, Crypto* crypt, size_t* outputSize, std::string rootPath, bool doSign)
 {
   charlie::CModuleTable* table;
   try {
-    table = generateModuleTableFromJson2(json, crypt, libprefix, libsuffix, rootPath, doHash);
+    table = generateModuleTableFromJson2(json, crypt, rootPath);
   }catch(...)
   {
     CERR("Unable to generate module table from json.");
@@ -244,4 +274,19 @@ int generateModuleTableFromJson(const char* json, unsigned char** output, Crypto
   }
   *outputSize = outSize;
   return 0;
+}
+
+const char* platformToPrefix(u32 platform)
+{
+  if (platform & charlie::LINUX || platform & charlie::MAC)
+    return "lib";
+  return "";
+}
+
+const char* platformToSuffix(u32 platform)
+{
+  if (platform & charlie::WINDOWS)
+    return ".dll";
+
+  return ".so";
 }

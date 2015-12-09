@@ -5,7 +5,12 @@
       "name": "manager",
       "mainfcn": true,
       "initial": true,
-      "acquire": [],
+      "binary": [
+        {
+          "acquire": [],
+          "platform": 4
+        }
+      ],
       "info_type": "CManagerInfo",
       "info": {
         "init_urls": [

@@ -1,35 +1,5 @@
-option optimize_for = LITE_RUNTIME;
-
-//Server and client messages
 package charlie;
-
-enum EMsgType
-{
-  //Unknown
-  NO_TYPE = 0;
-  //S+C: Ping
-  PING = 1;
-  //CMsgClientRegister
-  CLIENT_REGISTER = 2;
-  //CMsgClientRegistered
-  CLIENT_REGISTERED = 3;
-  //Validation error
-  VALIDATION_ERROR = 9000;
-}
-
-// Expected usage:
-//   client->server - use SIGNED_CLIENT_PRI
-//   server->client - use SIGNED_SERVER_PRI
-// Others exist, but are not used (yet)
-enum EBodyEncryptionType
-{
-  //No body encryption
-  NO_ENCRYPTION = 0;
-  //Encrypted with client's public key
-  SIGNED_CLIENT_PUB = 1;
-  //Encrypted with the server's public key
-  SIGNED_SERVER_PUB = 2;
-}
+option optimize_for = LITE_RUNTIME;
 
 //Some data EVP public key signed
 message CRSABuffer
@@ -44,25 +14,6 @@ message CSignedBuffer
 {
   optional bytes data = 1;
   optional bytes sig  = 2;
-}
-
-message CMsgHeader
-{
-  optional EMsgType type = 1;
-  optional int64 timestamp = 2; //Possible to be zero length in which case it's just a keepalive ping
-  optional int64 length = 3;
-  optional EBodyEncryptionType encryption = 4;
-}
-
-message CMsgContainer
-{
-  //Timestamp from header signed with server key
-  optional bytes signed_timestamp = 1;
-  //Body
-  optional bytes body = 2;
-  optional EBodyEncryptionType body_encryption = 3;
-  //Hash of the decrypted body signed
-  optional bytes signed_body_hash = 4;
 }
 
 message CSaveContainer
@@ -107,24 +58,37 @@ message CModule
   optional bool   mainfcn = 2;
   //is this THE manager module? system refuses to start without loading this first
   optional bool   initial = 3;
-  //hash of the binary ( current version ) sha256
-  optional bytes  hash    = 4;
-  //download information
-  repeated CModuleAcquire acquire = 5;
+  repeated CModuleBinary binary = 4;
   //Any additional info
-  optional bytes  info = 6;
+  optional bytes  info = 5;
+}
+
+message CModuleBinary
+{
+  // hash of the binary ( current version ) sha256
+  optional bytes hash = 1;
+  // supported platform flags, see ESystemPlatform
+  optional uint32 platform = 2;
+  //download information
+  repeated CModuleAcquire acquire = 3;
+}
+
+enum ESystemPlatform
+{
+  WINDOWS = 0x01;
+  MAC = 0x02;
+  LINUX = 0x04;
 }
 
 //Info stored on a static HTTP GET
 message CWebInformation
 {
-  //optional CModuleTable mod_table = 1;
   //We have to use a csignedbuffer...
   optional int64 timestamp = 1;
   optional CSignedBuffer mod_table = 2;
 }
 
-//Temporary storage of instance data
+// Temporary storage of instance data
 enum EModuleStatus
 {
   MODULE_INIT = 0;

@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 add_definitions("-Wno-deprecated-declarations")
@@ -112,7 +113,7 @@ if(WINCC)
   list(APPEND MANAGER_LIBS -Wl,-Bstatic ${WINSOCK_LIBRARY} ${Intl_LIBRARIES} winmm ${IPHLPAP_LIBRARY} ${LIBICONV_LIBRARY})
 endif()
 
-set(STEALTH_FLAGS "-D__FILE__='\"\"' -Wno-builtin-macro-redefined -std=c++11 -fno-rtti -DBOOST_NO_RTTI -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
+set(STEALTH_FLAGS "-D__FILE__='\"\"' -Wno-builtin-macro-redefined -fno-rtti -DBOOST_NO_RTTI -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   set(STEALTH_FLAGS "${STEALTH_FLAGS}")
   set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
@@ -218,7 +219,7 @@ MESSAGE( STATUS "Planning to generate the initial module table..." )
 add_custom_command(
   OUTPUT init_mtable
   COMMAND "${CMAKE_BINARY_DIR}/cutils"
-  ARGS genmodtable --xorkey 70016b8d0c80f1393f8155f897f7e63b7fc2ef0b45c42763325019ef8983ace0 --output init_mtable --sign --hash --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json --libprefix "${CMAKE_SHARED_LIBRARY_PREFIX}" --libsuffix "${CMAKE_SHARED_LIBRARY_SUFFIX}"
+  ARGS genmodtable --xorkey 70016b8d0c80f1393f8155f897f7e63b7fc2ef0b45c42763325019ef8983ace0 --output init_mtable --sign --identity server_identity --identxor serveridentity --json ../src/config/initmtable.json
   DEPENDS cutils server_identity manager
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )

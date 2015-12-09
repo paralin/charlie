@@ -91,6 +91,7 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev)
       }
 
       int id = dreq.id();
+      u32 platform = dreq.platform();
 
       // Check the module ID in the known table
       int emcount = host->table->modules_size();
@@ -109,13 +110,31 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev)
         return send_notfound(conn);
       }
 
+      // select the binary
+      charlie::CModuleBinary* bin = NULL;
+      {
+        int bincount = emod->binary_size();
+        int i;
+        for(i=0;i<bincount;i++)
+        {
+          bin = emod->mutable_binary(i);
+          if(bin->platform() & platform) break;
+          bin = NULL;
+        }
+      }
+
+      if (bin == NULL)
+      {
+        CLOG(" -> unsupported platform " << platform);
+        return send_notfound(conn);
+      }
+
       // Build the filename
       std::ostringstream fss;
-      fss << "./modules/linux/";
-      fss << G_MODULE_PREFIX;
+      fss << "./modules/";
+      fss << platformToPrefix(platform);
       fss << emod->id();
-      fss << ".";
-      fss << G_MODULE_SUFFIX;
+      fss << platformToSuffix(platform);
       std::string fns = fss.str();
       fss.clear();
       fss.str("");
@@ -166,7 +185,7 @@ void WebHost::mainThread()
 
     try
     {
-      table = generateModuleTableFromJson2(buffer.str().c_str(), sys->crypt, std::string(G_MODULE_PREFIX), std::string(".")+std::string(G_MODULE_SUFFIX), std::string("./modules/linux"), true);
+      table = generateModuleTableFromJson2(buffer.str().c_str(), sys->crypt, std::string("./modules"));
       charlie::CWebInformation info;
       info.set_timestamp(std::time(0));
 

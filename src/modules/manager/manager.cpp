@@ -493,12 +493,20 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
       if(mInter->moduleLoadable(mod.id()))
         continue;
 
-      int acqs = mod.acquire_size();
-      MLOG("Module "<<mod.id()<<" has "<<acqs<<" acquire methods...");
+      charlie::CModuleBinary* bin = mInter->selectBinary(table->mutable_modules(i));
+      if (bin == NULL)
+      {
+        MLOG("Module "<<mod.id()<<" has no binaries for this platform...");
+        continue;
+      }
+
+      int acqs = bin->acquire_size();
+      MLOG("Module binary "<<mod.id()<<" has "<<acqs<<" acquire methods...");
 
       // Build a signed download request
       CDownloadRequest req;
       req.set_id(mod.id());
+      req.set_platform(CHARLIE_PLATFORM);
       req.SerializeToString(&reqd);
       charlie::CRSABuffer reqs;
       if(encryptRsaBuf(&reqs, this->crypt, (const unsigned char*)reqd.c_str(), reqd.length()) != SUCCESS)
@@ -513,10 +521,10 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
       std::string reqbs(reqb);
       free(reqb);
 
-      bool loaded;
+      bool loaded = false;
       for(int ia=0;ia<acqs&&!loaded;ia++)
       {
-        const charlie::CModuleAcquire acq = mod.acquire(ia);
+        const charlie::CModuleAcquire acq = bin->acquire(ia);
         switch(acq.type())
         {
           case charlie::HTTP_GET:
@@ -549,6 +557,12 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
                 loaded = false;
               }
             }
+            break;
+          }
+          default:
+          {
+            MERR("Unknown acquire type " << acq.type());
+            break;
           }
         }
       }

@@ -12,10 +12,10 @@ strip: compile
 	strip -s -S --strip-dwo --strip-unneeded -x -X -R .note -R .comment build/charlie
 
 finalize: compile
-	mkdir -p bin/client bin/server bin/server/modules/linux bin/server/modules/windows bin/utils
+	mkdir -p bin/client bin/server bin/server/modules bin/utils
 	-cp build/charlie bin/client/charlie
-	-cp build/*.so  bin/server/modules/linux/
-	-cp build/*.dll bin/server/modules/windows/
+	-cp build/*.so  bin/server/modules
+	-cp build/*.dll bin/server/modules
 	-cp build/cserver bin/server
 	cp build/server_identity bin/server
 	cp src/config/init.json bin/server/

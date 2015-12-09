@@ -47,6 +47,8 @@ class ModuleInterImpl : public modules::ModuleInterface
 
     bool moduleLoadable(u32 id);
 
+    charlie::CModuleBinary* selectBinary(charlie::CModule* mod);
+
   private:
     ModuleManager *mManager;
     ModuleInstance * inst;

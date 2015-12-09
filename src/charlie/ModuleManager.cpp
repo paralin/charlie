@@ -78,8 +78,12 @@ bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
 
 char* ModuleManager::getModuleFilename(charlie::CModule* mod)
 {
+  charlie::CModuleBinary* bin = selectBinary(mod);
+  if (!bin)
+    return NULL;
+
   //The filename is based on the hash of the file xor by sysid
-  const unsigned char* digest = (const unsigned char*)mod->hash().c_str();
+  const unsigned char* digest = (const unsigned char*)bin->hash().c_str();
 
   char mdString[SHA256_DIGEST_LENGTH*2+1];
   size_t keyi=0;
@@ -115,6 +119,14 @@ bool ModuleManager::moduleLoadable(u32 id, bool cleanFail)
 
 bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
 {
+  // Check if this module applies to this system
+  charlie::CModuleBinary* bin = ModuleManager::selectBinary(mod);
+  if (bin == NULL)
+  {
+    CLOG("Module "<<mod->id()<<" doesn't apply to this platform.");
+    return false;
+  }
+
   //First get the filename of the module
   char* path = getModuleFilename(mod);
 
@@ -133,7 +145,7 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
   }
 
   //Check if it matches the module def
-  const char* hash = mod->hash().c_str();
+  const char* hash = bin->hash().c_str();
   if(memcmp(hash, digest, SHA256_DIGEST_LENGTH) != 0)
   {
     CERR("Module digest for ["<<mod->id()<<"] doesn't match.");
@@ -217,6 +229,22 @@ int ModuleManager::launchModule(charlie::CModule* mod)
   }
   minstances.insert(std::pair<int, std::shared_ptr<ModuleInstance>>(mod->id(), inst));
   return 0;
+}
+
+// Find the applicable binary for the module
+charlie::CModuleBinary* ModuleManager::selectBinary(charlie::CModule* mod, int *idx)
+{
+  int bincount = mod->binary_size();
+  charlie::CModuleBinary *bin = NULL;
+  int i;
+  for(i=0;i<bincount;i++)
+  {
+    bin = mod->mutable_binary(i);
+    if(bin->platform() & CHARLIE_PLATFORM) break;
+    bin = NULL;
+  }
+  if(idx != NULL) *idx = i;
+  return bin;
 }
 
 void ModuleManager::evaluateRequirements()

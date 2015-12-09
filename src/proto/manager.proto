@@ -25,4 +25,5 @@ message CManagerStorage
 message CDownloadRequest
 {
   optional uint32 id = 1;
+  optional uint32 platform = 2;
 }

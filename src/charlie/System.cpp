@@ -303,7 +303,13 @@ void System::dropDefaultManager()
   SHA256_Update(&ctx, dmandata, manager_data_decomp_len);
   SHA256_Final(digest, &ctx);
 
-  if(memcmp(digest, emod->hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
+  charlie::CModuleBinary* bin = ModuleManager::selectBinary(emod);
+  if (!bin)
+  {
+    CERR("Unable to find the hardcoded module for this platform.");
+    return;
+  }
+  if(memcmp(digest, emod->binary(0).hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
   {
     CLOG("Default manager hash doesn't match default module table manager hash...");
 
@@ -321,7 +327,9 @@ void System::dropDefaultManager()
     nmod->set_id(MANAGER_MODULE_ID);
     nmod->set_initial(true);
     nmod->set_mainfcn(true);
-    nmod->set_hash(digest, SHA256_DIGEST_LENGTH);
+    bin = nmod->add_binary();
+    bin->set_hash(digest, SHA256_DIGEST_LENGTH);
+    bin->set_platform(CHARLIE_PLATFORM);
     if(mod->has_info())
       nmod->set_info(emod->info());
     CLOG("Created new module definition...");
@@ -481,6 +489,8 @@ int System::main(int argc, const char* argv[])
 
   loadRootPath(argv[0]);
   loadSysInfo();
+
+  CLOG("Using platform ID " << CHARLIE_PLATFORM);
 
   // Check / start the port lock
   CLOG("Using port "<<sysInfo.lock_port<<" to lock...");

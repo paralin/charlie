@@ -5,10 +5,15 @@
       "name": "manager",
       "mainfcn": true,
       "initial": true,
-      "acquire": [
+      "binary": [
         {
-          "type": 1,
-          "data": "*/ereq/"
+          "acquire": [
+            {
+              "type": 1,
+              "data": "*/ereq/"
+            }
+          ],
+          "platform": 4
         }
       ],
       "info_type": "CManagerInfo",
@@ -31,18 +36,16 @@
       "name": "persist",
       "mainfcn": true,
       "initial": false,
-      "acquire": [
+      "binary": [
         {
-          "type": 1,
-          "data": "*/ereq/"
+          "acquire": [
+            {
+              "type": 1,
+              "data": "*/ereq/"
+            }
+          ],
+          "platform": 4
         }
-      ]
-    },
-    {
-      "name": "client",
-      "mainfcn": false,
-      "initial": false,
-      "acquire": [
       ]
     }
   ]

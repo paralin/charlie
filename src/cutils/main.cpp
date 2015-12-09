@@ -56,9 +56,6 @@ struct GenModtableCommand : public GenericOptions {
   bool        sign_;
   std::string identity_;
   std::string identxor_;
-  bool        hash_;
-  std::string libprefix_;
-  std::string libsuffix_;
 };
 
 struct EmbedCommand : public GenericOptions {
@@ -272,13 +269,10 @@ Command ParseOptions(int argc, const char *argv[])
   {
     po::options_description geni_desc("genmodtable options");
     geni_desc.add_options()
-      ("hash", "Hash the libraries using gmodule for name")
       ("sign", "Sign the data in a CSignedBuffer.")
       ("identity", po::value<std::string>(), "Identity for CSignedBuffer")
       ("identxor", po::value<std::string>(), "XOR key for identity file")
       ("output", po::value<std::string>(), "File to write the module table to")
-      ("libprefix", po::value<std::string>(), "Prefix of a library file")
-      ("libsuffix", po::value<std::string>(), "Suffix of a library file")
       ("json", po::value<std::string>(), "Input json file for the module table.");
 
     std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
@@ -293,12 +287,7 @@ Command ParseOptions(int argc, const char *argv[])
     {
       comm.json_ = vm["json"].as<std::string>();
       comm.output_ = vm["output"].as<std::string>();
-      comm.libprefix_ = vm["libprefix"].as<std::string>();
-      comm.libsuffix_ = vm["libsuffix"].as<std::string>();
       comm.sign_ = false;
-      if(vm.count("hash") > 0){
-        comm.hash_ = true;
-      }
       if(vm.count("sign") > 0){
         comm.sign_ = true;
         comm.identity_ = vm["identity"].as<std::string>();
@@ -653,7 +642,7 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
     Crypto * crypt = loadCrypto(&(comm->identity_), &(comm->identxor_));
     unsigned char* out;
     size_t outSize;
-    if(generateModuleTableFromJson(buffer.str().c_str(), &out, crypt, &outSize, comm->hash_, comm->libprefix_, comm->libsuffix_, full_path->string(), comm->sign_) != 0)
+    if(generateModuleTableFromJson(buffer.str().c_str(), &out, crypt, &outSize, full_path->string(), comm->sign_) != 0)
     {
       CERR("Unable to generate module table from json.");
       return -1;
