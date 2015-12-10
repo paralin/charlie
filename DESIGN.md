@@ -45,11 +45,6 @@ for another re-attempt command from the server. This is a rescue state
 where perhaps if numerous clients have time sync problems I can allow
 the server to be more lax with timestamps in the future.
 
-# POTENTIAL VULNS
-
-Need some way to verify the initial command module before loading it.
-This is hard because it might change.
-
 # SAVE FILE
 
 Identity and various other things stored in a save file next to the
@@ -124,3 +119,20 @@ to fetch the latest init module table from the INIT SEQUENCE. If there's
 no update to the table it won't restart but just continue to attempt to
 connect normally. But, this will set a timer to re-check the init table
 every half an hour if contact is not re-established.
+
+# Handshake Sequence V2
+
+This is the sequence for connecting to a server:
+
+  1. Open socket connection.
+  2. Server sends a CServerIdentify. Contains the server public key.
+-- start RSA encryption --
+  3. Client sends a CClientIdentify. Contains client pubkey.
+  4. see reg sequence
+
+# Registration Sequence
+
+If the server doesn't recognize a client (unknown client) it sends a
+CServerRegisterChallenge with a random value to tag with a proof of work
+function, and the required bit count to be correct in the POW function.
+It then terminates the connection.

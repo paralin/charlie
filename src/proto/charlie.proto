@@ -56,11 +56,15 @@ message CModule
   optional uint32 id = 1;
   //does it have a main function to be run on a separate thread?
   optional bool   mainfcn = 2;
-  //is this THE manager module? system refuses to start without loading this first
+  //system refuses to start without loading this first
   optional bool   initial = 3;
   repeated CModuleBinary binary = 4;
   //Any additional info
   optional bytes  info = 5;
+  // Modules with higher priority will be used first
+  optional uint32 priority = 6;
+  // See EModuleCapabilities
+  optional uint32 capabilities = 7;
 }
 
 message CModuleBinary
@@ -109,6 +113,13 @@ enum EModuleEvents
   // When the unresolved modules list is updated
   EVENT_UNRESOLVED_MODULES_UPDATE = 7;
   EVENT_REQUESTED_MODULES_UPDATE = 8;
+}
+
+enum EModuleCapabilities
+{
+  MODULE_CAP_NONE = 0;
+  // Can communicate with the server
+  MODULE_CAP_NET = 1;
 }
 
 message CModuleInstance

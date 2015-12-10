@@ -70,6 +70,14 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
     {
       mod->set_initial(ix["initial"].GetBool());
     }
+    if (ix.HasMember("priority") && ix["priority"].IsNumber())
+    {
+      mod->set_priority(ix["priority"].GetInt());
+    }
+    if (ix.HasMember("capabilities") && ix["capabilities"].IsNumber())
+    {
+      mod->set_capabilities(ix["capabilities"].GetInt());
+    }
     if (ix.HasMember("binary") && ix["binary"].IsArray())
     {
       const rapidjson::Value& binaries = ix["binary"];
