@@ -283,6 +283,6 @@ if(NOT WINCC)
     "src/charlie/smear.cpp"
     )
   target_link_libraries(cserver ${SERVER_LIBS})
-  set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
+  set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS} -DDO_CHARLIE_LOG")
   set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
  endif()

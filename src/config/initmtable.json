@@ -14,10 +14,10 @@
       "info_type": "CManagerInfo",
       "info": {
         "init_urls": [
-          "http://localhost:9921/initt"
+          "localhost:9921/initt"
         ],
         "server_roots": [
-          "http://localhost:9921/"
+          "localhost:9921"
         ],
         "onion_hosts": [
           "zgpnutxuh5ktxano"

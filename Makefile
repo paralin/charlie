@@ -129,10 +129,9 @@ dbash:
 dcleanall:
 	sudo docker rm -f `sudo docker ps --no-trunc -aq`
 
-push: finalize
-	@if [ ! -d "../charliebin/" ]; then echo "Charlie binary repository does not exist." && exit 5; fi
-	rsync -rav --exclude='.git/' --exclude="client/" --delete bin/ ../charliebin/
-	cd ../charliebin/ && git add -A && git commit -am "$(m)" && git push dokku master
+docker: release finalize
+	cp Dockerfile bin/
+	cd bin && docker build -t "paralin/charlie:v1" .
 
 server: all
 	cd ./bin/server/ && ./cserver

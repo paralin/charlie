@@ -1,4 +1,5 @@
 #!/bin/bash
 service tor start
 cd /root/server
-./cserver 2>&1 | tee /var/log/cserver.log
+nohup ./cserver 2>&1 > /var/log/cserver.log &
+tail -f /var/log/tor/log /var/log/cserver.log
