@@ -381,6 +381,8 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
   {
     charlie::CModule mod = modTable.modules(i);
     char* fns = mManager->getModuleFilename(&mod);
+    if (fns == NULL)
+      continue;
     fs::path fn = fs::path(fns).filename();
     free(fns);
     fs::path mpth = croot/fn;
