@@ -11,6 +11,7 @@
 
 #include <protogen/manager.pb.h>
 #include "ManagerInter.h"
+#include "Client.h"
 #include <modules/persist/PersistInter.h>
 #include <set>
 
@@ -61,6 +62,7 @@ namespace modules
       ManagerInter* pInter;
       CManagerStorage stor;
       Crypto* crypt;
+      CharlieClient* client;
 
       // List of pending modules
       std::set<u32>* pendingLoad;

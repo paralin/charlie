@@ -23,6 +23,7 @@ using namespace modules::manager;
 ManagerModule::ManagerModule()
 {
   MLOG("Manager module constructed...");
+  client = new CharlieClient(this);
   pInter = new ManagerInter(this);
   nextModuleUpdate = std::time(nullptr);
   dependedUpon = NULL;
@@ -32,6 +33,7 @@ ManagerModule::ManagerModule()
 ManagerModule::~ManagerModule()
 {
   delete pInter;
+  delete client;
 }
 
 void ManagerModule::shutdown()
