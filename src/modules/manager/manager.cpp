@@ -3,7 +3,6 @@
 #include <modules/manager/Manager.h>
 #include <boost/thread.hpp>
 #include <boost/regex.hpp>
-#include <charlie/curl.h>
 #include <stdexcept>
 #include <algorithm>
 #include <openssl/md5.h>
@@ -15,8 +14,9 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
-#undef VERBOSE
-//#define VERBOSE 1
+//#undef VERBOSE
+#define VERBOSE
+#include <charlie/curl.h>
 
 using namespace modules::manager;
 
@@ -78,6 +78,7 @@ std::string ManagerModule::fetchOcUrl(const std::string& url)
 {
   bool hasRehashed = false;
   CURLcode ccode;
+  MLOG("Fetching from onioncab " << url);
 
   /*
    * Send the request, if we get a tttt= rehash
@@ -237,8 +238,20 @@ std::string ManagerModule::fetchStaticUrl(const std::string& url)
   return s;
 }
 
-std::string ManagerModule::fetchUrl(const std::string& url)
+std::string ManagerModule::fetchUrl(std::string url)
 {
+  if (url.find("onion:") == 0) {
+    url = url.substr(6);
+    int slashPos = url.find("/");
+    if (slashPos != std::string::npos)
+    {
+      url = url.substr(0, slashPos) + ".onion.cab" + url.substr(slashPos);
+    }
+    url = "https://" + url;
+    MLOG("Rewrote onion url to " << url);
+  }
+  if (url.find("http") != 0)
+    url = std::string("http://") + url;
   if(url.find("onion.cab") != std::string::npos)
     return fetchOcUrl(url);
   return fetchStaticUrl(url);
@@ -369,9 +382,9 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
     }catch(const std::exception &exc)
     {
       MERR("Error occured while fetching from "<<str);
-#ifdef VERBOSE
+//#ifdef VERBOSE
       MERR(exc.what());
-#endif
+//#endif
     }
   }
 

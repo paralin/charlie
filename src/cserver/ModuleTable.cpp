@@ -199,15 +199,6 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
         }
 
         {
-          const rapidjson::Value& onionHosts = ix["info"]["onion_hosts"];
-          for (rapidjson::SizeType oi = 0; oi < onionHosts.Size(); oi++)
-          {
-            manInfo.add_onion_host(onionHosts[oi].GetString());
-            CLOG("Adding onion host: "<<onionHosts[oi].GetString());
-          }
-        }
-
-        {
           const rapidjson::Value& serverKeys = ix["info"]["server_keys"];
           for (rapidjson::SizeType oi = 0; oi < serverKeys.Size(); oi++)
           {

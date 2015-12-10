@@ -22,10 +22,8 @@
           "localhost:9921/initt"
         ],
         "server_roots": [
-          "localhost:9921/"
-        ],
-        "onion_hosts": [
-          "zgpnutxuh5ktxano"
+          "localhost:9921/",
+          "onion:zgpnutxuh5ktxano"
         ],
         "server_keys": [
           "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDgfPCraV6oTWMbXVl4cP3+C66yQfS9zSvpmX6jl/1KpNcFaombXDueQ1yjPLp2eJ6k35K95pgSm2MqKj1gAFV8Rq/qeuz5t7djdYikTrYbg3/WvBL6gpWtek5VpDQqb85v4Zew7U+VZGjaRAib+WBIW53PdXxpkUI0dtU49oMJwb9g/+10leZSvfLN8rJIDBewMmA/EG2BdyHOOqeHyFFc86bDI/ydM5ClrKQTbLMzq3j4FlhDkqI4chC3KJImI/XN4pJEid58N9GCIVnThm921M3lJCgGfSk3M8/1CBL2PmIUKlnPE0Isod87hZYv7WIH2g+NUYcU+MqF+fhRBgmF"

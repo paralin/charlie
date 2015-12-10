@@ -44,7 +44,7 @@ namespace modules
       // Returns if it's okay to relocate or if someone else is already doing it.
       bool prepareToRelocate();
 
-      std::string fetchUrl(const std::string& url);
+      std::string fetchUrl(std::string url);
       std::string fetchStaticUrl(const std::string& url);
       std::string fetchOcUrl(const std::string& url);
 

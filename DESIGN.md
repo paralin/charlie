@@ -136,3 +136,7 @@ If the server doesn't recognize a client (unknown client) it sends a
 CServerRegisterChallenge with a random value to tag with a proof of work
 function, and the required bit count to be correct in the POW function.
 It then terminates the connection.
+
+# Tor Module
+Two modules. One that runs tor on a localhost port, and another that
+actually is the client to the server.

@@ -46,6 +46,7 @@ if(WINCC)
 else()
   set(OPENSSL_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/openssl/final/include/")
   set(OPENSSL_LIBRARIES "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libssl.a" "${PROJECT_SOURCE_DIR}/deps/openssl/final/lib/libcrypto.a")
+  set(OPENSSL_FOUND ON)
 endif()
 
 set(PROCESS_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/process/")
@@ -61,17 +62,20 @@ else()
   set(ZLIB_INCLUDE_DIRS ${CMAKE_INSTALL_PREFIX}/include)
 endif()
 
+# This will not disable https
 set(HTTP_ONLY ON CACHE BOOL "")
 set(CURL_STATICLIB ON CACHE BOOL "")
 set(BUILD_CURL_EXE OFF CACHE BOOL "")
 set(BUILD_CURL_TESTS OFF CACHE BOOL "")
 set(CURL_ZLIB ON CACHE BOOL "")
-set(CMAKE_USE_LIBSSH2 OFF CACHE BOOL "")
+#set(CMAKE_USE_LIBSSH2 ON CACHE BOOL "")
 set(CMAKE_USE_OPENSSL ON CACHE BOOL "")
 set(ENABLE_MANUAL OFF CACHE BOOL "")
-set(CURL_DISABLE_CRYPTO_AUTH ON CACHE BOOL "")
+#set(CURL_DISABLE_CRYPTO_AUTH ON CACHE BOOL "")
 # See #558 on curl
-set(CURL_DISABLE_VERBOSE_STRINGS OFF CACHE BOOL "")
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CURL_DISABLE_VERBOSE_STRINGS OFF CACHE BOOL "")
+endif()
 add_subdirectory(deps/curl)
 if (NOT WINCC)
   set_target_properties(libcurl PROPERTIES COMPILE_FLAGS "-fPIC")
@@ -132,6 +136,7 @@ else()
   add_executable(cutils
     "src/cutils/main.cpp"
     "src/protogen/charlie.pb.cc"
+    "src/protogen/charlie_net.pb.cc"
     "src/protogen/manager.pb.cc"
     "src/charlie/xor.cpp"
     "src/charlie/Crypto.cpp"
@@ -170,6 +175,7 @@ add_library(manager SHARED ${manager_SRC}
   "src/charlie/CryptoBuf.cpp"
   "charlie.pb.redacted.cc"
   "manager.pb.redacted.cc"
+  "charlie_net.pb.redacted.cc"
   )
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"manager\"'")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})

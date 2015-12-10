@@ -36,6 +36,9 @@ CURLcode curl_read(const std::string& url, std::ostream& os, long* status_code =
 #ifdef CURL_INSECURE_HTTPS
         && CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0))
 #endif
+#ifdef VERBOSE
+        && CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L))
+#endif
         && (headers == NULL || CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers))))
     {
       code = curl_easy_perform(curl);
