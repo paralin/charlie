@@ -77,6 +77,7 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
     if (ix.HasMember("capabilities") && ix["capabilities"].IsNumber())
     {
       mod->set_capabilities(ix["capabilities"].GetInt());
+      CLOG("capabilities: " << mod->capabilities());
     }
     if (ix.HasMember("binary") && ix["binary"].IsArray())
     {

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -98,7 +99,7 @@ MESSAGE( STATUS "Other inc: ${include_t1}" )
 #set(CURL_LIBRARIES_DEPS ${GSS_LIBRARIES} libcurl ${GSS_LIBRARIES})
 set(CURL_LIBRARIES_DEPS libcurl)
 set(LIBS -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
-set(MANAGER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} pow -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+set(MANAGER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
 if(WINCC)
   find_package(Libiconv REQUIRED)
@@ -147,7 +148,7 @@ else()
 endif()
 
 # Redact files
-set(redact_proto charlie manager charlie_net charlie_server)
+set(redact_proto charlie manager charlie_net charlie_server client)
 
 MESSAGE( STATUS "Will redact charlie proto files." )
 foreach(to_redact IN LISTS redact_proto)
@@ -162,9 +163,6 @@ foreach(to_redact IN LISTS redact_proto)
     )
 endforeach()
 
-# Proof of Work
-file(GLOB pow_SRC "src/pow/*.c")
-add_library(pow STATIC ${pow_SRC} src/pow/pow.cpp)
 
 # Build manager
 file(GLOB manager_SRC "src/modules/manager/*.cpp")
@@ -193,6 +191,26 @@ set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(persist -Wl,-Bstatic  ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
 add_custom_command(TARGET persist POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:persist> ${CMAKE_SHARED_LIBRARY_PREFIX}2526948902${CMAKE_SHARED_LIBRARY_SUFFIX}
+)
+
+# Build client
+file(GLOB_RECURSE client_SRC "src/modules/client/*.cpp")
+add_library(client SHARED ${client_SRC} "charlie.pb.redacted.cc")
+set_target_properties(client PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"client\"'")
+set_target_properties(client PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+target_link_libraries(client -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
+add_custom_command(TARGET client POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:client> ${CMAKE_SHARED_LIBRARY_PREFIX}2777954855${CMAKE_SHARED_LIBRARY_SUFFIX}
+)
+
+# Build directconnect
+file(GLOB_RECURSE directconnect_SRC "src/modules/directconnect/*.cpp")
+add_library(directconnect SHARED ${directconnect_SRC} "charlie.pb.redacted.cc")
+set_target_properties(directconnect PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"directconnect\"'")
+set_target_properties(directconnect PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+target_link_libraries(directconnect -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
+add_custom_command(TARGET directconnect POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:directconnect> ${CMAKE_SHARED_LIBRARY_PREFIX}1909739493${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
 
 # Set the list of libraries to compile embed code

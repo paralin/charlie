@@ -19,7 +19,6 @@ message CInitInfo
 message CManagerStorage
 {
   optional string onion_cab_cookie = 1;
-  optional charlie.CClientRegisterProof register_proof = 2;
 }
 
 // A request to download a module

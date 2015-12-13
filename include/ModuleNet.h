@@ -11,5 +11,5 @@ namespace modules
 
       // Is this network module able to communicate?
       virtual bool ready() = 0;
-  }
+  };
 }

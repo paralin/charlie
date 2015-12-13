@@ -21,6 +21,8 @@ void ModuleInterImpl::requireDependency(u32 id)
   inst->modReqs.insert(id);
   if(mManager->moduleRunning(id))
      inst->notifyModuleLoaded(id, mManager->getModuleInstance(id)->publicInterface);
+  else
+    mManager->deferRecheckModules();
 }
 
 void ModuleInterImpl::releaseDependency(u32 id)
@@ -105,6 +107,11 @@ std::string ModuleInterImpl::getModuleFilename(charlie::CModule* mod)
 bool ModuleInterImpl::moduleLoadable(u32 id)
 {
   return mManager->moduleLoadable(id, false);
+}
+
+charlie::CModule* ModuleInterImpl::selectModule(u32 cap, charlie::CModuleBinary** bin)
+{
+  return mManager->selectModule(cap, bin);
 }
 
 charlie::CModuleBinary* ModuleInterImpl::selectBinary(charlie::CModule* mod)

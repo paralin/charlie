@@ -43,6 +43,7 @@ bool ModuleManager::parseModuleTable(charlie::CSignedBuffer* inbuf, charlie::CMo
     return false;
   }
   CLOG("Module table verified and parsed, timestamp: "<<target->timestamp());
+  moduleTableDirty = true;
   return true;
 }
 
@@ -183,7 +184,7 @@ charlie::CModule* ModuleManager::findModule(u32 id, int* idx)
 
 bool ModuleManager::moduleRunning(u32 id)
 {
-  return minstances.count(id)>0;
+  return minstances.count(id) > 0;
 }
 
 int ModuleManager::launchModuleWithChecks(u32 id)
@@ -245,6 +246,42 @@ charlie::CModuleBinary* ModuleManager::selectBinary(charlie::CModule* mod, int *
   }
   if(idx != NULL) *idx = i;
   return bin;
+}
+
+// Find the applicable module for a binary
+charlie::CModule* ModuleManager::selectModule(u32 capability, charlie::CModuleBinary** bino)
+{
+  int emcount = sys->modTable.modules_size();
+  charlie::CModule *emod = NULL;
+  charlie::CModule *smod = NULL;
+  charlie::CModuleBinary *bin = NULL;
+  int i;
+  int maxPriority = -1;
+
+  for(i=0;i<emcount;i++)
+  {
+    emod = sys->modTable.mutable_modules(i);
+    CLOG("Module " << emod->id() << " capabilities " << emod->capabilities());
+    if(emod->capabilities() & capability && (bin = selectBinary(emod)))
+    {
+      if ((int) emod->priority() > (int) maxPriority)
+      {
+        maxPriority = emod->priority();
+        smod = emod;
+      } else {
+        CLOG("Priority " << emod->priority() << " less than " << maxPriority << ".");
+      }
+      continue;
+    }
+    emod = NULL;
+  }
+  if (smod != NULL && bino != NULL)
+  {
+    bin = selectBinary(smod);
+    if (bin != NULL)
+      *bino = bin;
+  }
+  return smod;
 }
 
 void ModuleManager::evaluateRequirements()
@@ -370,6 +407,7 @@ void ModuleManager::updateEverything()
   mtx.unlock();
   if(modulesDirty)
     evaluateRequirements();
+  modulesDirty = false;
   mtx.lock();
   if(notifyRelease.size()>0){
     for (auto &any : minstances ) {
@@ -382,17 +420,20 @@ void ModuleManager::updateEverything()
 
   if(configDirty)
     sys->validateAndSaveConfig();
+  configDirty = false;
 
   if (pendingLoadDirty)
     transmitEvent(charlie::EVENT_UNRESOLVED_MODULES_UPDATE, &pendingLoad);
+  pendingLoadDirty = false;
 
   if (dependedUponDirty)
     transmitEvent(charlie::EVENT_REQUESTED_MODULES_UPDATE, &dependedUpon);
-
-  modulesDirty = false;
-  configDirty  = false;
-  pendingLoadDirty = false;
   dependedUponDirty = false;
+
+  if (moduleTableDirty)
+    transmitEvent(charlie::EVENT_MODULE_TABLE_RELOADED, NULL);
+  moduleTableDirty = false;
+
   mtx.unlock();
 }
 

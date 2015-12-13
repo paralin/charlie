@@ -60,5 +60,8 @@ namespace modules
 
       // Select a binary based on platform
       virtual charlie::CModuleBinary* selectBinary(charlie::CModule* mod) = 0;
+
+      // Select a module based on capabilities
+      virtual charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL) = 0;
   };
 };

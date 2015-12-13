@@ -35,6 +35,7 @@ public:
   char* getModuleFilename(charlie::CModule* mod);
   charlie::CModule* findModule(u32 id, int*idx=NULL);
   static charlie::CModuleBinary* selectBinary(charlie::CModule* mod, int*idx=NULL);
+  charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
   bool moduleRunning(u32 id);
 
   //Deferred actions
@@ -83,6 +84,7 @@ private:
   bool configDirty;
   bool pendingLoadDirty;
   bool dependedUponDirty;
+  bool moduleTableDirty;
 
   boost::mutex mtx;
   bool hasShutdown = false;

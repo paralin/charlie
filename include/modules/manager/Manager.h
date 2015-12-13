@@ -11,8 +11,10 @@
 
 #include <protogen/manager.pb.h>
 #include "ManagerInter.h"
-#include "Client.h"
+
 #include <modules/persist/PersistInter.h>
+#include <modules/client/ClientInter.h>
+
 #include <set>
 
 namespace modules
@@ -62,7 +64,7 @@ namespace modules
       ManagerInter* pInter;
       CManagerStorage stor;
       Crypto* crypt;
-      CharlieClient* client;
+      modules::client::ClientInter* clientMod;
 
       // List of pending modules
       std::set<u32>* pendingLoad;
@@ -82,6 +84,9 @@ namespace modules
       // True if some other module has called prepareToRelocate
       bool aboutToRelocate;
       bool shouldDownloadModules;
+
+      // Id of the selected client module
+      u32 clientModId;
     };
   };
 };

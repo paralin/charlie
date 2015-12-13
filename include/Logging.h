@@ -10,6 +10,12 @@
 #endif
 #endif
 
+#ifdef IS_YCM
+#undef DO_CHARLIE_LOG
+#define MLOG(msg) ;
+#define MERR(msg) ;
+#endif
+
 #ifdef DO_CHARLIE_LOG
 #define CLOG(msg) \
   ( \

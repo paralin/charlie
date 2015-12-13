@@ -20,6 +20,7 @@
 #include <charlie/ModuleTable_Data.h>
 #include <charlie/ManagerModule_Data.h>
 #include <boost/thread/mutex.hpp>
+#include <boost/asio/ssl/detail/openssl_init.hpp>
 
 namespace fs = boost::filesystem;
 
@@ -51,6 +52,7 @@ class System {
     void     dropDefaultManager();
 
     ModuleManager *mManager;
+    boost::asio::ssl::detail::openssl_init<true> opensslInit;
 
   public:
     Crypto* crypto;

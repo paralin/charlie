@@ -20,3 +20,7 @@ Possible bugs:
  - The module instances use CModule pointers to hold state. Make sure
    these CModule state elements are replicated to the new module table
    and the pointers are updated.
+ - If a module table is specifically crafted for a client but then a new
+   one is pulled in from the internet, it could override the additional
+   modules added to the client. Make it combine the two module tables,
+   and only delete if its the server sending a table.

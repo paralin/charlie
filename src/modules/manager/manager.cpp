@@ -23,17 +23,16 @@ using namespace modules::manager;
 ManagerModule::ManagerModule()
 {
   MLOG("Manager module constructed...");
-  client = new CharlieClient(this);
   pInter = new ManagerInter(this);
-  nextModuleUpdate = std::time(nullptr);
+  nextModuleUpdate = std::time(NULL);
   dependedUpon = NULL;
+  clientMod = NULL;
   aboutToRelocate = false;
 }
 
 ManagerModule::~ManagerModule()
 {
   delete pInter;
-  delete client;
 }
 
 void ManagerModule::shutdown()
@@ -58,6 +57,9 @@ void ManagerModule::injectDependency(u32 id, void* dep)
     case (u32)2526948902:
       persist = (modules::persist::PersistInter*)dep;
       break;
+    case (u32)CLIENT_MODULE_ID:
+      clientMod = (modules::client::ClientInter*) dep;
+      break;
   }
   loadedModules[id] = (ModuleAPI*)dep;
 }
@@ -69,6 +71,9 @@ void ManagerModule::releaseDependency(u32 id)
   {
     case (u32)2526948902:
       persist = NULL;
+      break;
+    case (u32)CLIENT_MODULE_ID:
+      clientMod = NULL;
       break;
   }
   loadedModules.erase(id);
@@ -283,7 +288,7 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
       MLOG("Trying to fetch table from "<<str<<"...");
       const std::string s = fetchUrl(str);
 
-#if VERBOSE
+#ifdef VERBOSE
       MLOG("Body: "<<s);
 #endif
 
@@ -294,7 +299,7 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
       {
         foundOne = true;
         std::string b64 = std::string(*iter).substr(1);
-#if VERBOSE
+#ifdef VERBOSE
         MLOG("Found an encoded module table: "<<b64);
 #endif
         //Decode base64
@@ -311,7 +316,7 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
 #endif
         }
 #ifdef DEBUG
-#if VERBOSE
+#ifdef VERBOSE
         {
           char mdString[33];
           unsigned char digest[MD5_DIGEST_LENGTH];
@@ -476,6 +481,7 @@ int ManagerModule::fetchModuleFromUrl(const charlie::CModule& mod, std::string u
 
 void ManagerModule::downloadModules(charlie::CModuleTable* table)
 {
+  bool anyFailed = false;
   if(aboutToRelocate)
   {
     // Probably will never happen
@@ -521,8 +527,7 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
       if(mInter->moduleLoadable(mod.id()))
         continue;
 
-      charlie::CModuleBinary* bin = mInter->selectBinary(table->mutable_modules(i));
-      if (bin == NULL)
+      charlie::CModuleBinary* bin = mInter->selectBinary(table->mutable_modules(i)); if (bin == NULL)
       {
         MLOG("Module "<<mod.id()<<" has no binaries for this platform...");
         continue;
@@ -595,9 +600,20 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
         }
       }
       if(!loaded)
-      {MERR("Unable to find a valid acquire for "<<mod.id()<<"!")}
+      {
+        MERR("Unable to find a valid acquire for "<<mod.id()<<"!");
+        anyFailed = true;
+      }
       else
       {MLOG("Successfully downloaded "<<mod.id()<<"!")}
+    }
+
+    std::time_t now;
+    std::time(&now);
+    if (anyFailed)
+    {
+      MLOG("Some modules failed download, will retry module lookup shortly...");
+      nextModuleUpdate = now + 30;
     }
   }
 
@@ -612,6 +628,7 @@ void ManagerModule::module_main()
   //Require persist module
   crypt = mInter->getCrypto();
   mInter->requireDependency(2526948902);
+  mInter->requireDependency(CLIENT_MODULE_ID);
   mInter->commitDepsChanges();
   loadStorage();
 
@@ -687,6 +704,7 @@ void ManagerModule::handleEvent(u32 eve, void* data)
       MLOG("Depending upon " << dependedUpon->size() << " modules...");
       shouldDownloadModules = true;
       break;
+    default: break;
   }
 }
 

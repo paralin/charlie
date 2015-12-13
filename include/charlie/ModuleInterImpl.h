@@ -49,6 +49,8 @@ class ModuleInterImpl : public modules::ModuleInterface
 
     charlie::CModuleBinary* selectBinary(charlie::CModule* mod);
 
+    charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
+
   private:
     ModuleManager *mManager;
     ModuleInstance * inst;

@@ -2,7 +2,8 @@
 #include <IntTypes.h>
 
 #define MANAGER_MODULE_ID 3133916783
-#define REGISTER_DIFFICULTY 23
+#define CLIENT_MODULE_ID 2777954855
+#define REGISTER_DIFFICULTY 38
 
 const char * const ONLINE_MTABLE_KEY = "xH0KEc9e5cWOx2geoXhBef2Yxy";
 

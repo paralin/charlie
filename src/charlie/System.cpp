@@ -5,8 +5,9 @@
 #include <charlie/ManagerModule_Data.h>
 #include <openssl/sha.h>
 #include <google/protobuf/repeated_field.h>
-#include <boost/thread/thread.hpp>
 #include <boost/asio.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/lexical_cast.hpp>
 #include <unistd.h>
 
 #ifdef DEBUG
