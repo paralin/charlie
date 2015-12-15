@@ -225,7 +225,7 @@ int ModuleManager::launchModule(charlie::CModule* mod)
   for(auto &any : minstances)
   {
     std::shared_ptr<ModuleInstance> tinst = any.second;
-    if(tinst->modReqs.count(mod->id())>0)
+    if(tinst->modReqs.count(mod->id())>0 || tinst->modOptReqs.count(mod->id())>0)
       tinst->notifyModuleLoaded(mod->id(), inst->publicInterface);
   }
   minstances.insert(std::pair<int, std::shared_ptr<ModuleInstance>>(mod->id(), inst));

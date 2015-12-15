@@ -6,7 +6,6 @@
 
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
-
 #include <boost/thread/mutex.hpp>
 
 #include <protogen/manager.pb.h>
@@ -87,6 +86,9 @@ namespace modules
 
       // Id of the selected client module
       u32 clientModId;
+
+      // Tor module
+      void* torModule;
     };
   };
 };

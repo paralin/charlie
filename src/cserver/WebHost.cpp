@@ -3,6 +3,7 @@
 #include <cserver/ModuleTable.h>
 #include <charlie/xor.h>
 #include <stdio.h>
+#include <Logging.h>
 #include <gmodule.h>
 #include <iostream>
 #include <fstream>
@@ -244,7 +245,7 @@ void WebHost::mainThread()
     this->server = mg_create_server((void*)this, ev_handler);
     mg_set_option(this->server, "listening_port", "9921");
 
-    CLOG("Server listening on localhost:9921");
+    CLOG("Web listening on localhost:9921");
     for (;;) mg_poll_server((struct mg_server *) this->server, 1000);
   }catch (std::exception &e) {
     CERR(e.what());

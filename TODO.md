@@ -12,6 +12,7 @@
    every single build of the executable in order to make things more
    confusing
  - Add the llvm obfuscation work in for modules
+ - Implement the rest of the events
 
 Possible bugs:
 

@@ -6,6 +6,7 @@
 #include <charlie/base64.h>
 #include <charlie/xor.h>
 #include <cserver/WebHost.h>
+#include <cserver/NetHost.h>
 #include <protogen/charlie.pb.h>
 
 class System {
@@ -19,6 +20,8 @@ class System {
 
   private:
     WebHost* host;
+    NetHost* nHost;
 
     int loadCrypto();
+    void webTh();
 };

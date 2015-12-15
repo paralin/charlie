@@ -7,6 +7,7 @@
 #include <charlie/xor.h>
 #include <protogen/charlie.pb.h>
 #include <mongoose.h>
+#include <string>
 
 class System;
 class WebHost {

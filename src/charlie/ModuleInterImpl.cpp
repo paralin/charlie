@@ -16,21 +16,24 @@ ModuleInterImpl::~ModuleInterImpl()
   this->mManager = NULL;
 }
 
-void ModuleInterImpl::requireDependency(u32 id)
+void ModuleInterImpl::requireDependency(u32 id, bool optional)
 {
-  inst->modReqs.insert(id);
+  if (optional)
+    inst->modOptReqs.insert(id);
+  else
+    inst->modReqs.insert(id);
   if(mManager->moduleRunning(id))
      inst->notifyModuleLoaded(id, mManager->getModuleInstance(id)->publicInterface);
-  else
-    mManager->deferRecheckModules();
+  mManager->deferRecheckModules();
 }
 
 void ModuleInterImpl::releaseDependency(u32 id)
 {
   inst->modReqs.erase(id);
+  inst->modOptReqs.erase(id);
 }
 
-void ModuleInterImpl::commitDepsChanges()
+void ModuleInterImpl::requestModuleRecheck()
 {
   mManager->deferRecheckModules();
 }

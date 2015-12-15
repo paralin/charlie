@@ -5,6 +5,10 @@
 #include <IntTypes.h>
 #include "DirectConnectInter.h"
 #include <ModuleNet.h>
+#include <set>
+#include <modules/manager/ManagerInter.h>
+
+#include <boost/thread/mutex.hpp>
 
 namespace modules
 {
@@ -27,6 +31,12 @@ namespace modules
     private:
       ModuleInterface* mInter;
       DirectConnectInter *pInter;
+      modules::manager::ManagerInter* manager;
+      std::set<std::string> serverKeys;
+      boost::mutex managerMtx;
+      std::set<std::string> server;
+
+      void populateServerKeys();
     };
   };
 };

@@ -1,5 +1,6 @@
 #pragma once
-#include <string>
+
+#include <string.h>
 #include <ModuleInterface.h>
 #include <charlie/SystemInfo.h>
 
@@ -12,11 +13,11 @@ class ModuleInterImpl : public modules::ModuleInterface
     ~ModuleInterImpl();
 
     //Request that a module be loaded
-    void requireDependency(u32 id);
+    void requireDependency(u32 id, bool optional = false);
     void releaseDependency(u32 id);
 
     //Immediately commit changes
-    void commitDepsChanges();
+    void requestModuleRecheck();
 
     //Attempts to verify and load a module table.
     //Rejects invalid / old module table.

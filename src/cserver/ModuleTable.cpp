@@ -215,6 +215,27 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
         }
         CLOG("has_info: "<<mod->has_info());
       }
+      else if(ityp.compare("CDirectConnectInfo") == 0)
+      {
+        CLOG("info_type recognized CDirectConnectInfo");
+        modules::directconnect::CDirectConnectInfo directConnectInfo;
+
+        {
+          const rapidjson::Value& serverAddrs = ix["info"]["server_addr"];
+          for (rapidjson::SizeType oi = 0; oi < serverAddrs.Size(); oi++)
+          {
+            directConnectInfo.add_server_addr(serverAddrs[oi].GetString());
+            CLOG("Adding server addr: "<<serverAddrs[oi].GetString());
+          }
+        }
+
+        std::string* info = mod->mutable_info();
+        if(!directConnectInfo.SerializeToString(info))
+        {
+          CERR("Unable to serialize modInfo to string");
+        }
+        CLOG("has_info: "<<mod->has_info());
+      }
     }
   }
   return table;

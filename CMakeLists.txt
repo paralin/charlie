@@ -139,6 +139,7 @@ else()
     "src/protogen/charlie.pb.cc"
     "src/protogen/charlie_net.pb.cc"
     "src/protogen/manager.pb.cc"
+    "src/protogen/directconnect.pb.cc"
     "src/charlie/xor.cpp"
     "src/charlie/Crypto.cpp"
     "src/charlie/hash.cpp"
@@ -148,7 +149,7 @@ else()
 endif()
 
 # Redact files
-set(redact_proto charlie manager charlie_net charlie_server client)
+set(redact_proto charlie manager charlie_net charlie_server client directconnect)
 
 MESSAGE( STATUS "Will redact charlie proto files." )
 foreach(to_redact IN LISTS redact_proto)
@@ -293,7 +294,7 @@ if(NOT WINCC)
   # Compile mongoose
   add_library(mongoose STATIC "${PROJECT_SOURCE_DIR}/deps/mongoose/mongoose.c")
 
-  set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+  set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
   file(GLOB cserver_SRC "src/cserver/*.cpp")
   file(GLOB protogen_SRC "src/protogen/*.cc")

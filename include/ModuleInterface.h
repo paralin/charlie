@@ -13,13 +13,13 @@ namespace modules
   {
     public:
       //Request that a module be loaded
-      virtual void requireDependency(u32 id) = 0;
+      virtual void requireDependency(u32 id, bool optional = false) = 0;
 
       //Release a load request
       virtual void releaseDependency(u32 id) = 0;
 
       //Immediately commit changes
-      virtual void commitDepsChanges() = 0;
+      virtual void requestModuleRecheck() = 0;
 
       //Attempts to verify and load a module table.
       //Rejects invalid / old module table.

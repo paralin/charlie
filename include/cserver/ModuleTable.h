@@ -5,6 +5,7 @@
 #include <charlie/Crypto.h>
 #include <protogen/charlie.pb.h>
 #include <protogen/charlie_server.pb.h>
+#include <protogen/directconnect.pb.h>
 #include <protogen/manager.pb.h>
 #include <charlie/CryptoBuf.h>
 

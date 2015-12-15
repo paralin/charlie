@@ -3,12 +3,13 @@
 #include <Common.h>
 #include <Module.h>
 #include <Logging.h>
-#include <protogen/charlie.pb.h>
 #include <string>
+#include <set>
 #include <glib.h>
 #include <gmodule.h>
+
+#include <protogen/charlie.pb.h>
 #include <charlie/ModuleInterImpl.h>
-#include <set>
 #include <boost/thread.hpp>
 
 typedef modules::Module* (*ConstructFunc) (void);
@@ -23,7 +24,10 @@ public:
   void unload();
 
   charlie::CModuleInstance inst;
+  // Requirements
   std::set<u32> modReqs;
+  // Optional requirements
+  std::set<u32> modOptReqs;
   void notifyModuleReleased(u32 id);
   void notifyModuleLoaded(u32 mod, void* ptr);
   charlie::EModuleStatus status();

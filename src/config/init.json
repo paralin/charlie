@@ -76,7 +76,13 @@
           ],
           "platform": 7
         }
-      ]
+      ],
+      "info_type": "CDirectConnectInfo",
+      "info": {
+        "server_addr": [
+          "127.0.0.1:9922"
+        ]
+      }
     }
   ]
 }

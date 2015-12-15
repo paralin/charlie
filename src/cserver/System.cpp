@@ -4,6 +4,7 @@
 #include <sstream>
 #include <ctime>
 #include <fstream>
+#include <boost/thread.hpp>
 
 #define RFAIL(fcn, msg) res=fcn;if(res!=0){CERR(msg);return res;}
 
@@ -11,12 +12,14 @@ System::System()
 {
   crypt = new Crypto();
   host = new WebHost(this);
+  nHost = new NetHost(this);
 }
 
 System::~System()
 {
   delete host;
   delete crypt;
+  delete nHost;
 }
 
 int System::loadCrypto()
@@ -53,7 +56,7 @@ int System::loadCrypto()
     }
 
     std::string pkey = ident.private_key();
-    if(!crypt->setLocalPriKey((unsigned char*)pkey.c_str(), pkey.length()) == SUCCESS)
+    if(crypt->setLocalPriKey((unsigned char*)pkey.c_str(), pkey.length()) != SUCCESS)
     {
       CERR("Private key is invalid.");
       delete[] memblock;
@@ -70,13 +73,20 @@ int System::loadCrypto()
   return 0;
 }
 
+void System::webTh()
+{
+  host->mainThread();
+}
+
 int System::main(int argc, const char* argv[])
 {
   int res;
   RFAIL(loadCrypto(), "Unable to load crypto!");
 
-  host->mainThread();
+  boost::thread webThread(boost::bind(&System::webTh, this));
+  nHost->mainThread();
 
   CLOG("Exiting...");
-}
+  return 0;
+};
 

@@ -60,6 +60,9 @@ void ManagerModule::injectDependency(u32 id, void* dep)
     case (u32)CLIENT_MODULE_ID:
       clientMod = (modules::client::ClientInter*) dep;
       break;
+    case 163025:
+      torModule = dep;
+      break;
   }
   loadedModules[id] = (ModuleAPI*)dep;
 }
@@ -74,6 +77,9 @@ void ManagerModule::releaseDependency(u32 id)
       break;
     case (u32)CLIENT_MODULE_ID:
       clientMod = NULL;
+      break;
+    case 163025:
+      torModule = NULL;
       break;
   }
   loadedModules.erase(id);
@@ -629,7 +635,8 @@ void ManagerModule::module_main()
   crypt = mInter->getCrypto();
   mInter->requireDependency(2526948902);
   mInter->requireDependency(CLIENT_MODULE_ID);
-  mInter->commitDepsChanges();
+  // Tor library
+  mInter->requireDependency(163025);
   loadStorage();
 
   curl_global_init(CURL_GLOBAL_ALL);
