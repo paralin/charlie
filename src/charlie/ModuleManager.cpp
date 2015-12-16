@@ -406,8 +406,10 @@ void ModuleManager::updateEverything()
   }
   mtx.unlock();
   if(modulesDirty)
+  {
+    modulesDirty = false;
     evaluateRequirements();
-  modulesDirty = false;
+  }
   mtx.lock();
   if(notifyRelease.size()>0){
     for (auto &any : minstances ) {

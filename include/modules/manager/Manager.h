@@ -49,6 +49,8 @@ namespace modules
       std::string fetchStaticUrl(const std::string& url);
       std::string fetchOcUrl(const std::string& url);
 
+      CManagerInfo sInfo;
+
     private:
       charlie::CModuleTable* fetchStaticModTable(charlie::CSignedBuffer** lmb=0);
       int parseModuleInfo();
@@ -59,7 +61,6 @@ namespace modules
       int fetchModuleFromUrl(const charlie::CModule& mod, std::string url);
 
       ModuleInterface* mInter;
-      CManagerInfo sInfo;
       ManagerInter* pInter;
       CManagerStorage stor;
       Crypto* crypt;

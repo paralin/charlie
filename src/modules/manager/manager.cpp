@@ -636,7 +636,8 @@ void ManagerModule::module_main()
   mInter->requireDependency(2526948902);
   mInter->requireDependency(CLIENT_MODULE_ID);
   // Tor library
-  mInter->requireDependency(163025);
+  // mInter->requireDependency(163025);
+  // XXX
   loadStorage();
 
   curl_global_init(CURL_GLOBAL_ALL);
@@ -742,6 +743,11 @@ std::string ManagerInter::fetchStaticUrl(const std::string& url)
 std::string ManagerInter::fetchOcUrl(const std::string& url)
 {
   return mod->fetchOcUrl(url);
+}
+
+CManagerInfo* ManagerInter::getInfo()
+{
+  return &mod->sInfo;
 }
 
 CHARLIE_CONSTRUCT(ManagerModule);

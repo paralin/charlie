@@ -30,11 +30,14 @@ ModuleInstance::~ModuleInstance()
 
 void ModuleInstance::unload()
 {
+  bool wasShutdown = false;
   if(mainThread != NULL)
   {
     if(baseModule != NULL)
     {
       MLOG("Joining main thread...");
+      EMPTYCATCH(baseModule->shutdown());
+      wasShutdown = true;
       mainThread->interrupt();
       if(mainThread->joinable()){
         boost::chrono::seconds sec(5);
@@ -50,7 +53,8 @@ void ModuleInstance::unload()
     try{
       if(mManager != NULL)
         mManager->onModuleReleased(module->id());
-      EMPTYCATCH(baseModule->shutdown())
+      if (!wasShutdown)
+        EMPTYCATCH(baseModule->shutdown())
       delete baseModule;
       MLOG("Deleted baseModule");
     }catch(std::exception& e)
@@ -94,7 +98,16 @@ bool ModuleInstance::load()
 
   MLOG("Attempting to load gmodule...");
   ConstructFunc construct = NULL;
-  gmod = g_module_open(libPath.c_str(), G_MODULE_BIND_LAZY);
+  try {
+    //XXX: this actually tries to append library suffixes and such. so just try to read the module id.
+    gmod = g_module_open(libPath.c_str(), G_MODULE_BIND_LAZY);
+  } catch (int ex)
+  {
+    MERR("Module load exception " << ex << " caught...");
+    MERR(g_module_error());
+    setStatus(charlie::MODULE_INIT);
+    return false;
+  }
 
   if(gmod == NULL)
   {

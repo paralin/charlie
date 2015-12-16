@@ -206,10 +206,10 @@ add_custom_command(TARGET client POST_BUILD
 
 # Build directconnect
 file(GLOB_RECURSE directconnect_SRC "src/modules/directconnect/*.cpp")
-add_library(directconnect SHARED ${directconnect_SRC} "charlie.pb.redacted.cc")
+add_library(directconnect SHARED ${directconnect_SRC} "charlie.pb.redacted.cc" "charlie_net.pb.redacted.cc" "directconnect.pb.redacted.cc")
 set_target_properties(directconnect PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"directconnect\"'")
 set_target_properties(directconnect PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(directconnect -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
+target_link_libraries(directconnect manager -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
 add_custom_command(TARGET directconnect POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:directconnect> ${CMAKE_SHARED_LIBRARY_PREFIX}1909739493${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
