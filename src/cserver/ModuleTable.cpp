@@ -215,10 +215,10 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
         }
         CLOG("has_info: "<<mod->has_info());
       }
-      else if(ityp.compare("CDirectConnectInfo") == 0)
+      else if(ityp.compare("CClientInfo") == 0)
       {
-        CLOG("info_type recognized CDirectConnectInfo");
-        modules::directconnect::CDirectConnectInfo directConnectInfo;
+        CLOG("info_type recognized CClientInfo");
+        modules::client::CClientInfo directConnectInfo;
 
         {
           const rapidjson::Value& serverAddrs = ix["info"]["server_addr"];

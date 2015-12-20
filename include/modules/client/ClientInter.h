@@ -15,6 +15,7 @@ namespace modules
       ~ClientInter();
 
       void handleCommand(void* buf);
+
     private:
       ClientModule* mod;
     };

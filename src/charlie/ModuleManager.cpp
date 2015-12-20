@@ -249,39 +249,47 @@ charlie::CModuleBinary* ModuleManager::selectBinary(charlie::CModule* mod, int *
 }
 
 // Find the applicable module for a binary
-charlie::CModule* ModuleManager::selectModule(u32 capability, charlie::CModuleBinary** bino)
+charlie::CModule* ModuleManager::selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bino)
 {
-  int emcount = sys->modTable.modules_size();
-  charlie::CModule *emod = NULL;
-  charlie::CModule *smod = NULL;
-  charlie::CModuleBinary *bin = NULL;
+  charlie::CModule* emod;
   int i;
   int maxPriority = -1;
 
-  for(i=0;i<emcount;i++)
+  for (auto mod : mods)
   {
-    emod = sys->modTable.mutable_modules(i);
-    CLOG("Module " << emod->id() << " capabilities " << emod->capabilities());
-    if(emod->capabilities() & capability && (bin = selectBinary(emod)))
-    {
-      if ((int) emod->priority() > (int) maxPriority)
-      {
-        maxPriority = emod->priority();
-        smod = emod;
-      } else {
-        CLOG("Priority " << emod->priority() << " less than " << maxPriority << ".");
-      }
+    if (mod->priority() <= maxPriority)
       continue;
-    }
-    emod = NULL;
+    maxPriority = mod->priority();
+    emod = mod;
   }
-  if (smod != NULL && bino != NULL)
+  if (bino != NULL)
+    *bino = selectBinary(emod);
+  return emod;
+}
+
+charlie::CModule* ModuleManager::selectModule(u32 capability, charlie::CModuleBinary** bino)
+{
+  std::set<charlie::CModule*> mods = listModulesWithCap(capability, true);
+  return selectModule(mods, bino);
+}
+
+std::set<charlie::CModule*> ModuleManager::listModulesWithCap(u32 capability, bool filterHasBinary) 
+{
+  int i;
+  int emcount = sys->modTable.modules_size();
+  std::set<charlie::CModule*> ret;
+
+  for (i=0;i<emcount;i++)
   {
-    bin = selectBinary(smod);
-    if (bin != NULL)
-      *bino = bin;
+    charlie::CModule* emod = sys->modTable.mutable_modules(i);
+    if(!(emod->capabilities() & capability))
+      continue;
+    if (filterHasBinary && selectBinary(emod) == NULL)
+      continue;
+    ret.insert(emod);
   }
-  return smod;
+
+  return ret;
 }
 
 void ModuleManager::evaluateRequirements()

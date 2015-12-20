@@ -35,7 +35,9 @@ public:
   char* getModuleFilename(charlie::CModule* mod);
   charlie::CModule* findModule(u32 id, int*idx=NULL);
   static charlie::CModuleBinary* selectBinary(charlie::CModule* mod, int*idx=NULL);
+  charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL);
   charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
+  std::set<charlie::CModule*> listModulesWithCap(u32 cap, bool filterHasBinary);
   bool moduleRunning(u32 id);
 
   //Deferred actions

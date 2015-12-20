@@ -112,12 +112,22 @@ bool ModuleInterImpl::moduleLoadable(u32 id)
   return mManager->moduleLoadable(id, false);
 }
 
-charlie::CModule* ModuleInterImpl::selectModule(u32 cap, charlie::CModuleBinary** bin)
-{
-  return mManager->selectModule(cap, bin);
-}
-
 charlie::CModuleBinary* ModuleInterImpl::selectBinary(charlie::CModule* mod)
 {
   return ModuleManager::selectBinary(mod);
+}
+
+std::set<charlie::CModule*> ModuleInterImpl::listModulesWithCap(u32 cap, bool filterHasBinary)
+{
+  return mManager->listModulesWithCap(cap, filterHasBinary);
+}
+
+charlie::CModule* ModuleInterImpl::selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin)
+{
+  return mManager->selectModule(mods, bin);
+}
+
+charlie::CModule* ModuleInterImpl::selectModule(u32 cap, charlie::CModuleBinary** bin)
+{
+  return mManager->selectModule(cap, bin);
 }

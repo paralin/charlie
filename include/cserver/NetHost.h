@@ -6,7 +6,7 @@
 #include <protogen/charlie.pb.h>
 #include <protogen/charlie_net.pb.h>
 #include <protogen/manager.pb.h>
-#include <protogen/directconnect.pb.h>
+#include <protogen/client.pb.h>
 
 #include <cserver/networking/CharlieClient.h>
 #include <boost/asio.hpp>

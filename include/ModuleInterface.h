@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <set>
 #include <IntTypes.h>
 #include <protogen/charlie.pb.h>
 #include <charlie/Crypto.h>
@@ -62,6 +63,8 @@ namespace modules
       virtual charlie::CModuleBinary* selectBinary(charlie::CModule* mod) = 0;
 
       // Select a module based on capabilities
+      virtual std::set<charlie::CModule*> listModulesWithCap(u32 cap, bool filterHasBinary) = 0;
+      virtual charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL) = 0;
       virtual charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL) = 0;
   };
 };

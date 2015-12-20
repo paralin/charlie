@@ -343,7 +343,7 @@ void CharlieClient::handleClientAccept(std::string& data)
   }
 
   handshakeComplete = true;
-  MLOG("Handshake complete.");
+  CLOG("Handshake complete.");
 }
 
 void CharlieClient::sendServerAccept()

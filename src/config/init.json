@@ -32,7 +32,6 @@
     {
       "name": "persist",
       "mainfcn": true,
-      "initial": false,
       "binary": [
         {
           "acquire": [
@@ -48,24 +47,6 @@
     {
       "name": "client",
       "mainfcn": true,
-      "initial": false,
-      "binary": [
-        {
-          "acquire": [
-            {
-              "type": 1,
-              "data": "*/ereq/"
-            }
-          ],
-          "platform": 7
-        }
-      ]
-    },
-    {
-      "name": "directconnect",
-      "mainfcn": true,
-      "initial": false,
-      "capabilities": 1,
       "binary": [
         {
           "acquire": [
@@ -77,7 +58,7 @@
           "platform": 7
         }
       ],
-      "info_type": "CDirectConnectInfo",
+      "info_type": "CClientInfo",
       "info": {
         "server_addr": [
           "localhost:9922"

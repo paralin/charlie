@@ -50,6 +50,8 @@ class ModuleInterImpl : public modules::ModuleInterface
 
     charlie::CModuleBinary* selectBinary(charlie::CModule* mod);
 
+    std::set<charlie::CModule*> listModulesWithCap(u32 cap, bool filterHasBinary);
+    charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL);
     charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
 
   private:

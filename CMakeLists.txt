@@ -139,7 +139,7 @@ else()
     "src/protogen/charlie.pb.cc"
     "src/protogen/charlie_net.pb.cc"
     "src/protogen/manager.pb.cc"
-    "src/protogen/directconnect.pb.cc"
+    "src/protogen/client.pb.cc"
     "src/charlie/xor.cpp"
     "src/charlie/Crypto.cpp"
     "src/charlie/hash.cpp"
@@ -149,7 +149,7 @@ else()
 endif()
 
 # Redact files
-set(redact_proto charlie manager charlie_net charlie_server directconnect)
+set(redact_proto charlie manager charlie_net charlie_server client)
 
 MESSAGE( STATUS "Will redact charlie proto files." )
 foreach(to_redact IN LISTS redact_proto)
@@ -196,28 +196,18 @@ add_custom_command(TARGET persist POST_BUILD
 
 # Build client
 file(GLOB_RECURSE client_SRC "src/modules/client/*.cpp")
-add_library(client SHARED ${client_SRC} "charlie.pb.redacted.cc")
-set_target_properties(client PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"client\"'")
-set_target_properties(client PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(client -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
-add_custom_command(TARGET client POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:client> ${CMAKE_SHARED_LIBRARY_PREFIX}2777954855${CMAKE_SHARED_LIBRARY_SUFFIX}
-)
-
-# Build directconnect
-file(GLOB_RECURSE directconnect_SRC "src/modules/directconnect/*.cpp")
-add_library(directconnect SHARED ${directconnect_SRC}
+add_library(client SHARED ${client_SRC}
   "src/networking/emsgsizes.cpp"
   "src/charlie/Crypto.cpp"
   "src/charlie/CryptoBuf.cpp"
   "charlie.pb.redacted.cc"
   "charlie_net.pb.redacted.cc"
-  "directconnect.pb.redacted.cc")
-set_target_properties(directconnect PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"directconnect\"'")
-set_target_properties(directconnect PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(directconnect manager -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
-add_custom_command(TARGET directconnect POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:directconnect> ${CMAKE_SHARED_LIBRARY_PREFIX}1909739493${CMAKE_SHARED_LIBRARY_SUFFIX}
+  "client.pb.redacted.cc")
+set_target_properties(client PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"client\"'")
+set_target_properties(client PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+target_link_libraries(client manager -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
+add_custom_command(TARGET client POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:client> ${CMAKE_SHARED_LIBRARY_PREFIX}2777954855${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
 
 # Set the list of libraries to compile embed code
@@ -287,9 +277,6 @@ add_custom_command(
   DEPENDS init_mtable cutils
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
-
-add_executable(ossltest "src/test/main.cpp")
-target_link_libraries(ossltest ${LIBS})
 
 # Build charlie
 file(GLOB charlie_SRC "src/charlie/*.cpp")
