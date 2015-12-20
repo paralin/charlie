@@ -11,7 +11,7 @@ Crypto::Crypto() {
 }
 
 Crypto::Crypto(unsigned char *remotePubKey, size_t remotePubKeyLen) {
-  this->localKeypair        = NULL;
+  this->localKeypair  = NULL;
   this->remotePubKey  = NULL;
 
   setRemotePubKey(remotePubKey, remotePubKeyLen);
@@ -260,20 +260,15 @@ int Crypto::init() {
 int Crypto::genLocalKeyPair() {
   EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
 
-  if(EVP_PKEY_keygen_init(ctx) <= 0) {
+  if (1 != EVP_PKEY_keygen_init(ctx))
     return FAILURE;
-  }
 
-  if(EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, RSA_KEYLEN) <= 0) {
+  if (1 != EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, RSA_KEYLEN))
     return FAILURE;
-  }
 
-  //Generate the local keypair (remove this?)
-  if(EVP_PKEY_keygen(ctx, &localKeypair) <= 0) {
+  if (1 != EVP_PKEY_keygen(ctx, &localKeypair))
     return FAILURE;
-  }
 
   EVP_PKEY_CTX_free(ctx);
-
   return SUCCESS;
 }

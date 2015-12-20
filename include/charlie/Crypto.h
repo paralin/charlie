@@ -35,9 +35,11 @@ public:
 
     int rsaDecrypt(unsigned char *encMsg, size_t encMsgLen, unsigned char *ek, size_t ekl, unsigned char *iv, size_t ivl, unsigned char **decMsg, bool useRemote=false);
 
+    int digestMessage(const unsigned char* msg, size_t msgLen, unsigned char** digest);
+
     int digestSign(const unsigned char *msg, size_t msgLen, unsigned char** sig, bool useRemote=false);
 
-    int digestVerify(const unsigned char *msg, size_t msgLen, unsigned char* sig, size_t sigLen, bool useRemote=false);
+    int digestVerify(const unsigned char *msg, size_t msgLen, unsigned char* sig, size_t sigLen, bool useRemote=true);
 
     int getRemotePubKey(unsigned char **pubKey);
 
@@ -65,7 +67,7 @@ private:
     EVP_CIPHER_CTX *rsaDecryptCtx;
 
     int init();
-    boost::mutex cmtx;
+    static boost::mutex cmtx;
 };
 
 #endif

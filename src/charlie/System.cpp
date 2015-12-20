@@ -23,6 +23,7 @@ volatile bool continueLoop=true;
 
 System::System(void)
 {
+  identityLoaded = false;
   crypto = new Crypto();
   mManager = new ModuleManager(this);
   configDataSize = 0;
@@ -89,12 +90,18 @@ int System::loadConfigFile()
 
 void System::generateIdentity()
 {
+  if (identityLoaded)
+  {
+    CERR("generateIdentity() when identity already loaded.");
+    return;
+  }
   CLOG("Generating identity...");
   charlie::CIdentity * identity = config.mutable_identity();
   if(crypto->genLocalKeyPair() != SUCCESS)
   {
     CERR("Unable to generate local key pair, continuing anyway...");
   }
+  identityLoaded = true;
   unsigned char* pkey;
   int pkeyLen = crypto->getLocalPriKey(&pkey);
   unsigned char* pubkey;
@@ -103,8 +110,8 @@ void System::generateIdentity()
   {
     CERR("Unable to retrieve pub/pri key, continuing anyway...");
   }
-  identity->set_private_key(pkey, pkeyLen);
-  identity->set_public_key(pubkey, pubkeyLen);
+  identity->set_private_key((char*) pkey);
+  identity->set_public_key((char*) pubkey);
   CLOG("==== GENERATED KEYS ====");
   CLOG(pkey);
   CLOG(pubkey);
@@ -207,13 +214,38 @@ void System::loadSysInfo()
 
 int System::loadIdentityToCrypto()
 {
-  const std::string pkey = config.identity().private_key();
-  int r1 = crypto->setLocalPriKey((unsigned char*)pkey.c_str(), pkey.length());
+  {
+    const std::string pkey = config.identity().private_key();
+    int r1 = crypto->setLocalPriKey((unsigned char*)pkey.c_str(), pkey.length());
 
-  const std::string pubkey = config.identity().public_key();
-  int r2 = crypto->setLocalPubKey((unsigned char*)pubkey.c_str(), pubkey.length());
+    if(r1 != SUCCESS) return FAILURE;
 
-  if(r1 != SUCCESS || r2 != SUCCESS) return FAILURE;
+    CLOG("==== LOADED KEYS pk ====");
+    CLOG(pkey);
+    CLOG("========================");
+  }
+
+  identityLoaded = true;
+
+#ifdef DO_CHARLIE_LOG
+  {
+    unsigned char* pkey;
+    int pkeyLen = crypto->getLocalPriKey(&pkey);
+    unsigned char* pubkey;
+    int pubkeyLen = crypto->getLocalPubKey(&pubkey);
+    if(pkeyLen == FAILURE || pubkeyLen == FAILURE)
+    {
+      CERR("Unable to retrieve pub/pri key, continuing anyway...");
+    }
+    CLOG("==== LOADED KEYS cr ====");
+    CLOG(pkey);
+    CLOG(pubkey);
+    CLOG("========================");
+    free(pkey);
+    free(pubkey);
+  }
+#endif
+
   return SUCCESS;
 }
 
@@ -502,37 +534,44 @@ int System::main(int argc, const char* argv[])
     ip::tcp::endpoint ep(ip::address::from_string( "127.0.0.1" ), sysInfo.lock_port);
     ip::tcp::acceptor acceptor(service, ep);
 
-    if(loadServerPubKey() != 0)
+    if (loadServerPubKey() != 0)
     {
       CERR("Server public key load unsuccessful, continuing anyway...");
     }
 
-    if(loadConfigFile() != SUCCESS)
+    if (loadConfigFile() != SUCCESS)
     {
       CLOG("Can't load config file, will use reasonable defaults...");
-    }else
+    } else
     {
       deserializeConfig();
     }
+
     if(validateConfig()){
       serializeConfig();
       saveConfig();
     }
-    if(loadIdentityToCrypto() != SUCCESS)
+
+    if (!identityLoaded)
     {
-      CERR("Can't load the identity to crypto! Regenerating identity...");
-      generateIdentity();
-      serializeConfig();
-      saveConfig();
-    }else{
-      CLOG("Loaded identity to crypto.");
+      if (loadIdentityToCrypto() != SUCCESS)
+      {
+        CERR("Can't load the identity to crypto! Regenerating identity...");
+        generateIdentity();
+        serializeConfig();
+        saveConfig();
+      } else {
+        CLOG("Loaded identity to crypto.");
+      }
     }
+
     mManager->setSystemInfo(&sysInfo);
     if(!mManager->moduleLoadable(mManager->findModule(MANAGER_MODULE_ID)))
     {
       CLOG("The manager module doesn't exist / failed to validate, dropping default...");
       dropDefaultManager();
     }
+
     CLOG("Manager module is verified, adding it as first dep!");
     mManager->tlReqs.insert(MANAGER_MODULE_ID);
     mManager->deferRecheckModules();

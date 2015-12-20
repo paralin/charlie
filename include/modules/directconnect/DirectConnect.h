@@ -13,7 +13,10 @@
 #include "DirectConnectInter.h"
 #include <ModuleNet.h>
 #include <modules/manager/ManagerInter.h>
+#include <protogen/charlie.pb.h>
 #include <protogen/directconnect.pb.h>
+#include <charlie/Crypto.h>
+#include <charlie/CryptoBuf.h>
 
 namespace modules
 {
@@ -44,6 +47,7 @@ namespace modules
       std::set<std::string> serverKeys;
       boost::mutex managerMtx;
       std::set<std::string> server;
+      std::vector<unsigned char> buf;
 
       void populateServerKeys();
       int parseModuleInfo();
@@ -53,9 +57,21 @@ namespace modules
       void disconnect();
       void resetReceiveContext();
       void unexpectedDataReceived();
+      void handleMessage(std::string& data);
+
+      void send(charlie::EMsg emsg, u32 target, std::string& data);
+
+      void sendClientIdentify();
+      void sendClientAccept(bool sendInfo = false);
 
       bool tryConnectAllEndpoints();
       bool tryConnectEndpoint(const char* endp);
+
+      bool validateMessageHeader();
+      bool validateMessageBody();
+      bool handleServerIdentify();
+
+      void handleServerAccept(std::string& data);
 
       boost::asio::io_service* io_service;
       tcp::resolver* resolver;
@@ -70,6 +86,20 @@ namespace modules
       u32 expectedHeaderSize;
       bool expectingHeader;
       u32 expectedBodySize;
+      bool handshakeComplete;
+      charlie::CMessageHeader head;
+      charlie::CMessageBody body;
+      std::time_t timeConnected;
+
+      // Value to hash in identify
+      std::string serverChallenge;
+      std::string clientChallenge;
+      Crypto* sessionCrypto;
+      Crypto* systemCrypto;
+
+      // Handshake phases
+      bool receivedServerIdentify;
+      bool sentClientIdentify;
 
       // Support socks later
     };

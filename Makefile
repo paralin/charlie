@@ -5,6 +5,7 @@ mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
 .PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run server client
+BOOST_COMPILE_ARGS=--layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
 
 protoc="../../deps/protobuf/final/bin/protoc"
 
@@ -27,7 +28,6 @@ finalize: compile
 	cp Dockerfile bin
 
 .setupmxe:
-	git submodule update --init
 	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf
 	sed -i '/set(CMAKE_BUILD_TYPE Release)/d' ./deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake
 	touch .setupmxe
@@ -41,27 +41,24 @@ dclean: clean
 	-rm -rf makeboost makessl
 
 .makessl:
-	git submodule update --init
 	-cd ./deps/openssl && rm -rf ./final/ && make clean && make dclean && mkdir ./final/
-	cd ./deps/openssl && export CFLAGS="-fPIC" && ./config --prefix="`pwd`/final/" -fPIC -DOPENSSL_PIC && make -j4 && make install
+	cd ./deps/openssl && export CFLAG="-fPIC" && export CXXFLAGS="-fPIC" && ./config --prefix="`pwd`/final/" --openssldir="`pwd`/final/" -fPIC -DOPENSSL_PIC && make && make install
 	# Small hack, just comment out all the find_package in curl
 	sed -i -e "s/ find_package/ #find_package/g" ./deps/curl/CMakeLists.txt
 	touch .makessl
 makessl: .makessl
 
 .makeboost:
-	git submodule update --init && cd ./deps/boost/ && git submodule update --init
 	# Hack to enable FPIC
 	sed -i -e "s# \= shared# \= static#g" ./deps/boost/tools/build/src/tools/gcc.jam
 	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/"
-	cd ./deps/boost/ && ./b2 headers install --layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
+	cd ./deps/boost/ && ./b2 install $(BOOST_COMPILE_ARGS)
 	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
 	find ./deps/process/boost/process/ -type f -name '*.hpp' -exec sed -i -e "s/Windows.h/windows.h/g" -e "s/Shellapi.h/shellapi.h/g" {} \;
 	touch .makeboost
 makeboost: .makeboost
 
 .makeprotolib:
-	git submodule update --init && cd ./deps/protobuf/ && git submodule update --init
 	-cd ./deps/protobuf && make clean
 	cd ./deps/protobuf/ && ./autogen.sh && ./configure --with-pic --prefix=`pwd`/final && make -j4 && make -j4 install
 	touch .makeprotolib

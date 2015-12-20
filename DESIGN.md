@@ -126,9 +126,13 @@ This is the sequence for connecting to a server:
 
   1. Open socket connection.
   2. Server sends a CServerIdentify. Contains the server public key.
+     Contains the challenge for the client.
 -- start RSA encryption --
-  3. Client sends a CClientIdentify. Contains client pubkey.
-  4. see reg sequence
+  3. Client sends a CClientIdentify. Contains client pubkey. Contains
+     challenge for server.
+  4. Server sends a CServerAccept with verification signature for
+     challenge.
+  5. see reg sequence
 
 # Registration Sequence
 

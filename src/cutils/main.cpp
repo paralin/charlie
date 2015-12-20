@@ -335,8 +335,8 @@ int generateIdentity(GenIdentCommand* comm, fs::path *full_path)
   int pkeyLen = crypto->getLocalPriKey(&pkey);
   unsigned char* pubkey;
   int pubkeyLen = crypto->getLocalPubKey(&pubkey);
-  ident.set_public_key(pubkey, pubkeyLen);
-  ident.set_private_key(pkey, pkeyLen);
+  ident.set_public_key((const char*) pubkey, pubkeyLen);
+  ident.set_private_key((const char*) pkey, pkeyLen);
 
   int outSize = ident.ByteSize();
   unsigned char* out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);

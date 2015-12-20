@@ -125,9 +125,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 else()
   set(STEALTH_FLAGS "${STEALTH_FLAGS} -Os -s")
   set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
-  if (NOT WINCC)
-    set(MODULE_FLAGS "${MODULE_FLAGS} -fPIC")
-  endif()
+endif()
+if (NOT WINCC)
+  set(MODULE_FLAGS "${MODULE_FLAGS} -fPIC")
 endif()
 
 if(NO_TOOLS)
@@ -149,7 +149,7 @@ else()
 endif()
 
 # Redact files
-set(redact_proto charlie manager charlie_net charlie_server client directconnect)
+set(redact_proto charlie manager charlie_net charlie_server directconnect)
 
 MESSAGE( STATUS "Will redact charlie proto files." )
 foreach(to_redact IN LISTS redact_proto)
@@ -206,7 +206,13 @@ add_custom_command(TARGET client POST_BUILD
 
 # Build directconnect
 file(GLOB_RECURSE directconnect_SRC "src/modules/directconnect/*.cpp")
-add_library(directconnect SHARED ${directconnect_SRC} "charlie.pb.redacted.cc" "charlie_net.pb.redacted.cc" "directconnect.pb.redacted.cc")
+add_library(directconnect SHARED ${directconnect_SRC}
+  "src/networking/emsgsizes.cpp"
+  "src/charlie/Crypto.cpp"
+  "src/charlie/CryptoBuf.cpp"
+  "charlie.pb.redacted.cc"
+  "charlie_net.pb.redacted.cc"
+  "directconnect.pb.redacted.cc")
 set_target_properties(directconnect PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"directconnect\"'")
 set_target_properties(directconnect PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(directconnect manager -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
@@ -282,6 +288,9 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
 
+add_executable(ossltest "src/test/main.cpp")
+target_link_libraries(ossltest ${LIBS})
+
 # Build charlie
 file(GLOB charlie_SRC "src/charlie/*.cpp")
 add_executable(charlie manager_data.c server_pubkey_data.c init_modtable_data.c ${charlie_SRC} "charlie.pb.redacted.cc")
@@ -300,6 +309,7 @@ if(NOT WINCC)
   file(GLOB protogen_SRC "src/protogen/*.cc")
   file(GLOB http_SRC "src/http/*.cpp")
   add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
+    "src/networking/emsgsizes.cpp"
     "src/charlie/Crypto.cpp"
     "src/charlie/CryptoBuf.cpp"
     "src/charlie/base64.cpp"

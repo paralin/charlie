@@ -53,6 +53,7 @@ class System {
 
     ModuleManager *mManager;
     boost::asio::ssl::detail::openssl_init<true> opensslInit;
+    bool identityLoaded;
 
   public:
     Crypto* crypto;

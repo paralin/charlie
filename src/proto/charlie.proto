@@ -26,8 +26,8 @@ message CSaveContainer
 
 message CIdentity
 {
-  optional bytes private_key = 1;
-  optional bytes public_key = 2;
+  optional string private_key = 1;
+  optional string public_key = 2;
 }
 
 message CModuleTable
