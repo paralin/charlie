@@ -422,7 +422,6 @@ void ModuleManager::updateEverything()
     evaluateRequirements();
   }
 
-  pModStatusMtx.lock();
   for(auto kv : pendingStatusNotify)
   {
     ModuleStateChange sc;
@@ -431,7 +430,6 @@ void ModuleManager::updateEverything()
     transmitEvent(charlie::EVENT_MODULE_STATE_CHANGE, &sc);
   }
   pendingStatusNotify.clear();
-  pModStatusMtx.unlock();
 
   for (auto id : notifyRelease)
     for (auto kv : minstances)
@@ -510,9 +508,7 @@ ModuleInstance* ModuleManager::getModuleInstance(u32 id)
 
 void ModuleManager::statusChanged(u32 id, charlie::EModuleStatus status)
 {
-  pModStatusMtx.lock();
   pendingStatusNotify[id] = status;
-  pModStatusMtx.unlock();
 }
 
 std::vector<charlie::CModuleInstance> ModuleManager::listModuleInstances()

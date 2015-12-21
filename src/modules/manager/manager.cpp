@@ -14,8 +14,10 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
-//#undef VERBOSE
+#if DEBUG
 #define VERBOSE
+#endif
+
 #include <charlie/curl.h>
 
 using namespace modules::manager;
@@ -393,9 +395,7 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
     }catch(const std::exception &exc)
     {
       MERR("Error occured while fetching from "<<str);
-//#ifdef VERBOSE
       MERR(exc.what());
-//#endif
     }
   }
 

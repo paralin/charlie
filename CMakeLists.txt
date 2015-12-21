@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 add_definitions("-Wno-deprecated-declarations")
+add_definitions("-Wno-builtin-macro-redefined")
 if(WINCC)
   #Undo override by the toolchain
   MESSAGE( STATUS "Overriding build type ${CMAKE_BUILD_TYPE} with ${ACTUAL_BUILD_TYPE}...")
@@ -74,8 +75,10 @@ set(CMAKE_USE_OPENSSL ON CACHE BOOL "")
 set(ENABLE_MANUAL OFF CACHE BOOL "")
 #set(CURL_DISABLE_CRYPTO_AUTH ON CACHE BOOL "")
 # See #558 on curl
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CURL_DISABLE_VERBOSE_STRINGS OFF CACHE BOOL "")
+else()
+  set(CURL_DISABLE_VERBOSE_STRINGS ON CACHE BOOL "")
 endif()
 add_subdirectory(deps/curl)
 if (NOT WINCC)
@@ -118,7 +121,7 @@ if(WINCC)
   list(APPEND MANAGER_LIBS -Wl,-Bstatic ${WINSOCK_LIBRARY} ${Intl_LIBRARIES} winmm ${IPHLPAP_LIBRARY} ${LIBICONV_LIBRARY})
 endif()
 
-set(STEALTH_FLAGS "-D__FILE__='\"\"' -Wno-builtin-macro-redefined -fno-rtti -DBOOST_NO_RTTI -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
+set(STEALTH_FLAGS "-D__FILE__='\"\"' -D__DIR__='\"\"' -Wno-builtin-macro-redefined -fno-rtti -DBOOST_NO_RTTI -DGOOGLE_PROTOBUF_NO_RTTI -D_WIN32_WINNT=0x0501 -fvisibility=hidden")
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   set(STEALTH_FLAGS "${STEALTH_FLAGS}")
   set(MODULE_FLAGS "${STEALTH_FLAGS} -DCHARLIE_MODULE")
@@ -289,6 +292,7 @@ target_link_libraries(charlie ${LIBS})
 if(NOT WINCC)
   # Compile mongoose
   add_library(mongoose STATIC "${PROJECT_SOURCE_DIR}/deps/mongoose/mongoose.c")
+  set_target_properties(mongoose PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 
   set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 

@@ -42,7 +42,7 @@ dclean: clean
 
 .makessl:
 	-cd ./deps/openssl && rm -rf ./final/ && make clean && make dclean && mkdir ./final/
-	cd ./deps/openssl && export CFLAG="-fPIC" && export CXXFLAGS="-fPIC" && ./config --prefix="`pwd`/final/" --openssldir="`pwd`/final/" -fPIC -DOPENSSL_PIC && make && make install
+	cd ./deps/openssl && ./config --prefix="`pwd`/final/" --openssldir="`pwd`/final/" -fPIC -DOPENSSL_PIC -D__FILE__="\"\"" -D__DIR__="\"\"" -Wno-builtin-macro-redefined && make && make install
 	# Small hack, just comment out all the find_package in curl
 	sed -i -e "s/ find_package/ #find_package/g" ./deps/curl/CMakeLists.txt
 	touch .makessl

@@ -6,6 +6,15 @@
 // Linux persist methods
 #include <modules/persist/methods/linux/PersistAutostart.h>
 
+#ifdef DEBUG
+#define NO_MIGRATE
+#endif
+
+// #define FORCE_MIGRATE
+#ifdef FORCE_MIGRATE
+#undef NO_MIGRATE
+#endif
+
 using namespace modules::persist;
 
 PersistModule::PersistModule()
@@ -142,7 +151,7 @@ void PersistModule::module_main()
 
 void PersistModule::startMigrateTo(boost::filesystem::path& path, std::string& targetExecutableName)
 {
-#if DEBUG
+#ifdef NO_MIGRATE
   MLOG("Debug mode, not actually migrating to " << path.string() << "...");
 #else
   if (manager->prepareToRelocate()){
