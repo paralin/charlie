@@ -580,7 +580,15 @@ int System::main(int argc, const char* argv[])
     while(continueLoop)
     {
       mManager->updateEverything();
-      boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
+      try {
+        boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
+      } catch (std::exception& ex)
+      {
+        CLOG("Exception during sleep, assuming shutdown.");
+#ifdef DEBUG
+        continueLoop = false;
+#endif
+      }
     }
     CLOG("Exiting...");
     FREE_OLD_CONFIG;

@@ -164,8 +164,9 @@ PersistInter::~PersistInter()
 {
 }
 
-void PersistInter::handleCommand(void* command)
+void PersistInter::handleCommand(u32 emsg, std::string& data)
 {
+  MERR("Received command " << emsg << " for this module but no commands are defined.");
 }
 
 CHARLIE_CONSTRUCT(PersistModule);

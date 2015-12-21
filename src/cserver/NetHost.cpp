@@ -73,7 +73,7 @@ void NetHost::clientCreated(std::shared_ptr<CharlieClient> client)
 
 void NetHost::clientDisconnected(std::shared_ptr<CharlieClient> client)
 {
-  for(std::vector<std::shared_ptr<CharlieClient>>::iterator it = clients.begin(); it != clients.end(); ++it) 
+  for(std::vector<std::shared_ptr<CharlieClient>>::iterator it = clients.begin(); it != clients.end(); ++it)
   {
     if (it->get() == client.get())
     {

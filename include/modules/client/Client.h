@@ -61,7 +61,7 @@ namespace modules
 
       void selectNetworkModule();
 
-      void send(charlie::EMsg emsg, u32 target, std::string& data);
+      void send(charlie::EMsg emsg, u32 target, std::string& data, u32 jobid = 0);
 
       void sendClientIdentify();
       void sendClientAccept(bool sendInfo = false);
@@ -107,8 +107,11 @@ namespace modules
       // Sub-networking module
       u32 netModuleId;
       bool usingNetModule;
+
       std::map<u32, ModuleNet*> loadedNetModules;
       std::set<u32> netModuleIds;
+
+      std::map<u32, ModuleAPI*> loadedModules;
 
       // Support socks later
     };

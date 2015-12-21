@@ -3,9 +3,13 @@
 #include <networking/EMsgSizes.h>
 #include <charlie/random.h>
 #include <charlie/SystemInfo.h>
+#include <charlie/StateChangeEvent.h>
 
 // 30 second allowed skew
 #define ALLOWED_TIME_SKEW 30
+
+// Depend on all modules optionally.
+#define DEPEND_ALL_MODULES
 
 #define DCASSERT(statement) if (!(statement)) { unexpectedDataReceived(); return; }
 #define DCASSERTL(statement, msg) if (!(statement)) { MERR(msg); unexpectedDataReceived(); return; }
@@ -92,22 +96,26 @@ void ClientModule::selectNetworkModule()
   if (mInter == NULL)
     return;
 
-  // Require all the network modules optionally
+  // Require all modules optionally
   auto netModules = mInter->listModulesWithCap(charlie::MODULE_CAP_NET, true);
   std::set<u32> oldNetModuleIds(netModuleIds);
   netModuleIds.clear();
   for (auto m : netModules)
   {
     netModuleIds.insert(m->id());
+#ifndef DEPEND_ALL_MODULES
     // this will immediately insert the dep
     mInter->requireDependency(m->id(), false);
+#endif
   }
 
+#ifndef DEPEND_ALL_MODULES
   for (auto m : oldNetModuleIds)
   {
     if (!netModuleIds.count(m))
       mInter->releaseDependency(m);
   }
+#endif
 
   // Dont mess with a working connection
   if (connected)
@@ -173,6 +181,7 @@ void ClientModule::injectDependency(u32 id, void* dep)
     MLOG("Received network module " << id);
     loadedNetModules[id] = (ModuleNet*) dep;
   }
+  loadedModules[id] = (ModuleAPI*) dep;
 }
 
 void ClientModule::releaseDependency(u32 id)
@@ -193,6 +202,7 @@ void ClientModule::releaseDependency(u32 id)
     MLOG("Network module we were using was dropped, disconnecting...");
     disconnect();
   }
+  loadedModules.erase(id);
 }
 
 void* ClientModule::getPublicInterface()
@@ -218,6 +228,17 @@ void ClientModule::unexpectedDataReceived()
 // Main function
 void ClientModule::module_main()
 {
+#ifdef DEPEND_ALL_MODULES
+  {
+    auto allMods = mInter->listModuleInstances();
+    for (auto mod : allMods)
+    {
+      if (mod.status() == charlie::MODULE_LOADED || mod.status() == charlie::MODULE_LOADED_RUNNING)
+        mInter->requireDependency(mod.id(), true);
+    }
+  }
+#endif
+
   selectNetworkModule();
   systemCrypto = mInter->getCrypto();
 
@@ -368,6 +389,39 @@ void ClientModule::handleMessage(std::string& data)
   {
     if (head.emsg() == charlie::EMsgServerAccept)
       handleServerAccept(data);
+    else
+      DCASSERTL(false, "Unknown emsg during handshake: " << head.emsg());
+    return;
+  }
+
+  DCASSERTL(head.has_target_module() && head.target_module() == 0, "Target module not specified, assuming something's wrong.");
+
+  u32 tmod = head.target_module();
+
+  // Find target module amongst loaded modules
+  if (!loadedModules.count(tmod))
+  {
+    MERR("Message to module " << tmod << " not routeable.");
+    charlie::CNetFailure fail;
+    fail.set_fail_type(charlie::FAILURE_MODULE_NOTFOUND);
+    std::string data = fail.SerializeAsString();
+    send(charlie::EMsgFailure, head.target_module(), data, head.job_id());
+    return;
+  }
+
+  try
+  {
+    loadedModules[tmod]->handleCommand(head.emsg(), data);
+  }
+  catch (std::exception& ex)
+  {
+    MERR("Error when handleCommand() on " << tmod << ", " << ex.what());
+    charlie::CNetFailure fail;
+    fail.set_fail_type(charlie::FAILURE_EXCEPTION_RAISED);
+    fail.set_error_message(ex.what());
+    std::string data = fail.SerializeAsString();
+    send(charlie::EMsgFailure, head.target_module(), data, head.job_id());
+    return;
   }
 }
 
@@ -403,7 +457,7 @@ void ClientModule::sendClientAccept(bool sendInfo)
   send(charlie::EMsgClientAccept, 0, outp);
 }
 
-void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data)
+void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data, u32 jobid)
 {
   charlie::CMessageBody nBody;
 
@@ -444,6 +498,8 @@ void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data)
   nHead.set_emsg(emsg);
   nHead.set_target_module(targetModule);
   nHead.set_body_size(sBody.length());
+  if (jobid)
+    nHead.set_job_id(jobid);
 
   std::string sHead = nHead.SerializeAsString();
 
@@ -718,6 +774,18 @@ void ClientModule::handleEvent(u32 eve, void* data)
   charlie::EModuleEvents event = (charlie::EModuleEvents) eve;
   if (event == charlie::EVENT_MODULE_TABLE_RELOADED)
       selectNetworkModule();
+  else if (event == charlie::EVENT_MODULE_STATE_CHANGE)
+  {
+    ModuleStateChange* ch = (ModuleStateChange*) data;
+#ifndef DEPEND_ALL_MODULES
+    if (netModuleIds.count(ch->mod))
+      return;
+#endif
+    if (ch->state == charlie::MODULE_LOADED || ch->state == charlie::MODULE_LOADED_RUNNING)
+      mInter->requireDependency(ch->mod, true);
+    else
+      mInter->releaseDependency(ch->mod);
+  }
 }
 
 ClientInter::ClientInter(ClientModule * mod)
@@ -729,8 +797,9 @@ ClientInter::~ClientInter()
 {
 }
 
-void ClientInter::handleCommand(void* command)
+void ClientInter::handleCommand(u32 emsg, std::string& command)
 {
+  MERR("Received command " << emsg << " for this module but no commands are defined.");
 }
 
 CHARLIE_CONSTRUCT(ClientModule);

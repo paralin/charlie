@@ -14,7 +14,7 @@ namespace modules
       ClientInter(ClientModule * mod);
       ~ClientInter();
 
-      void handleCommand(void* buf);
+      void handleCommand(u32 emsg, std::string& buf);
 
     private:
       ClientModule* mod;

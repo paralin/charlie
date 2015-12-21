@@ -54,6 +54,8 @@ class ModuleInterImpl : public modules::ModuleInterface
     charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL);
     charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
 
+    std::vector<charlie::CModuleInstance> listModuleInstances();
+
   private:
     ModuleManager *mManager;
     ModuleInstance * inst;

@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <charlie/hash.h>
 #include <sstream>
+#include <charlie/StateChangeEvent.h>
 
 #define USE_MHASH_FILENAME
 
@@ -43,7 +44,6 @@ bool ModuleManager::parseModuleTable(charlie::CSignedBuffer* inbuf, charlie::CMo
     return false;
   }
   CLOG("Module table verified and parsed, timestamp: "<<target->timestamp());
-  moduleTableDirty = true;
   return true;
 }
 
@@ -73,7 +73,7 @@ bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
   sys->config.set_allocated_emodtable(buf);
   deferSaveConfig();
   //todo: maybe we need to update all the modules?
-  //todo: notify the modules of the change?
+  moduleTableDirty = true;
   return true;
 }
 
@@ -413,21 +413,31 @@ void ModuleManager::updateEverything()
     toReload.clear();
   }
   mtx.unlock();
+
   if(modulesDirty)
   {
     modulesDirty = false;
     evaluateRequirements();
   }
-  mtx.lock();
-  if(notifyRelease.size()>0){
-    for (auto &any : minstances ) {
-      std::shared_ptr<ModuleInstance> inst = any.second;
-      for(auto id : notifyRelease)
-        inst->notifyModuleReleased(id);
-    }
-    notifyRelease.clear();
-  }
 
+  pModStatusMtx.lock();
+  for(auto kv : pendingStatusNotify)
+  {
+    ModuleStateChange sc;
+    sc.mod = kv.first;
+    sc.state = kv.second;
+    transmitEvent(charlie::EVENT_MODULE_STATE_CHANGE, &sc);
+  }
+  pendingStatusNotify.clear();
+  pModStatusMtx.unlock();
+
+  for (auto id : notifyRelease)
+    for (auto kv : minstances)
+      if (kv.second->modReqs.count(id) || kv.second->modOptReqs.count(id))
+        kv.second->notifyModuleReleased(id);
+  notifyRelease.clear();
+
+  mtx.lock();
   if(configDirty)
     sys->validateAndSaveConfig();
   configDirty = false;
@@ -494,4 +504,19 @@ ModuleInstance* ModuleManager::getModuleInstance(u32 id)
 {
   if(minstances.count(id) == 0) return NULL;
   return minstances[id].get();
+}
+
+void ModuleManager::statusChanged(u32 id, charlie::EModuleStatus status)
+{
+  pModStatusMtx.lock();
+  pendingStatusNotify[id] = status;
+  pModStatusMtx.unlock();
+}
+
+std::vector<charlie::CModuleInstance> ModuleManager::listModuleInstances()
+{
+  std::vector<charlie::CModuleInstance> r;
+  for (auto t : minstances)
+    r.push_back(t.second->inst);
+  return r;
 }

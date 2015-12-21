@@ -66,5 +66,8 @@ namespace modules
       virtual std::set<charlie::CModule*> listModulesWithCap(u32 cap, bool filterHasBinary) = 0;
       virtual charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL) = 0;
       virtual charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL) = 0;
+
+      // List all the current instances
+      virtual std::vector<charlie::CModuleInstance> listModuleInstances() = 0;
   };
 };

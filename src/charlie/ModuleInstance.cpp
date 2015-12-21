@@ -170,6 +170,7 @@ inline void ModuleInstance::setStatus(::charlie::EModuleStatus value)
   if(inst.status() == value) return;
   MLOG("status => "<<value);
   inst.set_status(value);
+  mManager->statusChanged(inst.id(), value);
 }
 
 charlie::EModuleStatus ModuleInstance::status()

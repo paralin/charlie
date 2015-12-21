@@ -15,8 +15,7 @@ namespace modules
   public:
     virtual ~ModuleAPI() {};
 
-    // Handle a server command packet
-    // This method is expected to release the buffer later
-    virtual void handleCommand(void* buf) = 0;
+    // Handle a server command
+    virtual void handleCommand(u32 emsg, std::string& buf) = 0;
   };
 };

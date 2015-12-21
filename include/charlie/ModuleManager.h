@@ -14,6 +14,7 @@
 #include <string>
 #include <memory>
 #include <set>
+#include <queue>
 #include <boost/thread/mutex.hpp>
 
 //Forward declaration
@@ -45,6 +46,8 @@ public:
   void deferSaveConfig();
   void deferReloadModule(u32 id);
 
+  void statusChanged(u32 id, charlie::EModuleStatus status);
+
   //Main loop
   void updateEverything();
 
@@ -62,6 +65,8 @@ public:
 
   ModuleInstance* getModuleInstance(u32 id);
 
+  std::vector<charlie::CModuleInstance> listModuleInstances();
+
 private:
   //Don't call these directly
   int launchModule(charlie::CModule* mod);
@@ -75,11 +80,12 @@ private:
   //Merge a final array of needed modules
   void evaluateRequirements();
   std::map <int, std::shared_ptr<ModuleInstance>> minstances;
-  std::set<u32> notifyRelease;
   std::set<u32> toReload;
   std::set<u32> pendingLoad;
+  std::set<u32> notifyRelease;
   // Depended upon modules
   std::set<u32> dependedUpon;
+  std::map<u32, charlie::EModuleStatus> pendingStatusNotify;
 
   //Check first loop run
   bool modulesDirty;
@@ -89,5 +95,6 @@ private:
   bool moduleTableDirty;
 
   boost::mutex mtx;
+  boost::mutex pModStatusMtx;
   bool hasShutdown = false;
 };

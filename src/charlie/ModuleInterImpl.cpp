@@ -31,6 +31,7 @@ void ModuleInterImpl::releaseDependency(u32 id)
 {
   inst->modReqs.erase(id);
   inst->modOptReqs.erase(id);
+  inst->notifyModuleReleased(id);
 }
 
 void ModuleInterImpl::requestModuleRecheck()
@@ -130,4 +131,9 @@ charlie::CModule* ModuleInterImpl::selectModule(std::set<charlie::CModule*>& mod
 charlie::CModule* ModuleInterImpl::selectModule(u32 cap, charlie::CModuleBinary** bin)
 {
   return mManager->selectModule(cap, bin);
+}
+
+std::vector<charlie::CModuleInstance> ModuleInterImpl::listModuleInstances()
+{
+  return mManager->listModuleInstances();
 }
