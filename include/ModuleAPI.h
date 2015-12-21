@@ -5,6 +5,8 @@
 #include <string>
 #include <iostream>
 
+#include <protogen/charlie_net.pb.h>
+
 #define VISIBLE __attribute__ ((visibility ("default")))
 
 namespace modules
@@ -16,6 +18,6 @@ namespace modules
     virtual ~ModuleAPI() {};
 
     // Handle a server command
-    virtual void handleCommand(u32 emsg, std::string& buf) = 0;
+    virtual void handleCommand(const charlie::CMessageTarget& target, std::string& buf) = 0;
   };
 };

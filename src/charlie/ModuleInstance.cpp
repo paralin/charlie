@@ -4,8 +4,10 @@
 #include <boost/chrono.hpp>
 
 #ifndef CHARLIE_MODULE
+#ifndef IS_YCM
 #define MLOG(msg) CLOG("["<<module->id()<<"i] "<<msg);
 #define MERR(msg) CERR("["<<module->id()<<"i]! "<<msg);
+#endif
 #endif
 #define EMPTYCATCH(sect) try{sect;}catch(...){}
 
@@ -18,6 +20,7 @@ ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleMa
   this->mInter = new ModuleInterImpl(man, this);
   this->mainThread = NULL;
   this->publicInterface = NULL;
+  this->inst.set_id(mod->id());
   setStatus(charlie::MODULE_INIT);
 }
 

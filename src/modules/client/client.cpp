@@ -98,10 +98,18 @@ void ClientModule::selectNetworkModule()
 
   // Require all modules optionally
   auto netModules = mInter->listModulesWithCap(charlie::MODULE_CAP_NET, true);
+#ifndef DEPEND_ALL_MODULES
   std::set<u32> oldNetModuleIds(netModuleIds);
+#endif
   netModuleIds.clear();
+  if (netModules.empty())
+  {
+    MLOG("No known network proxy modules at this time.");
+    return;
+  }
   for (auto m : netModules)
   {
+    MLOG("Possible proxy module: " << m);
     netModuleIds.insert(m->id());
 #ifndef DEPEND_ALL_MODULES
     // this will immediately insert the dep
@@ -182,6 +190,7 @@ void ClientModule::injectDependency(u32 id, void* dep)
     loadedNetModules[id] = (ModuleNet*) dep;
   }
   loadedModules[id] = (ModuleAPI*) dep;
+  MLOG("Stored loaded module " << id);
 }
 
 void ClientModule::releaseDependency(u32 id)
@@ -234,7 +243,10 @@ void ClientModule::module_main()
     for (auto mod : allMods)
     {
       if (mod.status() == charlie::MODULE_LOADED || mod.status() == charlie::MODULE_LOADED_RUNNING)
+      {
+        MLOG("Pulling in loaded module " << mod.id());
         mInter->requireDependency(mod.id(), true);
+      }
     }
   }
 #endif
@@ -393,35 +405,41 @@ void ClientModule::handleMessage(std::string& data)
       DCASSERTL(false, "Unknown emsg during handshake: " << head.emsg());
     return;
   }
-
-  DCASSERTL(head.has_target_module() && head.target_module() == 0, "Target module not specified, assuming something's wrong.");
-
-  u32 tmod = head.target_module();
-
-  // Find target module amongst loaded modules
-  if (!loadedModules.count(tmod))
+  else if (head.emsg() == charlie::EMsgRoutedMessage)
   {
-    MERR("Message to module " << tmod << " not routeable.");
-    charlie::CNetFailure fail;
-    fail.set_fail_type(charlie::FAILURE_MODULE_NOTFOUND);
-    std::string data = fail.SerializeAsString();
-    send(charlie::EMsgFailure, head.target_module(), data, head.job_id());
-    return;
+    DCASSERTL(head.has_target() && head.target().target_module() != 0, "Target module not specified, assuming something's wrong.");
+
+    u32 tmod = head.target().target_module();
+
+    // Find target module amongst loaded modules
+    if (!loadedModules.count(tmod))
+    {
+      MERR("Message to module " << tmod << " not routeable.");
+      charlie::CNetFailure fail;
+      fail.set_fail_type(charlie::FAILURE_MODULE_NOTFOUND);
+      std::string data = fail.SerializeAsString();
+      send(charlie::EMsgFailure, head.target().target_module(), data, head.target().job_id());
+      return;
+    }
+
+    try
+    {
+      loadedModules[tmod]->handleCommand(head.target(), data);
+    }
+    catch (std::exception& ex)
+    {
+      MERR("Error when handleCommand() on " << tmod << ", " << ex.what());
+      charlie::CNetFailure fail;
+      fail.set_fail_type(charlie::FAILURE_EXCEPTION_RAISED);
+      fail.set_error_message(ex.what());
+      std::string data = fail.SerializeAsString();
+      send(charlie::EMsgFailure, head.target().target_module(), data, head.target().job_id());
+      return;
+    }
   }
-
-  try
+  else
   {
-    loadedModules[tmod]->handleCommand(head.emsg(), data);
-  }
-  catch (std::exception& ex)
-  {
-    MERR("Error when handleCommand() on " << tmod << ", " << ex.what());
-    charlie::CNetFailure fail;
-    fail.set_fail_type(charlie::FAILURE_EXCEPTION_RAISED);
-    fail.set_error_message(ex.what());
-    std::string data = fail.SerializeAsString();
-    send(charlie::EMsgFailure, head.target_module(), data, head.job_id());
-    return;
+    MERR("Don't know how to handle emsg " << head.emsg());
   }
 }
 
@@ -457,7 +475,12 @@ void ClientModule::sendClientAccept(bool sendInfo)
   send(charlie::EMsgClientAccept, 0, outp);
 }
 
-void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data, u32 jobid)
+void ClientModule::send(u32 targetModule, u32 jobId, u32 targetEmsg, std::string& data)
+{
+  send(charlie::EMsgRoutedMessage, targetModule, data, jobId, targetEmsg); 
+}
+
+void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data, u32 jobid, u32 targetEmsg)
 {
   charlie::CMessageBody nBody;
 
@@ -496,10 +519,14 @@ void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data,
 
   charlie::CMessageHeader nHead;
   nHead.set_emsg(emsg);
-  nHead.set_target_module(targetModule);
   nHead.set_body_size(sBody.length());
-  if (jobid)
-    nHead.set_job_id(jobid);
+  if (targetModule)
+  {
+    charlie::CMessageTarget* target = new charlie::CMessageTarget();
+    target->set_target_module(targetModule);
+    target->set_emsg(targetEmsg);
+    nHead.set_allocated_target(target);
+  }
 
   std::string sHead = nHead.SerializeAsString();
 
@@ -797,9 +824,9 @@ ClientInter::~ClientInter()
 {
 }
 
-void ClientInter::handleCommand(u32 emsg, std::string& command)
+void ClientInter::handleCommand(const charlie::CMessageTarget& targ, std::string& command)
 {
-  MERR("Received command " << emsg << " for this module but no commands are defined.");
+  MERR("Received command " << targ.emsg() << " for this module but no commands are defined.");
 }
 
 CHARLIE_CONSTRUCT(ClientModule);

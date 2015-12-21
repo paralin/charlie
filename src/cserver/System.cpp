@@ -5,6 +5,7 @@
 #include <ctime>
 #include <fstream>
 #include <boost/thread.hpp>
+#include <cserver/ModuleTable.h>
 
 #define RFAIL(fcn, msg) res=fcn;if(res!=0){CERR(msg);return res;}
 
@@ -20,6 +21,22 @@ System::~System()
   delete host;
   delete crypt;
   delete nHost;
+}
+
+charlie::CModuleTable* System::generateModuleTableFromFile(const char* path)
+{
+  std::ifstream inFile (path, std::ios_base::in);
+  if (!inFile.is_open())
+  {
+    CERR("Unable to find path " << path);
+    return NULL;
+  }
+
+  std::stringstream buffer;
+  buffer << inFile.rdbuf();
+  inFile.close();
+
+  return generateModuleTableFromJson2(buffer.str().c_str(), crypt, std::string("./modules"));
 }
 
 int System::loadCrypto()

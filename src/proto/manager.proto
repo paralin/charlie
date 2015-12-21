@@ -27,3 +27,14 @@ message CDownloadRequest
   optional uint32 id = 1;
   optional uint32 platform = 2;
 }
+
+// Server sending a new module table
+message CModuleTableUpdate
+{
+  optional charlie.CSignedBuffer buf = 1;
+}
+
+enum EManagerEMsg
+{
+  EManagerEMsg_ModuleTableUpdate = 1;
+}

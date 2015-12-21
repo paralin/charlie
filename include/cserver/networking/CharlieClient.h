@@ -30,7 +30,11 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>
     void sendServerIdentify();
     void sendServerAccept();
 
-    void send(charlie::EMsg emsg, u32 targetModule, std::string& data);
+    // Don't use this
+    [[deprecated("Replaced by the other send.")]]
+    void send(charlie::EMsg emsg, u32 targetModule, std::string& data, u32 jobid = 0, u32 targetEmsg = 0);
+    void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);
+    void send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data);
 
     bool validateMessageHeader();
     bool validateMessageBody();
@@ -38,8 +42,12 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>
 
     bool handleClientIdentify(std::string& data);
     void handleClientAccept(std::string& data);
+    void handleFailure(std::string& data);
 
     void disconnect();
+
+    void sendInitData();
+    void sendModuleTable();
 
     Crypto* sessionCrypto;
     Crypto* serverCrypto;

@@ -21,7 +21,7 @@ namespace modules
       std::string fetchOcUrl(const std::string& url);
       CManagerInfo* getInfo();
 
-      void handleCommand(u32 emsg, std::string& data);
+      void handleCommand(const charlie::CMessageTarget& targ, std::string& data);
 
     private:
       ManagerModule* mod;

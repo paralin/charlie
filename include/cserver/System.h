@@ -18,6 +18,8 @@ class System {
 
     Crypto * crypt;
 
+    charlie::CModuleTable* generateModuleTableFromFile(const char* path = "./init.json");
+
   private:
     WebHost* host;
     NetHost* nHost;

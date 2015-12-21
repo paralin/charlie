@@ -1,6 +1,7 @@
 #pragma once
 #include <Module.h>
 #include <ModuleAPI.h>
+#include <protogen/charlie_net.pb.h>
 
 //This is the public interface
 namespace modules
@@ -14,7 +15,7 @@ namespace modules
       ClientInter(ClientModule * mod);
       ~ClientInter();
 
-      void handleCommand(u32 emsg, std::string& buf);
+      void handleCommand(const charlie::CMessageTarget& targ, std::string& buf);
 
     private:
       ClientModule* mod;

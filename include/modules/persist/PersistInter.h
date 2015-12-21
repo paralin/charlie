@@ -14,7 +14,7 @@ namespace modules
       PersistInter(PersistModule * mod);
       ~PersistInter();
 
-      void handleCommand(u32 emsg, std::string& buf);
+      void handleCommand(const charlie::CMessageTarget& target, std::string& buf);
     private:
       PersistModule* mod;
     };

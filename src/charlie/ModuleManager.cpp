@@ -50,6 +50,7 @@ bool ModuleManager::parseModuleTable(charlie::CSignedBuffer* inbuf, charlie::CMo
 bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
 {
   charlie::CModuleTable ntab;
+
   CLOG("Verifying incoming module table...");
   if(!parseModuleTable(buf, &ntab))
   {
@@ -66,6 +67,7 @@ bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
     CERR("Incoming table is older / same as current.");
     return false;
   }
+
   //Okay, we have a good new module table
   sys->modTable.Clear();
   sys->modTable.CheckTypeAndMergeFrom(ntab);

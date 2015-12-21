@@ -582,7 +582,7 @@ int System::main(int argc, const char* argv[])
       mManager->updateEverything();
       try {
         boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
-      } catch (std::exception& ex)
+      } catch(int e)
       {
         CLOG("Exception during sleep, assuming shutdown.");
 #ifdef DEBUG

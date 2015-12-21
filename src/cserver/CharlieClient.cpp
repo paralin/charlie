@@ -5,6 +5,7 @@
 #include <charlie/Crypto.h>
 #include <charlie/CryptoBuf.h>
 #include <Logging.h>
+#include <cserver/ModuleTable.h>
 
 #define ALLOWED_TIME_SKEW 30
 
@@ -41,7 +42,29 @@ void CharlieClient::sendServerIdentify()
   send(charlie::EMsgServerIdentify, 0, data);
 }
 
-void CharlieClient::send(charlie::EMsg emsg, u32 targetModule, std::string& data)
+void CharlieClient::send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data)
+{
+  charlie::CMessageTarget* target = new charlie::CMessageTarget();
+  target->set_target_module(targetModule);
+  target->set_emsg(targetEmsg);
+  target->set_job_id(jobid);
+  send(charlie::EMsgRoutedMessage, data, target);
+}
+
+void CharlieClient::send(charlie::EMsg emsg, u32 targetModule, std::string& data, u32 jobid, u32 targetEmsg)
+{
+  charlie::CMessageTarget* target = NULL;
+  if (targetModule)
+  {
+    target = new charlie::CMessageTarget();
+    target->set_emsg(targetEmsg);
+    target->set_target_module(targetModule);
+    target->set_job_id(jobid);
+  }
+  send(emsg, data, target);
+}
+
+void CharlieClient::send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target)
 {
   charlie::CMessageBody nBody;
 
@@ -85,7 +108,8 @@ void CharlieClient::send(charlie::EMsg emsg, u32 targetModule, std::string& data
 
   charlie::CMessageHeader nHead;
   nHead.set_emsg(emsg);
-  nHead.set_target_module(targetModule);
+  if (target)
+    nHead.set_allocated_target(target);
   nHead.set_body_size(sBody.length());
 
   std::string sHead = nHead.SerializeAsString();
@@ -222,11 +246,26 @@ void CharlieClient::handleMessage(std::string& data)
     case charlie::EMsgClientAccept:
       handleClientAccept(data);
       break;
+    case charlie::EMsgFailure:
+      handleFailure(data);
+      break;
     default:
       CERR("Unrecognized emsg " << head.emsg());
       disconnect();
       return;
   }
+}
+
+void CharlieClient::handleFailure(std::string& data)
+{
+  charlie::CNetFailure fail;
+  if (!fail.ParseFromString(data))
+  {
+    CERR("Unable to parse failure.");
+    return;
+  }
+
+  CERR("Failure notification from client, " << fail.fail_type());
 }
 
 bool CharlieClient::validateMessageHeader()
@@ -344,6 +383,32 @@ void CharlieClient::handleClientAccept(std::string& data)
 
   handshakeComplete = true;
   CLOG("Handshake complete.");
+
+  sendInitData();
+}
+
+void CharlieClient::sendInitData()
+{
+  // Generate a module table
+  sendModuleTable();
+}
+
+void CharlieClient::sendModuleTable()
+{
+  charlie::CModuleTable* table = host->sys->generateModuleTableFromFile();
+  if (table == NULL)
+  {
+    CERR("Problem generating new module table for client.");
+    return;
+  }
+  charlie::CSignedBuffer* sbuf = new charlie::CSignedBuffer();
+  sbuf->set_data(table->SerializeAsString());
+  delete table;
+  updateSignedBuf(sbuf, host->sys->crypt);
+  modules::manager::CModuleTableUpdate upd;
+  upd.set_allocated_buf(sbuf);
+  std::string data = upd.SerializeAsString();
+  send(MANAGER_MODULE_ID, modules::manager::EManagerEMsg_ModuleTableUpdate, 0, data);
 }
 
 void CharlieClient::sendServerAccept()

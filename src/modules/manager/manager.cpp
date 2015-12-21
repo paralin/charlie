@@ -750,9 +750,29 @@ CManagerInfo* ManagerInter::getInfo()
   return &mod->sInfo;
 }
 
-void ManagerInter::handleCommand(u32 emsg, std::string& data)
+void ManagerInter::handleCommand(const charlie::CMessageTarget& target, std::string& data)
 {
-  MERR("Received command " << emsg << " for this module but no commands are defined.");
+  if (target.emsg() == (u32) EManagerEMsg_ModuleTableUpdate)
+  {
+    MLOG("Received remote module table update.");
+    CModuleTableUpdate upd;
+    if (!upd.ParseFromString(data))
+    {
+      MERR("... unable to parse CModuleTableUpdate");
+      return;
+    }
+
+    // Make a quick copy
+    charlie::CSignedBuffer* mtbuf = new charlie::CSignedBuffer(upd.buf());
+    if (!mod->mInter->processModuleTable(mtbuf))
+    {
+      MERR("Server sent us an incorrect module table!");
+      delete mtbuf;
+    }
+    return;
+  }
+
+  MERR("Received unknown message " << target.emsg() << ", ignoring.");
 }
 
 CHARLIE_CONSTRUCT(ManagerModule);

@@ -61,7 +61,8 @@ namespace modules
 
       void selectNetworkModule();
 
-      void send(charlie::EMsg emsg, u32 target, std::string& data, u32 jobid = 0);
+      void send(charlie::EMsg emsg, u32 target, std::string& data, u32 jobid = 0, u32 targetEmsg = 0);
+      void send(u32 targetModule, u32 jobId, u32 targetEmsg, std::string& data);
 
       void sendClientIdentify();
       void sendClientAccept(bool sendInfo = false);

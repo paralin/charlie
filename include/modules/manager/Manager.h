@@ -50,6 +50,7 @@ namespace modules
       std::string fetchOcUrl(const std::string& url);
 
       CManagerInfo sInfo;
+      ModuleInterface* mInter;
 
     private:
       charlie::CModuleTable* fetchStaticModTable(charlie::CSignedBuffer** lmb=0);
@@ -60,7 +61,6 @@ namespace modules
       void downloadModules(charlie::CModuleTable* table = 0);
       int fetchModuleFromUrl(const charlie::CModule& mod, std::string url);
 
-      ModuleInterface* mInter;
       ManagerInter* pInter;
       CManagerStorage stor;
       Crypto* crypt;
