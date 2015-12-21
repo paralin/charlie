@@ -12,11 +12,14 @@
 #include <boost/asio.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <networking/EMsgSizes.h>
+#include <SModuleInterface.h>
+#include <cserver/ModuleInterface.h>
+#include <cserver/ServerModuleInstance.h>
 
 using boost::asio::ip::tcp;
 
 class NetHost;
-class CharlieClient : public std::enable_shared_from_this<CharlieClient>
+class CharlieClient : public std::enable_shared_from_this<CharlieClient>, public server_modules::SModuleInterface
 {
   public:
     CharlieClient(std::shared_ptr<tcp::socket>& socket, NetHost* host);
@@ -52,8 +55,17 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>
     Crypto* sessionCrypto;
     Crypto* serverCrypto;
 
-  private:
+    // Methods for the modules to call
+    inline Crypto* getSessionCrypto() { return sessionCrypto; }
+    inline Crypto* getServerCrypto() { return serverCrypto; }
+    inline std::string getClientId() { return clientId; }
+    inline std::string getClientPubkey() { return clientPubkey; }
+
+    std::vector<std::shared_ptr<ServerModuleInstance>> modules;
+
     NetHost* host;
+
+  private:
     std::shared_ptr<tcp::socket> socket;
     std::vector<char> buffer;
 
@@ -70,6 +82,9 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>
     bool receivedClientIdentify;
     std::string clientChallenge;
     std::string serverChallenge;
+
+    std::string clientId;
+    std::string clientPubkey;
 };
 
 typedef std::shared_ptr<CharlieClient> client_ptr;

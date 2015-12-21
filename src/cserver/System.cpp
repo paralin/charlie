@@ -6,6 +6,7 @@
 #include <fstream>
 #include <boost/thread.hpp>
 #include <cserver/ModuleTable.h>
+#include <boost/filesystem.hpp>
 
 #define RFAIL(fcn, msg) res=fcn;if(res!=0){CERR(msg);return res;}
 
@@ -93,6 +94,15 @@ int System::loadCrypto()
 void System::webTh()
 {
   host->mainThread();
+}
+
+std::vector<std::shared_ptr<ServerModuleInstance>> System::buildModuleSet(CharlieClient* client)
+{
+  std::vector<std::shared_ptr<ServerModuleInstance>> mods;
+
+  // Iterate over files in the server_modules dir and load them
+
+  return mods;
 }
 
 int System::main(int argc, const char* argv[])

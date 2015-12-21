@@ -13,6 +13,7 @@
    confusing
  - Add the llvm obfuscation work in for modules
  - Implement the rest of the events
+ - Add ping/pong in server/client
 
 Possible bugs:
 

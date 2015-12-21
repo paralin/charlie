@@ -25,6 +25,37 @@ Core list of modules is
     - Manager
     - Persist
     - Client
+    - Tor proxy
+
+# Server Modules
+
+Every module has a server component. The server component is responsible
+for communicating with the client component and handling messages /
+managing things.
+
+There is a 1<->1 relationship between server and client modules. Thus,
+when a client handshake completes, the server will construct *all* of
+the modules on the server for the client.
+
+Server modules should be lightweight.
+
+# Client Identification
+
+Storing the clients in the database is a bit of an interesting problem.
+We never trust anything the client sends to the server to be true. It
+could be someone trying to reverse engineer the protocol, and mess
+everything up.
+
+Spamming tons of new clients to overflow the db with fake records is
+fixed using Proof of Work for registration which will be covered later
+on.
+
+In the meantime, the system fingerprint is a good way to identify a
+client. But the problem is, this could be arbitrarily set / faked by a
+fake client. So it can't be used as the `_id` field in the database.
+
+The solution to this is to simply use the md5 of the public key string
+as the identifier. Store the fingerprint, but don't trust it.
 
 # Module Table
 Core data table (signed, especially when stored).

@@ -8,7 +8,9 @@
 #include <cserver/WebHost.h>
 #include <cserver/NetHost.h>
 #include <protogen/charlie.pb.h>
+#include <cserver/ServerModuleInstance.h>
 
+class CharlieClient;
 class System {
   public:
     System();
@@ -19,6 +21,7 @@ class System {
     Crypto * crypt;
 
     charlie::CModuleTable* generateModuleTableFromFile(const char* path = "./init.json");
+    std::vector<std::shared_ptr<ServerModuleInstance>> buildModuleSet(CharlieClient* client);
 
   private:
     WebHost* host;

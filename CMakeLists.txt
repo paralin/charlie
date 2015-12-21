@@ -213,6 +213,21 @@ add_custom_command(TARGET client POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:client> ${CMAKE_SHARED_LIBRARY_PREFIX}2777954855${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
 
+# Build client (server version)
+file(GLOB_RECURSE s_client_SRC "src/server_modules/client/*.cpp")
+add_library(s_client SHARED ${s_client_SRC}
+  "src/charlie/Crypto.cpp"
+  "src/charlie/CryptoBuf.cpp"
+  "charlie.pb.redacted.cc"
+  "charlie_net.pb.redacted.cc"
+  "client.pb.redacted.cc")
+set_target_properties(s_client PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"client\"'")
+set_target_properties(s_client PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
+target_link_libraries(s_client -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
+add_custom_command(TARGET client POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:s_client> ${CMAKE_BINARY_DIR}/server_modules/${CMAKE_SHARED_LIBRARY_PREFIX}client${CMAKE_SHARED_LIBRARY_SUFFIX}
+)
+
 # Set the list of libraries to compile embed code
 set(embed_libraries manager)
 
@@ -294,7 +309,7 @@ if(NOT WINCC)
   add_library(mongoose STATIC "${PROJECT_SOURCE_DIR}/deps/mongoose/mongoose.c")
   set_target_properties(mongoose PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
 
-  set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
+  set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_CHRONO_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES}  -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
   file(GLOB cserver_SRC "src/cserver/*.cpp")
   file(GLOB protogen_SRC "src/protogen/*.cc")

@@ -6,6 +6,7 @@
 #include <charlie/CryptoBuf.h>
 #include <Logging.h>
 #include <cserver/ModuleTable.h>
+#include <openssl/md5.h>
 
 #define ALLOWED_TIME_SKEW 30
 
@@ -359,6 +360,25 @@ bool CharlieClient::handleClientIdentify(std::string& data)
     return false;
   }
 
+  // Take the pubkey out again
+  unsigned char* pubkey;
+  if (sessionCrypto->getRemotePubKey(&pubkey) == FAILURE)
+  {
+    CERR("Unable to serialize the client public key as a string.");
+    return false;
+  }
+  clientPubkey = std::string((char*) pubkey);
+  free(pubkey);
+
+  // MD5 the pubkey to get the identifier
+  char mdString[33];
+  unsigned char digest[MD5_DIGEST_LENGTH];
+  MD5((const unsigned char*) clientPubkey.c_str(), clientPubkey.length(), (unsigned char*)&digest);
+  for (int i=0; i < 16; i++)
+    sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+  clientId = mdString;
+
+  CLOG("Client identifier: " << clientId);
   CLOG("Received valid client identify.");
   receivedClientIdentify = true;
   sendServerAccept();
@@ -383,8 +403,10 @@ void CharlieClient::handleClientAccept(std::string& data)
 
   handshakeComplete = true;
   CLOG("Handshake complete.");
-
   sendInitData();
+
+  CLOG("Initializing server modules...");
+  modules = host->sys->buildModuleSet(this);
 }
 
 void CharlieClient::sendInitData()
