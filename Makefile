@@ -43,6 +43,8 @@ dclean: clean
 .makessl:
 	-cd ./deps/openssl && rm -rf ./final/ && make clean && make dclean && mkdir ./final/
 	cd ./deps/openssl && ./config --prefix="`pwd`/final/" --openssldir="`pwd`/final/" -fPIC -DOPENSSL_PIC -D__FILE__="\"\"" -D__DIR__="\"\"" -Wno-builtin-macro-redefined && make && make install
+	sed -i -e "s/^my \$$dir.*$$/my \$$dir = \"\";/g" ./deps/openssl/final/bin/c_rehash
+	sed -i -e "s/^my \$$prefix.*$$/my \$$prefix = \"\";/g" ./deps/openssl/final/bin/c_rehash
 	# Small hack, just comment out all the find_package in curl
 	sed -i -e "s/ find_package/ #find_package/g" ./deps/curl/CMakeLists.txt
 	touch .makessl

