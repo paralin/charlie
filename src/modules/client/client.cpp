@@ -30,6 +30,7 @@ ClientModule::ClientModule() :
 {
   MLOG("Client module constructed...");
   pInter = new ClientInter(this);
+  mi = mr = 0;
   clientChallenge = gen_random(10);
   // This will set everything to an init value
   releaseNetworking();
@@ -76,6 +77,7 @@ void ClientModule::disconnect()
   body.Clear();
   serverChallenge = "";
   resetReceiveContext();
+  mi = mr = 0;
   if (sessionCrypto)
   {
     delete sessionCrypto;
@@ -321,8 +323,22 @@ void ClientModule::module_main()
         expectingHeaderLengthPrefix = false;
         expectingHeader = true;
         expectedHeaderSize = 0;
-        for (unsigned i = 0; i < 4; ++i)
-          expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[i]) & 0xFF);
+
+        // Order is
+        //  - 0 -> 2
+        //  - 1 -> 0
+        //  - 2 -> 3
+        //  - 3 -> 1
+        // Also each is xor by the number of messages sent
+        char cnt = mr++;
+        if (mr >= UCHAR_MAX)
+          mr = 0;
+
+        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[2] ^ cnt) & 0XFF);
+        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[0] ^ cnt) & 0XFF);
+        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[3] ^ cnt) & 0XFF);
+        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[1] ^ cnt) & 0XFF);
+
         DCASSERTLC(expectedHeaderSize < 80, "Expected header size = " << expectedHeaderSize << " which is too big.");
       } else if (expectingHeader)
       {
@@ -530,11 +546,22 @@ void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data,
 
   std::string sHead = nHead.SerializeAsString();
 
+  // Order is
+  //  - 0 -> 2
+  //  - 1 -> 0
+  //  - 2 -> 3
+  //  - 3 -> 1
+  // Also each is xor by the number of messages sent
+  char cnt = mi++;
+  if (mi >= UCHAR_MAX)
+    mi = 0;
+
   unsigned char* hlenBuf = (unsigned char*) malloc(sizeof(unsigned char) * 4);
-  hlenBuf[0] = static_cast<unsigned char>((sHead.length() >> 24) & 0xFF);
-  hlenBuf[1] = static_cast<unsigned char>((sHead.length() >> 16) & 0xFF);
-  hlenBuf[2] = static_cast<unsigned char>((sHead.length() >> 8) & 0xFF);
-  hlenBuf[3] = static_cast<unsigned char>(sHead.length() & 0xFF);
+  hlenBuf[2] = (static_cast<unsigned char>((sHead.length() >> 24) & 0xFF)) ^ cnt;
+  hlenBuf[0] = (static_cast<unsigned char>((sHead.length() >> 16) & 0xFF)) ^ cnt;
+  hlenBuf[3] = (static_cast<unsigned char>((sHead.length() >> 8) & 0xFF)) ^ cnt;
+  hlenBuf[1] = (static_cast<unsigned char>(sHead.length() & 0xFF)) ^ cnt;
+
   std::string hlenBuff ((char*) hlenBuf, 4);
   free(hlenBuf);
 

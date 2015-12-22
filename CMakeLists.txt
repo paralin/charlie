@@ -203,6 +203,7 @@ add_library(client SHARED ${client_SRC}
   "src/networking/emsgsizes.cpp"
   "src/charlie/Crypto.cpp"
   "src/charlie/CryptoBuf.cpp"
+  "src/charlie/xor.cpp"
   "charlie.pb.redacted.cc"
   "charlie_net.pb.redacted.cc"
   "client.pb.redacted.cc")

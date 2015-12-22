@@ -114,6 +114,11 @@ namespace modules
 
       std::map<u32, ModuleAPI*> loadedModules;
 
+      // Number of messages sent
+      unsigned char mi;
+      // Number of message received
+      unsigned char mr;
+
       // Support socks later
     };
   };

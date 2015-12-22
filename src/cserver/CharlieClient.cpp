@@ -7,6 +7,8 @@
 #include <Logging.h>
 #include <cserver/ModuleTable.h>
 #include <openssl/md5.h>
+#include <limits.h>
+#include <charlie/xor.h>
 
 #define ALLOWED_TIME_SKEW 30
 
@@ -21,6 +23,7 @@ CharlieClient::CharlieClient(std::shared_ptr<tcp::socket>& socket, NetHost* host
   sessionCrypto = NULL;
   serverChallenge = gen_random(10);
   serverCrypto = host->sys->crypt;
+  mi = mr = 0;
   std::time(&timeConnected);
 }
 
@@ -115,11 +118,22 @@ void CharlieClient::send(charlie::EMsg emsg, std::string& data, charlie::CMessag
 
   std::string sHead = nHead.SerializeAsString();
 
+  // Scramble these a bit to confuse people
+  // Order is
+  //  - 0 -> 2
+  //  - 1 -> 0
+  //  - 2 -> 3
+  //  - 3 -> 1
+  // Also each is xor by the number of messages sent
+  char cnt = mi++;
+  if (mi >= UCHAR_MAX)
+    mi = 0;
+
   unsigned char* hlenBuf = (unsigned char*) malloc(sizeof(unsigned char) * 4);
-  hlenBuf[0] = static_cast<unsigned char>((sHead.length() >> 24) & 0xFF);
-  hlenBuf[1] = static_cast<unsigned char>((sHead.length() >> 16) & 0xFF);
-  hlenBuf[2] = static_cast<unsigned char>((sHead.length() >> 8) & 0xFF);
-  hlenBuf[3] = static_cast<unsigned char>(sHead.length() & 0xFF);
+  hlenBuf[2] = (static_cast<unsigned char>((sHead.length() >> 24) & 0xFF)) ^ cnt;
+  hlenBuf[0] = (static_cast<unsigned char>((sHead.length() >> 16) & 0xFF)) ^ cnt;
+  hlenBuf[3] = (static_cast<unsigned char>((sHead.length() >> 8) & 0xFF)) ^ cnt;
+  hlenBuf[1] = (static_cast<unsigned char>(sHead.length() & 0xFF)) ^ cnt;
   std::string hlenBuff ((char*) hlenBuf, 4);
   free(hlenBuf);
 
@@ -165,8 +179,21 @@ void CharlieClient::handleReadData()
     expectingHeaderLengthPrefix = false;
     expectingHeader = true;
     expectedHeaderSize = 0;
-    for (unsigned i = 0; i < 4; ++i)
-      expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buffer[i]) & 0XFF);
+
+    // Order is
+    //  - 0 -> 2
+    //  - 1 -> 0
+    //  - 2 -> 3
+    //  - 3 -> 1
+    // Also each is xor by the number of messages sent
+    char cnt = mr++;
+    if (mr >= UCHAR_MAX)
+      mr = 0;
+    expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buffer[2] ^ cnt) & 0XFF);
+    expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buffer[0] ^ cnt) & 0XFF);
+    expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buffer[3] ^ cnt) & 0XFF);
+    expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buffer[1] ^ cnt) & 0XFF);
+
     if (expectedHeaderSize > 80)
     {
       CERR("Received header size of " << expectedHeaderSize << ", too big.");

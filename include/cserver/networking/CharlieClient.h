@@ -85,6 +85,11 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>, public
 
     std::string clientId;
     std::string clientPubkey;
+
+    // Number of messages sent
+    unsigned char mi;
+    // Number of message received
+    unsigned char mr;
 };
 
 typedef std::shared_ptr<CharlieClient> client_ptr;

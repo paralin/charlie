@@ -14,6 +14,8 @@
  - Add the llvm obfuscation work in for modules
  - Implement the rest of the events
  - Add ping/pong in server/client
+ - Have a separate buffer for headersize/header/body. This would save
+   re-allocation of memory every time
 
 Possible bugs:
 
