@@ -101,6 +101,11 @@ std::vector<std::shared_ptr<ServerModuleInstance>> System::buildModuleSet(Charli
   std::vector<std::shared_ptr<ServerModuleInstance>> mods;
 
   // Iterate over files in the server_modules dir and load them
+  boost::filesystem::path p("./server_modules/");
+  boost::filesystem::directory_iterator end;
+  for (boost::filesystem::directory_iterator itr(p); itr != end; ++itr)
+    if (boost::filesystem::is_regular_file(itr->path()))
+      mods.emplace_back(new ServerModuleInstance(itr->path().string(), client));
 
   return mods;
 }

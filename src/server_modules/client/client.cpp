@@ -35,6 +35,15 @@ void ClientModule::module_main()
 {
 }
 
+void ClientModule::handleMessage(charlie::CMessageTarget* target, std::string& data)
+{
+}
+
+u32 ClientModule::getModuleId()
+{
+  return 2777954855;
+}
+
 ClientModule::~ClientModule()
 {
 }

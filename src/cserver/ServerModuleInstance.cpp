@@ -143,6 +143,12 @@ bool ServerModuleInstance::load()
   EMPTYCATCH(ninst->setModuleInterface((server_modules::ServerModuleInterface*) client););
 
   MLOG("Loaded module successfully.");
+  inst.set_id(ninst->getModuleId());
+
+  // Inject all the other modules
+  for (auto t : client->modules)
+    if (t->status() >= charlie::MODULE_LOADED && t->inst.id() != inst.id())
+      EMPTYCATCH(ninst->inject(t->inst.id(), t->baseModule));
 
   MLOG("Starting module thread...");
   try{

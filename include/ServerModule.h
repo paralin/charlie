@@ -36,6 +36,8 @@ namespace server_modules
     virtual void release(u32 id) = 0;
     // Provide a handle to the module interface
     virtual void setModuleInterface(ServerModuleInterface* inter) = 0;
+    // Get module id
+    virtual u32  getModuleId() = 0;
     // Release everything and prepare to be deleted
     virtual void shutdown() = 0;
     // Leave this empty if you dont want it
@@ -43,7 +45,7 @@ namespace server_modules
     // Handle an event
     virtual void handleEvent(u32 event, void* data) = 0;
     // Handle a message from the client
-    virtual void handleMessage(charlie::CMessageTarget* target, std::string& data);
+    virtual void handleMessage(charlie::CMessageTarget* target, std::string& data) = 0;
   };
 };
 

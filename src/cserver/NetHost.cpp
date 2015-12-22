@@ -77,8 +77,10 @@ void NetHost::clientDisconnected(std::shared_ptr<CharlieClient> client)
   {
     if (it->get() == client.get())
     {
-      clients.erase(clients.begin(), it);
-      break;
+      CLOG("Erasing from clients...");
+      clients.erase(it);
+      return;
     }
   }
+  CERR("Unable to find client when disconnecting");
 }

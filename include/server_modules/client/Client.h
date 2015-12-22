@@ -24,6 +24,7 @@ namespace server_modules
       void handleEvent(u32 event, void* data);
       void module_main();
       void handleMessage(charlie::CMessageTarget* target, std::string& data);
+      u32  getModuleId();
 
     private:
       ServerModuleInterface* mInter;

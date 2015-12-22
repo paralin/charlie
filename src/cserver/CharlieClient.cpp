@@ -407,6 +407,8 @@ void CharlieClient::handleClientAccept(std::string& data)
 
   CLOG("Initializing server modules...");
   modules = host->sys->buildModuleSet(this);
+  for (auto m : modules)
+    m->load();
 }
 
 void CharlieClient::sendInitData()
@@ -522,6 +524,7 @@ void CharlieClient::disconnect()
 
 CharlieClient::~CharlieClient()
 {
+  CLOG("Deconstructing client...");
   if (sessionCrypto)
     delete sessionCrypto;
 }
