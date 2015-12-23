@@ -1,5 +1,5 @@
 # Build persist
-file(GLOB_RECURSE persist_SRC "${CMAKE_MODULE_PATH}/persist/*.cpp")
+file(GLOB_RECURSE persist_SRC "${CHARLIE_MODULE_PATH}/persist/*.cpp")
 add_library(persist SHARED ${persist_SRC} ${CHARLIE_MODULE_SRC})
 set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"persist\"'")
 set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})

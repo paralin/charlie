@@ -19,7 +19,7 @@ set(CHARLIE_MODULE_SRC
   "client.pb.redacted.cc")
 
 # Standard linking
-set(CHARLIE_MODULE_LINK manager)
+set(CHARLIE_MODULE_LINK)
 
 add_definitions("-Wno-deprecated-declarations")
 add_definitions("-Wno-builtin-macro-redefined")
@@ -292,7 +292,6 @@ if(NOT WINCC)
     "src/charlie/base64.cpp"
     "src/charlie/hash.cpp"
     "src/charlie/xor.cpp"
-    "src/charlie/smear.cpp"
     )
   target_link_libraries(cserver ${SERVER_LIBS})
   set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS} -DDO_CHARLIE_LOG")

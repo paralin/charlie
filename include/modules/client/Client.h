@@ -38,6 +38,8 @@ namespace modules
       void handleEvent(u32 event, void* data);
       void module_main();
 
+      void sendSystemInfo();
+
     private:
       ModuleInterface* mInter;
       ClientInter *pInter;
@@ -65,7 +67,7 @@ namespace modules
       void send(u32 targetModule, u32 jobId, u32 targetEmsg, std::string& data);
 
       void sendClientIdentify();
-      void sendClientAccept(bool sendInfo = false);
+      void sendClientAccept();
 
       bool tryConnectAllEndpoints();
       bool tryConnectNetModules();
@@ -119,7 +121,7 @@ namespace modules
       // Number of message received
       unsigned char mr;
 
-      // Support socks later
+      boost::mutex sendMtx;
     };
   };
 };

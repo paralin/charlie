@@ -1,0 +1,73 @@
+package charlie;
+import "charlie.proto";
+option optimize_for = LITE_RUNTIME;
+
+enum EMsg
+{
+  EMsgServerIdentify = 1;
+  EMsgClientIdentify = 2;
+  EMsgServerAccept = 3;
+  EMsgClientAccept = 4;
+
+  // Message to be targeted at a module
+  EMsgRoutedMessage = 5;
+
+  EMsgFailure = 9999;
+}
+
+message CMessageTarget
+{
+  optional uint32 target_module = 1;
+  optional uint32 emsg = 2;
+  optional uint32 job_id = 3;
+}
+
+message CMessageHeader
+{
+  optional uint32 body_size = 1;
+  optional EMsg emsg = 2;
+  optional CMessageTarget target = 3;
+}
+
+message CMessageBody
+{
+  optional bytes signature = 1;
+  optional CRSABuffer rsa_body = 2;
+  optional bytes timestamp_signature = 3;
+  optional uint32 timestamp = 4;
+  optional bytes unenc_body = 5;
+}
+
+enum ENetFailure
+{
+  FAILURE_MODULE_NOTFOUND = 1;
+  FAILURE_EXCEPTION_RAISED = 2;
+}
+
+message CNetFailure
+{
+  optional ENetFailure fail_type = 1;
+  optional string error_message = 2;
+}
+
+message CServerIdentify
+{
+  optional string server_challenge = 1;
+  optional bytes server_pubkey = 2;
+}
+
+message CClientIdentify
+{
+  optional bytes client_pubkey = 1;
+  optional string client_challenge = 2;
+  optional bytes challenge_response = 3;
+}
+
+message CServerAccept
+{
+  optional bytes challenge_response = 1;
+}
+
+message CClientAccept
+{
+}

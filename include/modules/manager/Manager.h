@@ -85,9 +85,6 @@ namespace modules
       bool aboutToRelocate;
       bool shouldDownloadModules;
 
-      // Id of the selected client module
-      u32 clientModId;
-
       // Tor module
       void* torModule;
     };

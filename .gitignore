@@ -46,19 +46,7 @@ Session.vim
 # KDE directory preferences
 .directory
 
-build
-make
-makedbg
-makerel
-proto
-setupmxe
-makemxe
-makemxer
-makeboost
-makessl
-makecppnetlib
-makeprotolib
-makeboostnetlib
+build/
 bin/
 .makeboost
 .makessl

@@ -1,6 +1,8 @@
 #include <server_modules/client/Client.h>
+#include <protogen/client.pb.h>
 
 using namespace server_modules::client;
+using namespace modules::client;
 
 ClientModule::ClientModule() :
   sessionCrypto(NULL),
@@ -33,10 +35,32 @@ void ClientModule::handleEvent(u32 event, void* data)
 
 void ClientModule::module_main()
 {
+  // First thing's first, request some info.
+  MLOG("Requesting client info...");
+  CClientRequestSystemInfo nfo;
+  std::string data = nfo.SerializeAsString();
+  mInter->send(getModuleId(), EClientEMsg_RequestSystemInfo, 0, data);
 }
 
 void ClientModule::handleMessage(charlie::CMessageTarget* target, std::string& data)
 {
+  if (target->emsg() == EClientEMsg_SystemInfo)
+  {
+    MLOG("Received client information.");
+    CClientSystemInfo cinfo;
+    if (!cinfo.ParseFromString(data))
+    {
+      MERR("Client info does not parse properly.");
+      return;
+    }
+
+    MLOG("SystemID: " << cinfo.system_id());
+    MLOG("CPUHash:  " << cinfo.cpu_hash());
+    MLOG("Hostname: " << cinfo.hostname());
+    return;
+  }
+
+  MERR("Unknown message received: " << target->emsg());
 }
 
 u32 ClientModule::getModuleId()

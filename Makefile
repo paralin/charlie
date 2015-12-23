@@ -35,7 +35,7 @@ finalize: compile
 setupmxe: .setupmxe
 
 clean:
-	-rm -rf makerel makedbg proto makemxe makemxer
+	-rm -rf .makerel .makedbg .proto
 	-rm -rf bin
 
 dclean: clean

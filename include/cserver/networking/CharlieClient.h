@@ -15,6 +15,7 @@
 #include <SModuleInterface.h>
 #include <cserver/ModuleInterface.h>
 #include <cserver/ServerModuleInstance.h>
+#include <boost/thread.hpp>
 
 using boost::asio::ip::tcp;
 
@@ -92,6 +93,8 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>, public
     unsigned char mi;
     // Number of message received
     unsigned char mr;
+
+    boost::mutex sendMtx;
 };
 
 typedef std::shared_ptr<CharlieClient> client_ptr;

@@ -1,6 +1,31 @@
 #include <charlie/machine_id.h>
 #include <string.h>
 #include <boost/asio/ip/host_name.hpp>
+
+u16 smear_mask[5] = { 0x4e25, 0xf4a1, 0x5437, 0xab41, 0x0000 };
+
+void smear( u16 id[] )
+{
+  for ( u32 i = 0; i < 5; i++ )
+    for ( u32 j = i; j < 5; j++ )
+      if ( i != j )
+        id[i] ^= id[j];
+
+  for ( u32 i = 0; i < 5; i++ )
+    id[i] ^= smear_mask[i];
+}
+
+void unsmear( u16 id[] )
+{
+  for ( u32 i = 0; i < 5; i++ )
+    id[i] ^= smear_mask[i];
+
+  for ( u32 i = 0; i < 5; i++ )
+    for ( u32 j = 0; j < i; j++ )
+      if ( i != j )
+        id[4-i] ^= id[4-j];
+}
+
 #define s8 char
 
 #if defined(_WIN64) || defined(_WIN32)

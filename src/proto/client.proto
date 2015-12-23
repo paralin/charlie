@@ -1,0 +1,27 @@
+option optimize_for = LITE_RUNTIME;
+import "charlie.proto";
+import "charlie_net.proto";
+package modules.client;
+
+message CClientInfo
+{
+  repeated string server_addr = 1;
+  repeated string server_key = 2;
+}
+
+enum EClientEMsg
+{
+  EClientEMsg_RequestSystemInfo = 1;
+  EClientEMsg_SystemInfo = 2;
+}
+
+message CClientRequestSystemInfo
+{
+}
+
+message CClientSystemInfo
+{
+  optional string system_id = 1;
+  optional uint32 cpu_hash = 2;
+  optional string hostname = 3;
+}

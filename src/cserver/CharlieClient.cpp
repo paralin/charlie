@@ -70,6 +70,8 @@ void CharlieClient::send(charlie::EMsg emsg, u32 targetModule, std::string& data
 
 void CharlieClient::send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target)
 {
+  boost::unique_lock<boost::mutex> scoped_lock(sendMtx);
+
   charlie::CMessageBody nBody;
 
   // Timestamp code
@@ -470,11 +472,6 @@ void CharlieClient::handleClientAccept(std::string& data)
     return;
   }
 
-  if (acc.has_system_info())
-  {
-    CLOG("Client cpu hash: " << acc.system_info().cpu_hash());
-  }
-
   handshakeComplete = true;
   CLOG("Handshake complete.");
   sendInitData();
@@ -512,7 +509,6 @@ void CharlieClient::sendModuleTable()
 void CharlieClient::sendServerAccept()
 {
   charlie::CServerAccept acc;
-  acc.set_request_system_info(true);
 
   unsigned char* resp;
   int sigLen = serverCrypto->digestSign((const unsigned char*) clientChallenge.c_str(), clientChallenge.length(), &resp);

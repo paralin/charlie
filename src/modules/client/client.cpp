@@ -4,6 +4,9 @@
 #include <charlie/random.h>
 #include <charlie/SystemInfo.h>
 #include <charlie/StateChangeEvent.h>
+#include <charlie/machine_id.h>
+
+#define MODULE_ID 2777954855
 
 // 30 second allowed skew
 #define ALLOWED_TIME_SKEW 30
@@ -181,11 +184,6 @@ void ClientModule::injectDependency(u32 id, void* dep)
 {
   if(!dep || !id) return;
   MLOG("Dep injected "<<id);
-  if (id == 3133916783)
-  {
-    manager = (modules::manager::ManagerInter*) dep;
-    managerMtx.unlock();
-  }
   if (netModuleIds.count(id))
   {
     MLOG("Received network module " << id);
@@ -198,11 +196,6 @@ void ClientModule::injectDependency(u32 id, void* dep)
 void ClientModule::releaseDependency(u32 id)
 {
   MLOG("Dep released "<<id);
-  if (id == 3133916783)
-  {
-    manager = NULL;
-    managerMtx.lock();
-  }
   if (loadedNetModules.count(id))
   {
     MLOG("Released network module " << id);
@@ -236,9 +229,25 @@ void ClientModule::unexpectedDataReceived()
   wasConnected = true;
 }
 
+void ClientModule::sendSystemInfo()
+{
+  SystemInfo* info = mInter->getSysInfo();
+
+  CClientSystemInfo cinfo;
+  cinfo.set_system_id(info->system_id);
+  cinfo.set_hostname(getMachineName());
+  cinfo.set_cpu_hash(info->cpu_hash);
+
+  std::string data = cinfo.SerializeAsString();
+  send(MODULE_ID, 0, EClientEMsg_SystemInfo, data);
+}
+
 // Main function
 void ClientModule::module_main()
 {
+  parseModuleInfo();
+  populateServerKeys();
+
 #ifdef DEPEND_ALL_MODULES
   {
     auto allMods = mInter->listModuleInstances();
@@ -256,8 +265,6 @@ void ClientModule::module_main()
   selectNetworkModule();
   systemCrypto = mInter->getCrypto();
 
-  //MLOG("Waiting for manager module...");
-  //populateServerKeys();
   MLOG("Parsing module info...");
   parseModuleInfo();
   MLOG("Initializing networking...");
@@ -303,6 +310,7 @@ void ClientModule::module_main()
       buf.resize(bufSize);
       boost::system::error_code error;
 
+      MLOG("Receiving " << bufSize << " bytes...");
       size_t len = socket->read_some(boost::asio::buffer(buf), error);
       if (error == boost::asio::error::eof)
       {
@@ -470,22 +478,15 @@ void ClientModule::handleServerAccept(std::string& data)
   DCASSERTL(ident.has_challenge_response(), "Server didn't send challenge response.");
   DCASSERTL(sessionCrypto->digestVerify((const unsigned char*) clientChallenge.c_str(), clientChallenge.length(), (unsigned char*) ident.challenge_response().c_str(), true), "Invalid server challenge response.");
 
-  sendClientAccept(ident.request_system_info());
+  sendClientAccept();
   handshakeComplete = true;
   MLOG("Handshake complete.");
 }
 
-void ClientModule::sendClientAccept(bool sendInfo)
+void ClientModule::sendClientAccept()
 {
   MLOG("Accepting the server.");
   charlie::CClientAccept accp;
-  if (sendInfo)
-  {
-    SystemInfo* sysInfo = mInter->getSysInfo();
-    charlie::CNetSystemInfo* info = accp.mutable_system_info();
-    info->set_cpu_hash(sysInfo->cpu_hash);
-    info->set_system_id(sysInfo->system_id);
-  }
 
   std::string outp = accp.SerializeAsString();
   send(charlie::EMsgClientAccept, 0, outp);
@@ -493,11 +494,13 @@ void ClientModule::sendClientAccept(bool sendInfo)
 
 void ClientModule::send(u32 targetModule, u32 jobId, u32 targetEmsg, std::string& data)
 {
-  send(charlie::EMsgRoutedMessage, targetModule, data, jobId, targetEmsg); 
+  send(charlie::EMsgRoutedMessage, targetModule, data, jobId, targetEmsg);
 }
 
 void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data, u32 jobid, u32 targetEmsg)
 {
+  boost::unique_lock<boost::mutex> scoped_lock(sendMtx);
+
   charlie::CMessageBody nBody;
 
   // Timestamp code
@@ -538,10 +541,9 @@ void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data,
   nHead.set_body_size(sBody.length());
   if (targetModule)
   {
-    charlie::CMessageTarget* target = new charlie::CMessageTarget();
+    charlie::CMessageTarget* target = nHead.mutable_target();
     target->set_target_module(targetModule);
     target->set_emsg(targetEmsg);
-    nHead.set_allocated_target(target);
   }
 
   std::string sHead = nHead.SerializeAsString();
@@ -816,11 +818,8 @@ bool ClientModule::tryConnectEndpoint(const char* endp)
 
 void ClientModule::populateServerKeys()
 {
-  if (manager == NULL) return;
-  modules::manager::CManagerInfo* info = manager->getInfo();
-  if (info == NULL) return;
-  for (int i = 0; i < info->server_key_size(); i++)
-    serverKeys.insert(info->server_key(i));
+  for (int i = 0; i < sInfo.server_key_size(); i++)
+    serverKeys.insert(sInfo.server_key(i));
 }
 
 void ClientModule::handleEvent(u32 eve, void* data)
@@ -853,6 +852,12 @@ ClientInter::~ClientInter()
 
 void ClientInter::handleCommand(const charlie::CMessageTarget& targ, std::string& command)
 {
+  if (targ.emsg() == EClientEMsg_RequestSystemInfo)
+  {
+    MLOG("Received request for system info.");
+    mod->sendSystemInfo();
+    return;
+  }
   MERR("Received command " << targ.emsg() << " for this module but no commands are defined.");
 }
 

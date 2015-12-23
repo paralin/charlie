@@ -28,6 +28,8 @@ namespace server_modules
 
     private:
       ServerModuleInterface* mInter;
+
+      void sendInfoRequest();
     };
   };
 };

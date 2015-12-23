@@ -1,6 +1,8 @@
 # Build client
 file(GLOB_RECURSE client_SRC "${CHARLIE_MODULE_PATH}/client/*.cpp")
-add_library(client SHARED ${client_SRC} ${CHARLIE_MODULE_SRC})
+add_library(client SHARED ${client_SRC} ${CHARLIE_MODULE_SRC}
+  "${CMAKE_SOURCE_DIR}/src/charlie/hash.cpp"
+  "${CMAKE_SOURCE_DIR}/src/charlie/machine_id.cpp")
 set_target_properties(client PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"client\"'")
 set_target_properties(client PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(client ${CHARLIE_MODULE_LINK} -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})

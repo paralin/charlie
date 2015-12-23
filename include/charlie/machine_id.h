@@ -1,6 +1,5 @@
 #pragma once
 #include <IntTypes.h>
-#include <charlie/smear.h>
 #include <algorithm>
 #include <string>
 

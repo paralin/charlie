@@ -11,6 +11,7 @@
 #include <charlie/xor.h>
 #include <charlie/CryptoBuf.h>
 #include <chrono>
+#include <charlie/machine_id.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -648,7 +649,8 @@ void ManagerModule::module_main()
   }
   while(running)
   {
-    try{
+    try
+    {
       //An interruption point
       boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
     }

@@ -18,8 +18,7 @@
         ],
         "server_roots": [
           "localhost:9921"
-        ],
-        "server_keys": []
+        ]
       }
     }
   ]

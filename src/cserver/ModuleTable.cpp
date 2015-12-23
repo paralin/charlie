@@ -199,15 +199,6 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           }
         }
 
-        {
-          const rapidjson::Value& serverKeys = ix["info"]["server_keys"];
-          for (rapidjson::SizeType oi = 0; oi < serverKeys.Size(); oi++)
-          {
-            manInfo.add_server_key(serverKeys[oi].GetString());
-            CLOG("Adding server key: "<<serverKeys[oi].GetString());
-          }
-        }
-
         std::string* info = mod->mutable_info();
         if(!manInfo.SerializeToString(info))
         {

@@ -8,7 +8,6 @@ message CManagerInfo
   //init table update urls
   repeated string init_url = 1;
   repeated string server_root = 2;
-  repeated string server_key = 3;
 }
 
 message CInitInfo
