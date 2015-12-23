@@ -65,3 +65,4 @@ sed \
   $DIR/module.cmake > $MODULE_PATH/module.cmake
 
 cp $DIR/module.proto $MODULE_PROTO_PATH/${MODULE_NAME}.proto
+rm $PROJECT_ROOT/.proto || true

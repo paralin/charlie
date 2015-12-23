@@ -62,3 +62,4 @@ sed \
   -e "s;{MODULE_NAME_UC};$MODULE_NAME_UC;g" \
   -e "s;{MODULE_ID};$MODULE_ID;g" \
   $DIR/Module.h > $MODULE_HEADER_PATH/${MODULE_NAME_UC}.h
+rm $PROJECT_ROOT/.proto || true

@@ -177,11 +177,11 @@ endforeach()
 MESSAGE( STATUS "Will redact charlie proto files." )
 foreach(to_redact IN LISTS redact_proto)
   MESSAGE( STATUS "Planning to redact ${to_redact} proto files..." )
-  file(COPY "${PROJECT_SOURCE_DIR}/src/protogen/${to_redact}.pb.h" DESTINATION ${CMAKE_BINARY_DIR})
+  file(COPY "${CMAKE_SOURCE_DIR}/src/protogen/${to_redact}.pb.h" DESTINATION ${CMAKE_BINARY_DIR})
   add_custom_command(
     OUTPUT ${to_redact}.pb.redacted.cc
     COMMAND "${CMAKE_BINARY_DIR}/cutils"
-    ARGS protoclean --input "${PROJECT_SOURCE_DIR}/src/protogen/${to_redact}.pb.cc" --output ${to_redact}.pb.redacted.cc
+    ARGS protoclean --input "${CMAKE_SOURCE_DIR}/src/protogen/${to_redact}.pb.cc" --output ${to_redact}.pb.redacted.cc
     DEPENDS cutils
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
