@@ -50,6 +50,12 @@ sed \
   -e "s;{MODULE_ID};$MODULE_ID;g" \
   $DIR/module.cpp > $MODULE_PATH/${MODULE_NAME}.cpp
 
+sed \
+  -e "s;{MODULE_NAME};$MODULE_NAME;g" \
+  -e "s;{MODULE_NAME_UC};$MODULE_NAME_UC;g" \
+  -e "s;{MODULE_ID};$MODULE_ID;g" \
+  $DIR/module.cmake > $MODULE_PATH/module.cmake
+
 mkdir -p $MODULE_HEADER_PATH
 sed \
   -e "s;{MODULE_NAME};$MODULE_NAME;g" \

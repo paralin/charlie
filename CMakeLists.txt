@@ -1,7 +1,25 @@
+project(charlie)
+
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+set(CHARLIE_MODULE_PATH "${CMAKE_SOURCE_DIR}/src/modules/")
+set(CHARLIE_SERVER_MODULE_PATH "${CMAKE_SOURCE_DIR}/src/server_modules/")
+
+# Standard files included in every module
+set(CHARLIE_MODULE_SRC
+  "${CMAKE_SOURCE_DIR}/src/networking/emsgsizes.cpp"
+  "${CMAKE_SOURCE_DIR}/src/charlie/Crypto.cpp"
+  "${CMAKE_SOURCE_DIR}/src/charlie/CryptoBuf.cpp"
+  "${CMAKE_SOURCE_DIR}/src/charlie/xor.cpp"
+  "${CMAKE_SOURCE_DIR}/src/charlie/base64.cpp"
+  "charlie.pb.redacted.cc"
+  "charlie_net.pb.redacted.cc"
+  "client.pb.redacted.cc")
+
+# Standard linking
+set(CHARLIE_MODULE_LINK manager)
 
 add_definitions("-Wno-deprecated-declarations")
 add_definitions("-Wno-builtin-macro-redefined")
@@ -13,8 +31,6 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-DDO_CHARLIE_LOG -DDEBUG")
 endif()
-
-project(charlie)
 
 find_package(DL REQUIRED)
 find_package(Threads REQUIRED)
@@ -99,7 +115,6 @@ MESSAGE( STATUS "GLIB: ${GLIB_LIBRARIES}")
 MESSAGE( STATUS "BOOST inc: ${Boost_INCLUDE_DIRS}")
 MESSAGE( STATUS "Other inc: ${include_t1}" )
 
-#set(CURL_LIBRARIES_DEPS ${GSS_LIBRARIES} libcurl ${GSS_LIBRARIES})
 set(CURL_LIBRARIES_DEPS libcurl)
 set(LIBS -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES} ${OPENSSL_LIBRARIES} ${ZLIB_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 set(MANAGER_LIBS -Wl,-Bstatic ${CURL_LIBRARIES_DEPS} ${PROTOBUF_LITE_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_CHRONO_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_SYSTEM_LIBRARY} ${Boost_REGEX_LIBRARY} ${OPENSSL_LIBRARIES} -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
@@ -152,7 +167,12 @@ else()
 endif()
 
 # Redact files
-set(redact_proto charlie manager charlie_net charlie_server client)
+set(redact_proto)
+file(GLOB proto_files "src/proto/*.proto")
+foreach(file ${proto_files})
+  get_filename_component (file_without_extension ${file} NAME_WE)
+  list(APPEND redact_proto ${file_without_extension})
+endforeach()
 
 MESSAGE( STATUS "Will redact charlie proto files." )
 foreach(to_redact IN LISTS redact_proto)
@@ -167,67 +187,17 @@ foreach(to_redact IN LISTS redact_proto)
     )
 endforeach()
 
+file(GLOB module_incs "${CHARLIE_MODULE_PATH}/**/module.cmake")
+foreach(file ${module_incs})
+  MESSAGE( STATUS "Including module ${file}...")
+  include(${file})
+endforeach()
 
-# Build manager
-file(GLOB manager_SRC "src/modules/manager/*.cpp")
-add_library(manager SHARED ${manager_SRC}
-  "src/charlie/xor.cpp"
-  "src/charlie/base64.cpp"
-  "src/charlie/Crypto.cpp"
-  "src/charlie/CryptoBuf.cpp"
-  "charlie.pb.redacted.cc"
-  "manager.pb.redacted.cc"
-  "charlie_net.pb.redacted.cc"
-  )
-set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"manager\"'")
-set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)
-target_link_libraries(manager ${MANAGER_LIBS})
-add_custom_command(TARGET manager POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:manager> ${CMAKE_SHARED_LIBRARY_PREFIX}3133916783${CMAKE_SHARED_LIBRARY_SUFFIX}
-)
-
-# Build persist
-file(GLOB_RECURSE persist_SRC "src/modules/persist/*.cpp")
-add_library(persist SHARED ${persist_SRC} "charlie.pb.redacted.cc")
-set_target_properties(persist PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"persist\"'")
-set_target_properties(persist PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(persist -Wl,-Bstatic  ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${PROTOBUF_LITE_LIBRARIES})
-add_custom_command(TARGET persist POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:persist> ${CMAKE_SHARED_LIBRARY_PREFIX}2526948902${CMAKE_SHARED_LIBRARY_SUFFIX}
-)
-
-# Build client
-file(GLOB_RECURSE client_SRC "src/modules/client/*.cpp")
-add_library(client SHARED ${client_SRC}
-  "src/networking/emsgsizes.cpp"
-  "src/charlie/Crypto.cpp"
-  "src/charlie/CryptoBuf.cpp"
-  "src/charlie/xor.cpp"
-  "charlie.pb.redacted.cc"
-  "charlie_net.pb.redacted.cc"
-  "client.pb.redacted.cc")
-set_target_properties(client PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"client\"'")
-set_target_properties(client PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(client manager -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
-add_custom_command(TARGET client POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:client> ${CMAKE_SHARED_LIBRARY_PREFIX}2777954855${CMAKE_SHARED_LIBRARY_SUFFIX}
-)
-
-# Build client (server version)
-file(GLOB_RECURSE s_client_SRC "src/server_modules/client/*.cpp")
-add_library(s_client SHARED ${s_client_SRC}
-  "src/charlie/Crypto.cpp"
-  "src/charlie/CryptoBuf.cpp"
-  "charlie.pb.redacted.cc"
-  "charlie_net.pb.redacted.cc"
-  "client.pb.redacted.cc")
-set_target_properties(s_client PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"client\"'")
-set_target_properties(s_client PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(s_client -Wl,-Bstatic ${PROTOBUF_LITE_LIBRARIES})
-add_custom_command(TARGET client POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:s_client> ${CMAKE_BINARY_DIR}/server_modules/${CMAKE_SHARED_LIBRARY_PREFIX}client${CMAKE_SHARED_LIBRARY_SUFFIX}
-)
+file(GLOB server_module_incs "${CHARLIE_SERVER_MODULE_PATH}/**/module.cmake")
+foreach(file ${server_module_incs})
+  MESSAGE( STATUS "Including server module ${file}...")
+  include(${file})
+endforeach()
 
 # Set the list of libraries to compile embed code
 set(embed_libraries manager)
