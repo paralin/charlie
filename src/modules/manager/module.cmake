@@ -1,6 +1,6 @@
 # Build manager
 file(GLOB manager_SRC "${CHARLIE_MODULE_PATH}/manager/*.cpp")
-add_library(manager SHARED ${manager_SRC} ${CHARLIE_MODULE_SRC})
+add_library(manager SHARED ${manager_SRC} ${CHARLIE_MODULE_SRC} "manager.pb.redacted.cc")
 set_target_properties(manager PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"manager\"'")
 set_target_properties(manager PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 set_target_properties(manager PROPERTIES LINK_SEARCH_END_STATIC ON)

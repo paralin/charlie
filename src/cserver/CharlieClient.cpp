@@ -277,11 +277,58 @@ void CharlieClient::handleMessage(std::string& data)
     case charlie::EMsgFailure:
       handleFailure(data);
       break;
+    case charlie::EMsgRoutedMessage:
+      handleRoutedMessage(data);
+      break;
     default:
       CERR("Unrecognized emsg " << head.emsg());
       disconnect();
       return;
   }
+}
+
+void CharlieClient::handleRoutedMessage(std::string& data)
+{
+  if (!head.has_target())
+  {
+    CERR("Routed message without a target!");
+    disconnect();
+    return;
+  }
+  charlie::CMessageTarget* target = head.mutable_target();
+  if (!target->has_target_module())
+  {
+    CERR("Routed message without a target.target_module!");
+    disconnect();
+    return;
+  }
+  for (auto m : modules)
+  {
+    if (m->inst.id() == target->target_module())
+    {
+      try
+      {
+        m->baseModule->handleMessage(target, data);
+      } catch (std::exception& ex)
+      {
+        CERR("Error thrown by module message handler: " << ex.what());
+      }
+      return;
+    }
+  }
+
+  CERR("Routed message target " << target->target_module() << " not found.");
+  sendDeliveryFailure();
+}
+
+void CharlieClient::sendDeliveryFailure()
+{
+  charlie::CNetFailure fail;
+  fail.set_fail_type(charlie::FAILURE_MODULE_NOTFOUND);
+  fail.set_error_message("Unable to find that module.");
+  std::string data = fail.SerializeAsString();
+  // Maybe set the target later
+  send(charlie::EMsgFailure, data);
 }
 
 void CharlieClient::handleFailure(std::string& data)

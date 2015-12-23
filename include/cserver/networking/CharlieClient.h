@@ -42,6 +42,7 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>, public
     bool validateMessageHeader();
     bool validateMessageBody();
     void handleMessage(std::string& data);
+    void handleRoutedMessage(std::string& data);
 
     bool handleClientIdentify(std::string& data);
     void handleClientAccept(std::string& data);
@@ -51,6 +52,7 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>, public
 
     void sendInitData();
     void sendModuleTable();
+    void sendDeliveryFailure();
 
     Crypto* sessionCrypto;
     Crypto* serverCrypto;
