@@ -66,6 +66,9 @@ makedeps: .makedeps
 .maketor:
 	cd deps/tor/ && export CFLAGS="-fPIC" && ./autogen.sh && ./configure --disable-asciidoc
 	sed -i -e "s/-fPIE//g" deps/tor/Makefile
+	sed -i -e "s/int crypto_early_initialized_ = 0/int crypto_early_initialized_ = 1/g" deps/tor/src/common/crypto.c
+	sed -i -e "s/int crypto_global_initialized_ = 0/int crypto_global_initialized_ = 1/g" deps/tor/src/common/crypto.c
+	sed -i -e "s/char buf\[10240\];\$$/char buf[10240];\\/\\/patched\n#ifndef DEBUG\nreturn;\n#endif/g" deps/tor/src/common/log.c
 	cd deps/tor/ && make -j4
 	touch .maketor
 maketor: .maketor

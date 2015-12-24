@@ -19,6 +19,7 @@ TormModule::~TormModule()
 void TormModule::shutdown()
 {
   MLOG("Shutting down torm module..");
+  torc_shutdown();
 }
 
 void TormModule::setModuleInterface(ModuleInterface* inter)

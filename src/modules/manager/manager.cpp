@@ -685,7 +685,6 @@ void ManagerModule::module_main()
       shouldDownloadModules = true;
     }
   }
-  curl_global_cleanup();
 }
 
 bool ManagerModule::prepareToRelocate()

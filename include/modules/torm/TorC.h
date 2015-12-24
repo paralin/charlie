@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
   void torc_main();
+  void torc_shutdown();
 
 #ifdef __cplusplus
 }

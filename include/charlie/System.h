@@ -52,7 +52,7 @@ class System {
     void     dropDefaultManager();
 
     ModuleManager *mManager;
-    boost::asio::ssl::detail::openssl_init<true> opensslInit;
+    //boost::asio::ssl::detail::openssl_init<true> opensslInit;
     bool identityLoaded;
 
   public:

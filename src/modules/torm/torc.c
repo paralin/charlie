@@ -68,15 +68,9 @@
 #include <event2/bufferevent.h>
 #endif
 
-#ifdef HAVE_SYSTEMD
-#   if defined(__COVERITY__) && !defined(__INCLUDE_LEVEL__)
-/* Systemd's use of gcc's __INCLUDE_LEVEL__ extension macro appears to confuse
- * Coverity. Here's a kludge to unconfuse it.
- */
-#   define __INCLUDE_LEVEL__ 2
-#   endif
-#include <systemd/sd-daemon.h>
-#endif
+#undef HAVE_SYSTEMD
+
+int continueRunning = 1;
 
 const char tor_git_revision[] = "";
 
@@ -1336,8 +1330,8 @@ run_scheduled_events(time_t now)
       if (load_ed_keys(options, now) < 0 ||
           generate_ed_link_cert(options, now)) {
         log_err(LD_OR, "Unable to update Ed25519 keys!  Exiting.");
-        tor_cleanup();
-        exit(0);
+        continueRunning = 0;
+        return;
       }
     }
     time_to.check_ed_keys = now + 30;
@@ -2052,8 +2046,6 @@ do_main_loop(void)
            "--enable-bufferevents.");
 #endif
 
-  handle_signals(1);
-
   /* load the private keys, if we're supposed to have them, and set up the
    * TLS context. */
   if (! client_identity_key_is_set()) {
@@ -2174,20 +2166,6 @@ do_main_loop(void)
   }
 #endif
 
-#ifdef HAVE_SYSTEMD
-  {
-    const int r = sd_notify(0, "READY=1");
-    if (r < 0) {
-      log_warn(LD_GENERAL, "Unable to send readiness to systemd: %s",
-               strerror(r));
-    } else if (r > 0) {
-      log_notice(LD_GENERAL, "Signaled readiness to systemd");
-    } else {
-      log_info(LD_GENERAL, "Systemd NOTIFY_SOCKET not present.");
-    }
-  }
-#endif
-
   return run_main_loop_until_done();
 }
 
@@ -2200,6 +2178,9 @@ run_main_loop_once(void)
 {
   int loop_result;
 
+  if (!continueRunning)
+    return 0;
+
   if (nt_service_is_stopping())
     return 0;
 
@@ -2210,7 +2191,8 @@ run_main_loop_once(void)
   /* All active linked conns should get their read events activated. */
   SMARTLIST_FOREACH(active_linked_connection_lst, connection_t *, conn,
                     event_active(conn->read_event, EV_READ, 1));
-  called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+  // called_loop_once = smartlist_len(active_linked_connection_lst) ? 1 : 0;
+  called_loop_once = 1;
 
   update_approx_time(time(NULL));
 
@@ -2258,7 +2240,7 @@ run_main_loop_until_done(void)
   int loop_result = 1;
   do {
     loop_result = run_main_loop_once();
-  } while (loop_result == 1);
+  } while (loop_result == 1 && continueRunning);
   return loop_result;
 }
 
@@ -2267,92 +2249,12 @@ run_main_loop_until_done(void)
 static void
 signal_callback(evutil_socket_t fd, short events, void *arg)
 {
-  const int *sigptr = arg;
-  const int sig = *sigptr;
-  (void)fd;
-  (void)events;
-
-  process_signal(sig);
 }
 
 /** Do the work of acting on a signal received in <b>sig</b> */
 static void
 process_signal(int sig)
 {
-  switch (sig)
-    {
-    case SIGTERM:
-      log_notice(LD_GENERAL,"Catching signal TERM, exiting cleanly.");
-      tor_cleanup();
-      exit(0);
-      break;
-    case SIGINT:
-      if (!server_mode(get_options())) { /* do it now */
-        log_notice(LD_GENERAL,"Interrupt: exiting cleanly.");
-        tor_cleanup();
-        exit(0);
-      }
-#ifdef HAVE_SYSTEMD
-      sd_notify(0, "STOPPING=1");
-#endif
-      hibernate_begin_shutdown();
-      break;
-#ifdef SIGPIPE
-    case SIGPIPE:
-      log_debug(LD_GENERAL,"Caught SIGPIPE. Ignoring.");
-      break;
-#endif
-    case SIGUSR1:
-      /* prefer to log it at INFO, but make sure we always see it */
-      dumpstats(get_min_log_level()<LOG_INFO ? get_min_log_level() : LOG_INFO);
-      control_event_signal(sig);
-      break;
-    case SIGUSR2:
-      switch_logs_debug();
-      log_debug(LD_GENERAL,"Caught USR2, going to loglevel debug. "
-                "Send HUP to change back.");
-      control_event_signal(sig);
-      break;
-    case SIGHUP:
-#ifdef HAVE_SYSTEMD
-      sd_notify(0, "RELOADING=1");
-#endif
-      if (do_hup() < 0) {
-        log_warn(LD_CONFIG,"Restart failed (config error?). Exiting.");
-        tor_cleanup();
-        exit(1);
-      }
-#ifdef HAVE_SYSTEMD
-      sd_notify(0, "READY=1");
-#endif
-      control_event_signal(sig);
-      break;
-#ifdef SIGCHLD
-    case SIGCHLD:
-      notify_pending_waitpid_callbacks();
-      break;
-#endif
-    case SIGNEWNYM: {
-      time_t now = time(NULL);
-      if (time_of_last_signewnym + MAX_SIGNEWNYM_RATE > now) {
-        signewnym_is_pending = 1;
-        log_notice(LD_CONTROL,
-            "Rate limiting NEWNYM request: delaying by %d second(s)",
-            (int)(MAX_SIGNEWNYM_RATE+time_of_last_signewnym-now));
-      } else {
-        signewnym_impl(now);
-      }
-      break;
-    }
-    case SIGCLEARDNSCACHE:
-      addressmap_clear_transient();
-      control_event_signal(sig);
-      break;
-    case SIGHEARTBEAT:
-      log_heartbeat(time(NULL));
-      control_event_signal(sig);
-      break;
-  }
 }
 
 /** Returns Tor's uptime. */
@@ -2510,92 +2412,18 @@ static struct {
   int signal_value;
   int try_to_register;
   struct event *signal_event;
-} signal_handlers[] = {
-#ifdef SIGINT
-  { SIGINT, UNIX_ONLY, NULL }, /* do a controlled slow shutdown */
-#endif
-#ifdef SIGTERM
-  { SIGTERM, UNIX_ONLY, NULL }, /* to terminate now */
-#endif
-#ifdef SIGPIPE
-  { SIGPIPE, UNIX_ONLY, NULL }, /* otherwise SIGPIPE kills us */
-#endif
-#ifdef SIGUSR1
-  { SIGUSR1, UNIX_ONLY, NULL }, /* dump stats */
-#endif
-#ifdef SIGUSR2
-  { SIGUSR2, UNIX_ONLY, NULL }, /* go to loglevel debug */
-#endif
-#ifdef SIGHUP
-  { SIGHUP, UNIX_ONLY, NULL }, /* to reload config, retry conns, etc */
-#endif
-#ifdef SIGXFSZ
-  { SIGXFSZ, UNIX_ONLY, NULL }, /* handle file-too-big resource exhaustion */
-#endif
-#ifdef SIGCHLD
-  { SIGCHLD, UNIX_ONLY, NULL }, /* handle dns/cpu workers that exit */
-#endif
-  /* These are controller-only */
-  { SIGNEWNYM, 0, NULL },
-  { SIGCLEARDNSCACHE, 0, NULL },
-  { SIGHEARTBEAT, 0, NULL },
-  { -1, -1, NULL }
-};
+} signal_handlers[] = {};
 
 /** Set up the signal handlers for either parent or child process */
 void
 handle_signals(int is_parent)
 {
-  int i;
-  if (is_parent) {
-    for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
-      if (signal_handlers[i].try_to_register) {
-        signal_handlers[i].signal_event =
-          tor_evsignal_new(tor_libevent_get_base(),
-                           signal_handlers[i].signal_value,
-                           signal_callback,
-                           &signal_handlers[i].signal_value);
-        if (event_add(signal_handlers[i].signal_event, NULL))
-          log_warn(LD_BUG, "Error from libevent when adding "
-                   "event for signal %d",
-                   signal_handlers[i].signal_value);
-      } else {
-        signal_handlers[i].signal_event =
-          tor_event_new(tor_libevent_get_base(), -1,
-                        EV_SIGNAL, signal_callback,
-                        &signal_handlers[i].signal_value);
-      }
-    }
-  } else {
-#ifndef _WIN32
-    struct sigaction action;
-    action.sa_flags = 0;
-    sigemptyset(&action.sa_mask);
-    action.sa_handler = SIG_IGN;
-    sigaction(SIGINT,  &action, NULL);
-    sigaction(SIGTERM, &action, NULL);
-    sigaction(SIGPIPE, &action, NULL);
-    sigaction(SIGUSR1, &action, NULL);
-    sigaction(SIGUSR2, &action, NULL);
-    sigaction(SIGHUP,  &action, NULL);
-#ifdef SIGXFSZ
-    sigaction(SIGXFSZ, &action, NULL);
-#endif
-#endif
-  }
 }
 
 /* Make sure the signal handler for signal_num will be called. */
 void
 activate_signal(int signal_num)
 {
-  int i;
-  for (i = 0; signal_handlers[i].signal_value >= 0; ++i) {
-    if (signal_handlers[i].signal_value == signal_num) {
-      event_active(signal_handlers[i].signal_event, EV_SIGNAL, 1);
-      return;
-    }
-  }
 }
 
 /** Main entry point for the Tor command-line client.
@@ -2826,10 +2654,6 @@ tor_cleanup(void)
 #ifdef USE_DMALLOC
   dmalloc_log_stats();
 #endif
-  tor_free_all(0); /* We could move tor_free_all back into the ifdef below
-                      later, if it makes shutdown unacceptably slow.  But for
-                      now, leave it here: it's helped us catch bugs in the
-                      past. */
   crypto_global_cleanup();
 #ifdef USE_DMALLOC
   dmalloc_log_unfreed();
@@ -3155,8 +2979,17 @@ sandbox_init_filter(void)
 }
 
 void
+torc_shutdown()
+{
+  log_err(LD_GENERAL, "Attempting to shut things down...");
+  continueRunning = 0;
+  // tor_cleanup();
+}
+
+void
 torc_main()
 {
+  continueRunning = 1;
 #ifdef _WIN32
   /* Call SetProcessDEPPolicy to permanently enable DEP.
      The function will not resolve on earlier versions of Windows,
