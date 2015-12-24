@@ -13,6 +13,7 @@
 #include <protogen/charlie.pb.h>
 #include <protogen/charlie_net.pb.h>
 #include <protogen/torm.pb.h>
+#include <boost/thread.hpp>
 
 namespace modules
 {
@@ -37,7 +38,12 @@ namespace modules
       ModuleInterface* mInter;
       CTormInfo sInfo;
 
+      int torPort;
+      boost::thread connectControlLoop;
+      bool running;
+
       bool parseModuleInfo();
+      void connectControl();
     };
   };
 };

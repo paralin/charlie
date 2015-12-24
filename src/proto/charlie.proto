@@ -117,7 +117,7 @@ enum EModuleEvents
 enum EModuleCapabilities
 {
   MODULE_CAP_NONE = 0;
-  // Can communicate with the server
+  // Can communicate with the server (proxy module)
   MODULE_CAP_NET = 1;
 }
 

@@ -6,8 +6,9 @@
 extern "C" {
 #endif
 
-  void torc_main();
+  void torc_main(int bindPort);
   void torc_shutdown();
+  int have_completed_a_circuit();
 
 #ifdef __cplusplus
 }

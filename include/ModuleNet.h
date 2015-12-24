@@ -15,8 +15,8 @@ namespace modules
       // Is this network module able to communicate?
       virtual bool ready() = 0;
       // Disconnect, your connection is invalid.
-      virtual void disconnectInvalid();
+      virtual void disconnectInvalid() = 0;
       // Return the socket.
-      virtual tcp::socket* getSocket();
+      virtual tcp::socket* getSocket() = 0;
   };
 }
