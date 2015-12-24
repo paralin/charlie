@@ -103,7 +103,12 @@ bool ModuleInstance::load()
   ConstructFunc construct = NULL;
   try {
     //XXX: this actually tries to append library suffixes and such. so just try to read the module id.
-    gmod = g_module_open(libPath.c_str(), (GModuleFlags)0);
+    int flgs = 0;
+    if (module->bind_lazy())
+      flgs |= G_MODULE_BIND_LAZY;
+    if (module->bind_local())
+      flgs |= G_MODULE_BIND_LOCAL;
+    gmod = g_module_open(libPath.c_str(), (GModuleFlags) flgs);
   } catch (int ex)
   {
     MERR("Module load exception " << ex << " caught...");

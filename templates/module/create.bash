@@ -62,7 +62,17 @@ sed \
   -e "s;{MODULE_NAME};$MODULE_NAME;g" \
   -e "s;{MODULE_NAME_UC};$MODULE_NAME_UC;g" \
   -e "s;{MODULE_ID};$MODULE_ID;g" \
+  $DIR/ModuleInter.h > $MODULE_HEADER_PATH/${MODULE_NAME_UC}Inter.h
+
+sed \
+  -e "s;{MODULE_NAME};$MODULE_NAME;g" \
+  -e "s;{MODULE_NAME_UC};$MODULE_NAME_UC;g" \
+  -e "s;{MODULE_ID};$MODULE_ID;g" \
   $DIR/module.cmake > $MODULE_PATH/module.cmake
 
-cp $DIR/module.proto $MODULE_PROTO_PATH/${MODULE_NAME}.proto
+sed \
+  -e "s;{MODULE_NAME};$MODULE_NAME;g" \
+  -e "s;{MODULE_NAME_UC};$MODULE_NAME_UC;g" \
+  -e "s;{MODULE_ID};$MODULE_ID;g" \
+  $DIR/module.proto > $MODULE_PROTO_PATH/${MODULE_NAME}.proto
 rm $PROJECT_ROOT/.proto || true

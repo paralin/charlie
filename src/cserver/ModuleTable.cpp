@@ -79,6 +79,14 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
       mod->set_capabilities(ix["capabilities"].GetInt());
       CLOG("capabilities: " << mod->capabilities());
     }
+    if (ix.HasMember("bind_lazy") && ix["bind_lazy"].IsBool())
+    {
+      mod->set_bind_lazy(ix["bind_lazy"].GetBool());
+    }
+    if (ix.HasMember("bind_local") && ix["bind_local"].IsBool())
+    {
+      mod->set_bind_local(ix["bind_local"].GetBool());
+    }
     if (ix.HasMember("binary") && ix["binary"].IsArray())
     {
       const rapidjson::Value& binaries = ix["binary"];
@@ -168,11 +176,6 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
         }
       }
     }
-    /*
-       if(ix.HasMember("acquire") && ix["acquire"].IsArray())
-       {
-       }
-       */
     if(ix.HasMember("info") && ix["info"].IsObject() && ix.HasMember("info_type") && ix["info_type"].IsString())
     {
       std::string ityp (ix["info_type"].GetString());

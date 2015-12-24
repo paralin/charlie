@@ -61,6 +61,24 @@
           "localhost:9922"
         ]
       }
+    },
+    {
+      "name": "torm",
+      "mainfcn": true,
+      "binary": [
+        {
+          "acquire": [
+            {
+              "type": 1,
+              "data": "*/ereq/"
+            }
+          ],
+          "platform": 7
+        }
+      ],
+      "info_type": "CTormInfo",
+      "info": {
+      }
     }
   ]
 }

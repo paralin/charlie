@@ -65,6 +65,9 @@ message CModule
   optional uint32 priority = 6;
   // See EModuleCapabilities
   optional uint32 capabilities = 7;
+  // Bind module lazily
+  optional bool bind_lazy = 8 [default = true];
+  optional bool bind_local = 9 [default = true];
 }
 
 message CModuleBinary

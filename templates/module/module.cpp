@@ -1,3 +1,4 @@
+#define MODULE_ID {MODULE_ID}
 #include <modules/{MODULE_NAME}/{MODULE_NAME_UC}.h>
 
 using namespace modules::{MODULE_NAME};
@@ -17,7 +18,6 @@ using namespace modules::{MODULE_NAME};
 void {MODULE_NAME_UC}Module::shutdown()
 {
   MLOG("Shutting down {MODULE_NAME} module..");
-  running = false;
 }
 
 void {MODULE_NAME_UC}Module::setModuleInterface(ModuleInterface* inter)
@@ -30,7 +30,15 @@ void* {MODULE_NAME_UC}Module::getPublicInterface()
   return pInter;
 }
 
-int {MODULE_NAME_UC}Module::parseModuleInfo()
+void {MODULE_NAME_UC}Module::injectDependency(u32 id, void* dep)
+{
+}
+
+void {MODULE_NAME_UC}Module::releaseDependency(u32 id)
+{
+}
+
+bool {MODULE_NAME_UC}Module::parseModuleInfo()
 {
   std::string info = mInter->getModuleInfo();
   return sInfo.ParseFromString(info) == 0;
@@ -39,11 +47,6 @@ int {MODULE_NAME_UC}Module::parseModuleInfo()
 void {MODULE_NAME_UC}Module::module_main()
 {
   parseModuleInfo();
-}
-
-void {MODULE_NAME_UC}Module::handleMessage(std::string& data)
-{
-  MERR("Don't know how to handle emsg " << head.emsg() << ".");
 }
 
 void {MODULE_NAME_UC}Module::handleEvent(u32 eve, void* data)
@@ -61,7 +64,7 @@ void {MODULE_NAME_UC}Module::handleEvent(u32 eve, void* data)
 
 void {MODULE_NAME_UC}Inter::handleCommand(const charlie::CMessageTarget& targ, std::string& command)
 {
-  mod->handleMessage(targ, command);
+  MERR("Don't know how to handle emsg " << targ.emsg() << ".");
 }
 
 CHARLIE_CONSTRUCT({MODULE_NAME_UC}Module);

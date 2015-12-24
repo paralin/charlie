@@ -42,3 +42,11 @@
 	path = deps/zlib
 	url = https://github.com/madler/zlib.git
   ignore = dirty
+[submodule "deps/tor"]
+	path = deps/tor
+	url = https://git.torproject.org/tor.git
+  ignore = dirty
+[submodule "deps/libevent"]
+	path = deps/libevent
+	url = https://github.com/libevent/libevent.git
+  ignore = dirty

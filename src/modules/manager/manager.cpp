@@ -63,7 +63,7 @@ void ManagerModule::injectDependency(u32 id, void* dep)
     case (u32)CLIENT_MODULE_ID:
       clientMod = (modules::client::ClientInter*) dep;
       break;
-    case 163025:
+    case 6032034:
       torModule = dep;
       break;
   }
@@ -81,7 +81,7 @@ void ManagerModule::releaseDependency(u32 id)
     case (u32)CLIENT_MODULE_ID:
       clientMod = NULL;
       break;
-    case 163025:
+    case 6032034:
       torModule = NULL;
       break;
   }
@@ -637,7 +637,7 @@ void ManagerModule::module_main()
   mInter->requireDependency(2526948902);
   mInter->requireDependency(CLIENT_MODULE_ID);
   // Tor library
-  // mInter->requireDependency(163025);
+  mInter->requireDependency(6032034);
   // XXX
   loadStorage();
 

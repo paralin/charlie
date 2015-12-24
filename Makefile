@@ -1,6 +1,6 @@
 all: debug
-debug: makessl makeboost makeprotolib makedbg finalize
-release: makessl makeboost makeprotolib makerel strip finalize
+debug: makessl makedeps maketor makeboost makeprotolib makedbg finalize
+release: makessl makedeps maketor makeboost makeprotolib makerel strip finalize
 mxe: setupmxe makemxe compile
 mxer: setupmxe makemxer compile
 
@@ -50,6 +50,25 @@ dclean: clean
 	sed -i -e "s/ find_package/ #find_package/g" ./deps/curl/CMakeLists.txt
 	touch .makessl
 makessl: .makessl
+
+.makedeps:
+	cd deps && mkdir -p build final
+	sed -i -e "s/ find_package/ #find_package/g" ./deps/libevent/CMakeLists.txt
+	sed -i -e '/-fPIE/d' ./deps/libevent/CMakeLists.txt
+	sed -i -e '/CURL_SOURCE_DIR}\/curl-config.in/,+7d' ./deps/curl/CMakeLists.txt
+	sed -i -e '/CURL_SOURCE_DIR}\/libcurl.pc.in/,+4d' ./deps/curl/CMakeLists.txt
+	sed -i -e '/auth using \%s with user/,+4d' ./deps/curl/lib/http.c
+	cd deps/build && cmake .. -DCMAKE_BUILD_TYPE=Release
+	cd deps/build && make -j4 && make install
+	touch .makedeps
+makedeps: .makedeps
+
+.maketor:
+	cd deps/tor/ && export CFLAGS="-fPIC" && ./autogen.sh && ./configure --disable-asciidoc
+	sed -i -e "s/-fPIE//g" deps/tor/Makefile
+	cd deps/tor/ && make -j4
+	touch .maketor
+maketor: .maketor
 
 .makeboost:
 	# Hack to enable FPIC

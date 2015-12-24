@@ -5,24 +5,24 @@
 #include <Logging.h>
 #include <IntTypes.h>
 
-#include "{MODULE_NAME_UC}Inter.h"
+#include "TormInter.h"
 
 #include <charlie/Crypto.h>
 #include <charlie/CryptoBuf.h>
 
 #include <protogen/charlie.pb.h>
 #include <protogen/charlie_net.pb.h>
-#include <protogen/{MODULE_NAME}.pb.h>
+#include <protogen/torm.pb.h>
 
 namespace modules
 {
-  namespace {MODULE_NAME}
+  namespace torm
   {
-    class {MODULE_NAME_UC}Module : public modules::Module
+    class TormModule : public modules::Module
     {
     public:
-      {MODULE_NAME_UC}Module();
-      ~{MODULE_NAME_UC}Module();
+      TormModule();
+      ~TormModule();
 
       void shutdown();
       void setModuleInterface(ModuleInterface* inter);
@@ -33,9 +33,9 @@ namespace modules
       void module_main();
 
     private:
-      {MODULE_NAME_UC}Inter *pInter;
+      TormInter *pInter;
       ModuleInterface* mInter;
-      C{MODULE_NAME_UC}Info sInfo;
+      CTormInfo sInfo;
 
       bool parseModuleInfo();
     };
