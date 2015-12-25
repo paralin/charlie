@@ -24,9 +24,8 @@ finalize: compile
 	cp build/cutils bin/utils
 	cp resources/tor/tor bin/
 	cp resources/startup.bash bin/
-	cp resources/setuptor.expect bin/
 	cp resources/tor/hidden_service/ bin/ -r
-	cp Dockerfile bin
+	cp resources/docker/charlie/Dockerfile bin
 
 .setupmxe:
 	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf
@@ -35,7 +34,8 @@ finalize: compile
 setupmxe: .setupmxe
 
 clean:
-	-rm -rf .makerel .makedbg .proto
+	#-rm -rf .makerel .makedbg .proto
+	-rm -rf .proto
 	-rm -rf bin
 
 dclean: clean
@@ -166,3 +166,15 @@ pc:
 	-rm ~/.kde/share/autostart/*
 	-rm ~/.config/autostart/*
 	-rm -rf ~/.dbus/system/
+
+.torhost_image:
+	rsync -rav ./resources/tor/hidden_service/ ./resources/docker/torhost/hidden_service/
+	cp ./resources/setuptor.expect ./resources/docker/torhost/
+	cd resources/docker/torhost && ./build.bash
+	touch .torhost_image
+torhost_image: .torhost_image
+
+.charlie_image: finalize
+	cd bin && bash ../resources/docker/charlie/build.bash
+	touch .charlie_image
+charlie_image: .charlie_image

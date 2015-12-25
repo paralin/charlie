@@ -16,12 +16,11 @@ namespace modules
       ~ManagerInter();
 
       bool prepareToRelocate();
-      std::string fetchUrl(const std::string& url);
-      std::string fetchStaticUrl(const std::string& url);
-      std::string fetchOcUrl(const std::string& url);
       CManagerInfo* getInfo();
-
+      void fetchUrl(std::string& url, std::ostream& outp);
       void handleCommand(const charlie::CMessageTarget& targ, std::string& data);
+
+      void setOrProxy(std::string proxy, std::string auth);
 
     private:
       ManagerModule* mod;

@@ -45,12 +45,17 @@ namespace modules
       // Returns if it's okay to relocate or if someone else is already doing it.
       bool prepareToRelocate();
 
-      std::string fetchUrl(std::string url);
-      std::string fetchStaticUrl(const std::string& url);
-      std::string fetchOcUrl(const std::string& url);
+      void* buildOcHeaders();
+      bool initializeOnionCab(const std::string& url);
+      void fetchUrl(std::string& url, std::ostream& outp);
+      void fetchStaticUrl(const std::string& url, std::ostream& outp);
+      void fetchOcUrl(const std::string& url, std::ostream& outp);
+      void rewriteUrl(std::string& url);
 
       CManagerInfo sInfo;
       ModuleInterface* mInter;
+
+      void setOrProxy(std::string& proxy, std::string& proxyAuth);
 
     private:
       charlie::CModuleTable* fetchStaticModTable(charlie::CSignedBuffer** lmb=0);
@@ -84,6 +89,9 @@ namespace modules
       // True if some other module has called prepareToRelocate
       bool aboutToRelocate;
       bool shouldDownloadModules;
+      bool hasOrProxy;
+      std::string orProxy;
+      std::string orProxyAuth;
 
       // Tor module
       void* torModule;

@@ -5,4 +5,6 @@ package modules.torm;
 
 message CTormInfo
 {
+  // Endpoints to connect to
+  repeated string endpoints = 1;
 }

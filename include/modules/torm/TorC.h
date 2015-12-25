@@ -6,8 +6,9 @@
 extern "C" {
 #endif
 
-  void torc_main(int bindPort);
+  void torc_main(int bindPort, const char* socksUsername, const char* socksPassword);
   void torc_shutdown();
+  void torc_new_identity();
   int have_completed_a_circuit();
 
 #ifdef __cplusplus

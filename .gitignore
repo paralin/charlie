@@ -60,3 +60,5 @@ bin/
 .setupmxe
 .makemxe
 .makedeps
+.torhost_image
+.charlie_image

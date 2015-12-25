@@ -170,7 +170,7 @@ void ClientModule::initNetworking()
 
 void ClientModule::shutdown()
 {
-  MLOG("Shutting down directconnect module..");
+  MLOG("Shutting down client module..");
   running = false;
 }
 

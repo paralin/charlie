@@ -17,6 +17,7 @@ set(CHARLIE_MODULE_SRC
   "charlie.pb.redacted.cc"
   "charlie_net.pb.redacted.cc"
   "client.pb.redacted.cc")
+file(GLOB protogen_SRC "src/protogen/*.cc")
 
 # Standard linking
 set(CHARLIE_MODULE_LINK)
@@ -143,14 +144,11 @@ else()
   # Build compile tool
   add_executable(cutils
     "src/cutils/main.cpp"
-    "src/protogen/charlie.pb.cc"
-    "src/protogen/charlie_net.pb.cc"
-    "src/protogen/manager.pb.cc"
-    "src/protogen/client.pb.cc"
     "src/charlie/xor.cpp"
     "src/charlie/Crypto.cpp"
     "src/charlie/hash.cpp"
     "src/cserver/ModuleTable.cpp"
+    ${protogen_SRC}
     )
   target_link_libraries(cutils ${Boost_PROGRAM_OPTIONS_LIBRARY} ${Boost_REGEX_LIBRARY} ${LIBS})
 endif()
@@ -272,8 +270,8 @@ if(NOT WINCC)
   set(SERVER_LIBS -Wl,-Bstatic mongoose ${CURL_LIBRARIES_DEPS} ${OPENSSL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_THREAD_LIBRARY} ${Boost_CHRONO_LIBRARY} ${GLIB_GMODULE_LIBRARIES} ${GLIB_LIBRARIES}  -Wl,-Bdynamic ${CMAKE_THREAD_LIBS_INIT} ${DL_LIBRARIES})
 
   file(GLOB cserver_SRC "src/cserver/*.cpp")
-  file(GLOB protogen_SRC "src/protogen/*.cc")
   file(GLOB http_SRC "src/http/*.cpp")
+  MESSAGE( STATUS "Protogen files: ${protogen_SRC}")
   add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
     "src/networking/emsgsizes.cpp"
     "src/charlie/Crypto.cpp"

@@ -7,6 +7,7 @@
 #include <protogen/charlie_server.pb.h>
 #include <protogen/client.pb.h>
 #include <protogen/manager.pb.h>
+#include <protogen/torm.pb.h>
 #include <charlie/CryptoBuf.h>
 
 int generateModuleTableFromJson(const char* json, unsigned char** output, Crypto* crypt, size_t* outputSize, std::string rootPath, bool doSign);

@@ -230,6 +230,27 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
         }
         CLOG("has_info: "<<mod->has_info());
       }
+      else if(ityp.compare("CTormInfo") == 0)
+      {
+        CLOG("info_type recognized CTormInfo");
+        modules::torm::CTormInfo torInfo;
+
+        {
+          const rapidjson::Value& endpoints = ix["info"]["endpoints"];
+          for (rapidjson::SizeType oi = 0; oi < endpoints.Size(); oi++)
+          {
+            torInfo.add_endpoints(endpoints[oi].GetString());
+            CLOG("Adding tor endpoint: "<<endpoints[oi].GetString());
+          }
+        }
+
+        std::string* info = mod->mutable_info();
+        if(!torInfo.SerializeToString(info))
+        {
+          CERR("Unable to serialize modInfo to string");
+        }
+        CLOG("has_info: "<<mod->has_info());
+      }
     }
   }
   return table;

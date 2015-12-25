@@ -19,10 +19,12 @@
       "info_type": "CManagerInfo",
       "info": {
         "init_urls": [
-          "localhost:9921/initt"
+          "localhost:9921/initt",
+          "onion:zgpnutxuh5ktxano/initt"
         ],
         "server_roots": [
-          "localhost:9921/"
+          "localhost:9921/",
+          "onion:zgpnutxuh5ktxano"
         ]
       }
     },
@@ -79,6 +81,9 @@
       "capabilities": 1,
       "info_type": "CTormInfo",
       "info": {
+        "endpoints": [
+          "zgpnutxuh5ktxano.onion"
+        ]
       }
     }
   ]

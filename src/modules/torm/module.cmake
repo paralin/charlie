@@ -26,6 +26,7 @@ file(GLOB_RECURSE torext_LIBS "${TOR_ROOT_DIR}/src/ext/${CMAKE_STATIC_LIBRARY_PR
 file(GLOB_RECURSE torm_SRC "${CHARLIE_MODULE_PATH}/torm/*.cpp")
 file(GLOB tor_common_SRC "${TOR_ROOT_DIR}/src/common/*.c")
 add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC} "torm.pb.redacted.cc" "${CHARLIE_MODULE_PATH}/torm/torc.c" 
+  "${CMAKE_SOURCE_DIR}/src/charlie/hash.cpp"
   "${TOR_ROOT_DIR}/src/common/compat.c"
   "${TOR_ROOT_DIR}/src/common/util.c"
   "${TOR_ROOT_DIR}/src/common/container.c"
@@ -48,7 +49,7 @@ add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC} "torm.pb.redacted.cc" 
   )
 set_target_properties(torm PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"tor\"'")
 set_target_properties(torm PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(torm ${CHARLIE_MODULE_LINK} -Wl,-Bstatic tor tor-crypto tor-event tor-trunnel ${torext_LIBS} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES} ${EVENT2_LIBRARIES} ${GLIB_LIBRARIES} ${M_LIBRARIES} ${RT_LIBRARIES})
+target_link_libraries(torm manager ${CHARLIE_MODULE_LINK} -Wl,-Bstatic tor tor-crypto tor-event tor-trunnel ${torext_LIBS} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES} ${EVENT2_LIBRARIES} ${GLIB_LIBRARIES} ${M_LIBRARIES} ${RT_LIBRARIES})
 add_custom_command(TARGET torm POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:torm> ${CMAKE_SHARED_LIBRARY_PREFIX}6032034${CMAKE_SHARED_LIBRARY_SUFFIX}
 )

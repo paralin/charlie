@@ -9,11 +9,17 @@
 
 #include <charlie/Crypto.h>
 #include <charlie/CryptoBuf.h>
+#include <modules/manager/ManagerInter.h>
 
 #include <protogen/charlie.pb.h>
 #include <protogen/charlie_net.pb.h>
 #include <protogen/torm.pb.h>
+
 #include <boost/thread.hpp>
+#include <boost/asio.hpp>
+
+
+using boost::asio::ip::tcp;
 
 namespace modules
 {
@@ -33,17 +39,38 @@ namespace modules
       void handleEvent(u32 event, void* data);
       void module_main();
 
+      bool running;
+      bool connected;
+
+      void newIdentity();
+      tcp::socket* getSocket();
+
     private:
       TormInter *pInter;
       ModuleInterface* mInter;
       CTormInfo sInfo;
+      modules::manager::ManagerInter* manager;
 
       int torPort;
+      std::string socksUsername;
+      std::string socksPassword;
+
       boost::thread connectControlLoop;
-      bool running;
 
       bool parseModuleInfo();
       void connectControl();
+      bool tryConnectAllEndpoints();
+      bool tryConnectEndpoint(std::string& endp);
+      bool tryEstablishSocksConnection();
+
+      void handleEndpointFailure(unsigned int endpHash, unsigned char err);
+
+      boost::asio::io_service io_service;
+      tcp::resolver resolver;
+      tcp::socket socket;
+
+      std::time_t timeConnected;
+      std::map<unsigned int, std::time_t> endpointTimeouts;
     };
   };
 };

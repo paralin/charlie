@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  labels:
+    app: torhost
+  name: torhost
+spec:
+  replicas: 1
+  selector:
+    app: torhost
+  template:
+    metadata:
+      labels:
+        app: torhost
+    spec:
+      containers:
+      - image: gcr.io/faceit-ltd/torhost:latest
+        imagePullPolicy: Always
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - killall
+              - mono
+        name: torhost
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always

@@ -2988,7 +2988,13 @@ torc_shutdown()
 }
 
 void
-torc_main(int bindPort)
+torc_new_identity()
+{
+  signewnym_impl(time(NULL));
+}
+
+void
+torc_main(int bindPort, const char* socksUsername, const char* socksPassword)
 {
   continueRunning = 1;
 #ifdef _WIN32
@@ -3027,8 +3033,8 @@ torc_main(int bindPort)
   tor_initb();
 
   // Finally this works.
-  char* sconfig = (char*) malloc(sizeof(char) * 25);
-  snprintf(sconfig, 25, "SocksPort %u", bindPort);
+  char* sconfig = (char*) malloc(sizeof(char) * 150);
+  snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s", bindPort, socksUsername, socksPassword);
   char* errstring = NULL;
   options_init_from_string(NULL, sconfig, CMD_RUN_TOR, NULL, &errstring);
   if (errstring != NULL)
