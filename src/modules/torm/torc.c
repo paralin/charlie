@@ -3039,8 +3039,8 @@ torc_main(int bindPort, const char* socksUsername, const char* socksPassword, co
   init_logging(0);
 
   sconfig = (char*) malloc(sizeof(char) * 150);
-  // snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog info stdout\nDataDirectory %s", bindPort, socksUsername, socksPassword, dataDir);
-  snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog info stdout", bindPort, socksUsername, socksPassword);
+  snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout\nDataDirectory %s", bindPort, socksUsername, socksPassword, dataDir);
+  // snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout", bindPort, socksUsername, socksPassword);
   if(tor_initb() < 0)
   {
     log_err(LD_BUG, "Unable to initialize.");

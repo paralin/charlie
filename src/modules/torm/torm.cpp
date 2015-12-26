@@ -19,6 +19,7 @@ TormModule::TormModule() :
   connected(false),
   inited(false),
   manager(NULL),
+  client(NULL),
   io_service(),
   resolver(io_service),
   socket(io_service)
@@ -50,14 +51,19 @@ void* TormModule::getPublicInterface()
 
 void TormModule::injectDependency(u32 id, void* dep)
 {
+  MLOG("Dep injected " << id);
   if (id == MANAGER_MODULE_ID)
     manager = (modules::manager::ManagerInter*) dep;
+  if (id == CLIENT_MODULE_ID)
+    client = (modules::client::ClientInter*) dep;
 }
 
 void TormModule::releaseDependency(u32 id)
 {
   if (id == MANAGER_MODULE_ID)
     manager = NULL;
+  if (id == CLIENT_MODULE_ID)
+    client = NULL;
 }
 
 bool TormModule::parseModuleInfo()
@@ -71,6 +77,7 @@ void TormModule::module_main()
   parseModuleInfo();
   std::string dataDir;
   mInter->requireDependency(MANAGER_MODULE_ID, false);
+  mInter->requireDependency(CLIENT_MODULE_ID, false);
   {
     SystemInfo *info = mInter->getSysInfo();
     torPort = info->lock_port + 1 + (rand() % 100);
@@ -237,8 +244,10 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
     socket.receive(boost::asio::buffer(&portdb, 2));
     // MLOG("Confirmed port is " << port);
   }
-  MLOG("Setting connected = true");
+  MLOG("Notifying client we're connected.");
   connected = true;
+  if (client)
+    client->retryConnectionsNow();
   return true;
 }
 

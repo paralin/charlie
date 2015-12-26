@@ -1,5 +1,6 @@
 #include <server_modules/client/Client.h>
 #include <protogen/client.pb.h>
+#include <boost/thread.hpp>
 
 using namespace server_modules::client;
 using namespace modules::client;
@@ -35,6 +36,7 @@ void ClientModule::handleEvent(u32 event, void* data)
 
 void ClientModule::module_main()
 {
+  boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
   // First thing's first, request some info.
   MLOG("Requesting client info...");
   CClientRequestSystemInfo nfo;

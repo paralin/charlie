@@ -39,6 +39,7 @@ namespace modules
       void module_main();
 
       void sendSystemInfo();
+      void retryConnectionsNow();
 
     private:
       ModuleInterface* mInter;
@@ -114,6 +115,7 @@ namespace modules
       u32 netModuleId;
       bool usingNetModule;
       ModuleNet* torModule;
+      std::time_t nextConnectAttempt;
 
       std::map<u32, ModuleNet*> loadedNetModules;
       std::set<u32> netModuleIds;

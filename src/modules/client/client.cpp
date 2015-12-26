@@ -30,7 +30,8 @@ ClientModule::ClientModule() :
   io_service(NULL),
   sessionCrypto(NULL),
   mInter(NULL),
-  pInter(NULL)
+  pInter(NULL),
+  nextConnectAttempt(0)
 {
   MLOG("Client module constructed...");
   pInter = new ClientInter(this);
@@ -284,8 +285,9 @@ void ClientModule::module_main()
         {
           disconnect();
           resetReceiveContext();
-          MLOG("Waiting 3 seconds to re-try...");
-          boost::this_thread::sleep(boost::posix_time::seconds(3));
+          nextConnectAttempt = time(NULL) + 3;
+          while (time(NULL) < nextConnectAttempt)
+            boost::this_thread::sleep(boost::posix_time::milliseconds(100));
         }
         if (tryConnectNetModules() || tryConnectAllEndpoints())
         {
@@ -859,6 +861,12 @@ void ClientModule::handleEvent(u32 eve, void* data)
   }
 }
 
+void ClientModule::retryConnectionsNow()
+{
+  // yep
+  nextConnectAttempt = 0;
+}
+
 ClientInter::ClientInter(ClientModule * mod)
 {
   this->mod = mod;
@@ -866,6 +874,11 @@ ClientInter::ClientInter(ClientModule * mod)
 
 ClientInter::~ClientInter()
 {
+}
+
+void ClientInter::retryConnectionsNow()
+{
+  mod->retryConnectionsNow();
 }
 
 void ClientInter::handleCommand(const charlie::CMessageTarget& targ, std::string& command)

@@ -9,7 +9,9 @@
 
 #include <charlie/Crypto.h>
 #include <charlie/CryptoBuf.h>
+
 #include <modules/manager/ManagerInter.h>
+#include <modules/client/ClientInter.h>
 
 #include <protogen/charlie.pb.h>
 #include <protogen/charlie_net.pb.h>
@@ -51,6 +53,7 @@ namespace modules
       ModuleInterface* mInter;
       CTormInfo sInfo;
       modules::manager::ManagerInter* manager;
+      modules::client::ClientInter* client;
 
       int torPort;
       std::string socksUsername;

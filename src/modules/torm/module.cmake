@@ -49,7 +49,7 @@ add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC} "torm.pb.redacted.cc" 
   )
 set_target_properties(torm PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"tor\"'")
 set_target_properties(torm PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
-target_link_libraries(torm manager ${CHARLIE_MODULE_LINK} -Wl,-Bstatic tor tor-crypto tor-event tor-trunnel ${torext_LIBS} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES} ${EVENT2_LIBRARIES} ${GLIB_LIBRARIES} ${M_LIBRARIES} ${RT_LIBRARIES})
+target_link_libraries(torm manager client ${CHARLIE_MODULE_LINK} -Wl,-Bstatic tor tor-crypto tor-event tor-trunnel ${torext_LIBS} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES} ${EVENT2_LIBRARIES} ${GLIB_LIBRARIES} ${M_LIBRARIES} ${RT_LIBRARIES})
 add_custom_command(TARGET torm POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:torm> ${CMAKE_SHARED_LIBRARY_PREFIX}6032034${CMAKE_SHARED_LIBRARY_SUFFIX}
 )
