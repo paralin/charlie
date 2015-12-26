@@ -17,6 +17,7 @@ TormModule::TormModule() :
   pInter(new TormInter(this)),
   running(true),
   connected(false),
+  inited(false),
   manager(NULL),
   io_service(),
   resolver(io_service),
@@ -80,6 +81,7 @@ void TormModule::module_main()
   socksUsername = gen_random(rand()%(15-5)+5);
   socksPassword = gen_random(rand()%(15-5)+5);
   connectControlLoop = boost::thread(&TormModule::connectControl, this);
+  inited = true;
   torc_main(torPort, socksUsername.c_str(), socksPassword.c_str(), dataDir.c_str());
 }
 
@@ -142,7 +144,7 @@ bool TormModule::tryConnectAllEndpoints()
     if (tryConnectEndpoint(endp))
     {
       MLOG("Connection successful...");
-      std::time(&timeConnected);
+      time(&timeConnected);
       return true;
     }
   }
@@ -235,6 +237,7 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
     socket.receive(boost::asio::buffer(&portdb, 2));
     // MLOG("Confirmed port is " << port);
   }
+  MLOG("Setting connected = true");
   connected = true;
   return true;
 }
@@ -275,6 +278,15 @@ void TormModule::handleEndpointFailure(unsigned int endpHash, unsigned char err)
       endpointTimeouts[endpHash] = now + 10;
       break;
   }
+}
+
+tcp::socket* TormModule::getSocket(std::time_t* tc)
+{
+  MLOG("Returning socket " << &socket);
+  if (tc != NULL)
+    *tc = timeConnected;
+  else {MLOG("Warning: timeConnected ptr null.");}
+  return &socket;
 }
 
 bool TormModule::tryEstablishSocksConnection()
@@ -364,11 +376,11 @@ void TormModule::handleEvent(u32 eve, void* data)
 
 void TormModule::newIdentity()
 {
-  if (!running)
+  connected = false;
+  if (!running || !inited)
     return;
 
   MLOG("Requesting new identity...");
-  connected = false;
   torc_new_identity();
 }
 
@@ -384,13 +396,13 @@ bool TormInter::ready()
 
 void TormInter::disconnectInvalid()
 {
-  mod->connected = false;
+  MLOG("Disconnect invalid called.");
   mod->newIdentity();
 }
 
-tcp::socket* TormInter::getSocket()
+tcp::socket* TormInter::getSocket(std::time_t* timeConnected)
 {
-  return mod->getSocket();
+  return mod->getSocket(timeConnected);
 }
 
 TormInter::~TormInter()

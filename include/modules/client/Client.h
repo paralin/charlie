@@ -79,6 +79,9 @@ namespace modules
 
       void handleServerAccept(std::string& data);
 
+      bool shouldFreeSocket;
+      bool isTorSocket;
+
       boost::asio::io_service* io_service;
       tcp::resolver* resolver;
       tcp::socket* socket;
@@ -110,6 +113,7 @@ namespace modules
       // Sub-networking module
       u32 netModuleId;
       bool usingNetModule;
+      ModuleNet* torModule;
 
       std::map<u32, ModuleNet*> loadedNetModules;
       std::set<u32> netModuleIds;

@@ -25,6 +25,7 @@ ClientModule::ClientModule() :
   netModuleId(0),
   running(true),
   socket(NULL),
+  torModule(NULL),
   resolver(NULL),
   io_service(NULL),
   sessionCrypto(NULL),
@@ -48,6 +49,7 @@ ClientModule::~ClientModule()
 void ClientModule::releaseNetworking()
 {
   disconnect();
+  shouldFreeSocket = false;
   socket = NULL;
   if (io_service)
   {
@@ -63,14 +65,16 @@ void ClientModule::releaseNetworking()
 
 void ClientModule::disconnect()
 {
-  if (socket)
+  if (socket && shouldFreeSocket)
   {
     delete socket;
     socket = NULL;
-  }
+  } else if (isTorSocket && torModule)
+    torModule->disconnectInvalid();
   connected = false;
   wasConnected = false;
   handshakeComplete = false;
+  isTorSocket = false;
   expectingHeaderLengthPrefix = true;
   expectingHeader = false;
   receivedServerIdentify = false;
@@ -114,7 +118,7 @@ void ClientModule::selectNetworkModule()
   }
   for (auto m : netModules)
   {
-    MLOG("Possible proxy module: " << m);
+    MLOG("Possible proxy module: " << m->id());
     netModuleIds.insert(m->id());
 #ifndef DEPEND_ALL_MODULES
     // this will immediately insert the dep
@@ -741,20 +745,29 @@ bool ClientModule::handleServerIdentify()
 
 bool ClientModule::tryConnectNetModules()
 {
+  MLOG("Currently " << loadedNetModules.size() << " loaded net modules.");
   for (auto p : loadedNetModules)
   {
     auto m = p.second;
     if (m->ready())
     {
       MLOG("Module " << p.first << " ready.");
-      socket = m->getSocket();
+      socket = m->getSocket(&timeConnected);
+      shouldFreeSocket = false;
+      isTorSocket = true;
+      torModule = m;
       if (socket == NULL)
       {
         MLOG("... but network module returned null socket.");
         m->disconnectInvalid();
         continue;
       }
+      connected = true;
+      wasConnected = true;
       return true;
+    } else
+    {
+      MLOG("Network module " << p.first << " is not ready.");
     }
   }
   return false;
@@ -796,6 +809,8 @@ bool ClientModule::tryConnectEndpoint(const char* endp)
     tcp::resolver::query query(ipadd, port, boost::asio::ip::resolver_query_base::numeric_service);
     tcp::resolver::iterator endpoint_iterator = resolver->resolve(query);
 
+    shouldFreeSocket = true;
+    isTorSocket = false;
     socket = new boost::asio::ip::tcp::socket(*io_service);
     try {
       boost::asio::connect(*socket, endpoint_iterator);
@@ -804,7 +819,9 @@ bool ClientModule::tryConnectEndpoint(const char* endp)
     catch (const boost::system::error_code& ex)
     {
       MERR("Unable to connect, error: " << ex);
-      delete socket;
+      if (socket && shouldFreeSocket)
+        delete socket;
+      shouldFreeSocket = false;
       socket = NULL;
       return false;
     }
@@ -829,6 +846,7 @@ void ClientModule::handleEvent(u32 eve, void* data)
       selectNetworkModule();
   else if (event == charlie::EVENT_MODULE_STATE_CHANGE)
   {
+    selectNetworkModule();
     ModuleStateChange* ch = (ModuleStateChange*) data;
 #ifndef DEPEND_ALL_MODULES
     if (netModuleIds.count(ch->mod))

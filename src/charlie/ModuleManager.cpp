@@ -152,13 +152,11 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
   if(memcmp(hash, digest, SHA256_DIGEST_LENGTH) != 0)
   {
     CERR("Module digest for ["<<mod->id()<<"] doesn't match.");
-#ifndef DEBUG
     if(cleanFail)
     {
       CLOG("Deleting mismatch library file...");
       boost::filesystem::remove(path);
     }
-#endif
     free(path);
     free(digest);
     return false;

@@ -41,9 +41,10 @@ namespace modules
 
       bool running;
       bool connected;
+      bool inited;
 
       void newIdentity();
-      tcp::socket* getSocket();
+      tcp::socket* getSocket(std::time_t* timeConnected);
 
     private:
       TormInter *pInter;

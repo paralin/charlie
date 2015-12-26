@@ -8,7 +8,7 @@ namespace modules
   namespace torm
   {
     class TormModule;
-    class VISIBLE TormInter : public ModuleAPI, public ModuleNet
+    class VISIBLE TormInter : public ModuleNet
     {
     public:
       TormInter(TormModule * mod);
@@ -18,7 +18,7 @@ namespace modules
 
       bool ready();
       void disconnectInvalid();
-      tcp::socket* getSocket();
+      tcp::socket* getSocket(std::time_t* timeConnected);
 
     private:
       TormModule* mod;
