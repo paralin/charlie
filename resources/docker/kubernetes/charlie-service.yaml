@@ -8,9 +8,9 @@ metadata:
 spec:
   clusterIP: 10.0.214.136
   ports:
-  - port: 80
+  - port: 9921
     protocol: TCP
-    targetPort: 80
+    targetPort: 9921
     name: web
   - port: 9922
     protocol: TCP

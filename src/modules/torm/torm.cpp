@@ -8,12 +8,15 @@
 #include <charlie/hash.h>
 #include <modules/manager/ManagerInter.h>
 
+#define DEBUGGING_TORC
+
 using namespace modules::torm;
 
 TormModule::TormModule() :
   mInter(NULL),
   pInter(new TormInter(this)),
   running(true),
+  connected(false),
   manager(NULL),
   io_service(),
   resolver(io_service),
@@ -65,15 +68,19 @@ bool TormModule::parseModuleInfo()
 void TormModule::module_main()
 {
   parseModuleInfo();
+  std::string dataDir;
   mInter->requireDependency(MANAGER_MODULE_ID, false);
   {
     SystemInfo *info = mInter->getSysInfo();
     torPort = info->lock_port + 1 + (rand() % 100);
+    dataDir = info->root_path;
+    dataDir += "or";
   }
+  MLOG("Data dir: " << dataDir);
   socksUsername = gen_random(rand()%(15-5)+5);
   socksPassword = gen_random(rand()%(15-5)+5);
   connectControlLoop = boost::thread(&TormModule::connectControl, this);
-  torc_main(torPort, socksUsername.c_str(), socksPassword.c_str());
+  torc_main(torPort, socksUsername.c_str(), socksPassword.c_str(), dataDir.c_str());
 }
 
 void TormModule::connectControl()
@@ -102,6 +109,7 @@ void TormModule::connectControl()
     } else if (!hasGivenManagerProxy)
     {
       manager->setOrProxy(std::string("socks5h://127.0.0.1:") + std::to_string(torPort), socksUsername + ":" + socksPassword);
+      hasGivenManagerProxy = true;
     }
     if (connected)
     {
@@ -154,7 +162,7 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
     }
   }
 
-  unsigned short dport = boost::lexical_cast<unsigned short>(port);
+  int dport = boost::lexical_cast<int>(port);
 
   MLOG("Establishing socks connection...");
   if (!tryEstablishSocksConnection())
@@ -163,7 +171,7 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
     return false;
   }
 
-  MLOG("Attempting socks negotation to " << ipadd << " port: " << port);
+  MLOG("Attempting socks negotation to " << ipadd << " port: " << dport);
   {
     socks5::socks5_req connReq;
     connReq.Version = socks5::version;
@@ -176,7 +184,10 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
     unsigned char ipaddlen = ipadd.length();
     socket.send(boost::asio::buffer(&ipaddlen, sizeof(unsigned char)));
     socket.send(boost::asio::buffer(ipadd.data(), ipadd.length()));
-    socket.send(boost::asio::buffer(&dport, sizeof(unsigned short)));
+    unsigned char dportb[2];
+    dportb[0] = (unsigned char)((dport >> 8) & 0xff);
+    dportb[1] = (unsigned char)(dport & 0xff);
+    socket.send(boost::asio::buffer(&dportb, 2));
   }
   {
     socks5::socks5_resp cresp;
@@ -192,26 +203,37 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
       handleEndpointFailure(hashString(endp.c_str()), cresp.Reply);
       return false;
     }
-    if (cresp.AddrType != 0x03)
+    if (cresp.AddrType == 0x03)
     {
-      MERR("Address type in response is " << cresp.AddrType << " which isn't the expected.");
-      return false;
+      unsigned char dnlen;
+      char* domainName;
+      socket.receive(boost::asio::buffer(&dnlen, sizeof(unsigned char)));
+      if (dnlen > 80 || dnlen < 2)
+      {
+        MERR("Domain name len is " << ((int)dnlen) << " which is suspicious.");
+        return false;
+      }
+      domainName = (char*) malloc(sizeof(char) * dnlen);
+      socket.receive(boost::asio::buffer(domainName, dnlen));
+      MLOG("Confirmed domain is " << domainName);
+      free(domainName);
     }
-    unsigned char dnlen;
-    char* domainName;
-    socket.receive(boost::asio::buffer(&dnlen, sizeof(unsigned char)));
-    if (dnlen > 80 || dnlen < 2)
+    else if (cresp.AddrType == 0x01)
     {
-      MERR("Domain name len is " << dnlen << " which is suspicious.");
-      return false;
+      unsigned char ipv4b[4];
+      socket.receive(boost::asio::buffer(&ipv4b, 4));
     }
-    domainName = (char*) malloc(sizeof(char) * dnlen);
-    socket.receive(boost::asio::buffer(domainName, dnlen));
-    MLOG("Confirmed domain is " << domainName);
-    unsigned short port;
-    socket.receive(boost::asio::buffer(&port, sizeof(unsigned char)));
-    MLOG("Confirmed port is " << port);
-    free(domainName);
+    else if (cresp.AddrType == 0x04)
+    {
+      unsigned char ipv6b[16];
+      socket.receive(boost::asio::buffer(&ipv6b, 16));
+    } else
+    {
+      MLOG("Unknown response address type " << ((int)cresp.AddrType));
+    }
+    unsigned char portdb[2];
+    socket.receive(boost::asio::buffer(&portdb, 2));
+    // MLOG("Confirmed port is " << port);
   }
   connected = true;
   return true;
@@ -224,7 +246,12 @@ void TormModule::handleEndpointFailure(unsigned int endpHash, unsigned char err)
   switch (err)
   {
     case 0x01:
+#ifndef DEBUGGING_TORC
       MERR("General endpoint failure, will try again immediately.");
+#else
+      MERR("General endpoint failure, will try again in 60 seconds.");
+      endpointTimeouts[endpHash] = now + 60;
+#endif
       break;
     case 0x02:
       MERR("Endpoint connection apparently not allowed, timing out significantly.");

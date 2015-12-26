@@ -71,6 +71,7 @@
 #undef HAVE_SYSTEMD
 
 int continueRunning = 1;
+char* sconfig;
 
 const char tor_git_revision[] = "";
 
@@ -2250,6 +2251,9 @@ run_main_loop_until_done(void)
 static void
 signal_callback(evutil_socket_t fd, short events, void *arg)
 {
+#ifdef DEBUG
+  printf("[torc] Received signal!");
+#endif
 }
 
 /** Do the work of acting on a signal received in <b>sig</b> */
@@ -2429,18 +2433,28 @@ activate_signal(int signal_num)
 
 /** Main entry point for the Tor command-line client.
  */
-void
+int
 tor_initb()
 {
   char progname[256];
-  int quiet = 0;
+  int quiet = 1;
 
   time_of_process_start = time(NULL);
   init_connection_lists();
+
   /* Have the log set up with our application name. */
   tor_snprintf(progname, sizeof(progname), "Tor %s", get_version());
   log_set_application_name(progname);
 
+  if (crypto_early_init() < 0)
+  {
+    log_err(LD_GENERAL, "Unable to initialize the crypto subsystem!");
+    return -1;
+  }
+
+  rep_hist_init();
+  rend_cache_init();
+  addressmap_init();
 
   quiet_level = quiet;
 
@@ -2471,9 +2485,17 @@ tor_initb()
 
   if (network_init()<0) {
     log_err(LD_BUG,"Error initializing network; exiting.");
-    return;
+    return -1;
   }
-  atexit(exit_function);
+
+  char* errstring = NULL;
+  options_init_from_string("", sconfig, CMD_RUN_TOR, NULL, &errstring);
+  if (errstring != NULL)
+  {
+    log_err(LD_GENERAL, "Error setting options %s", errstring);
+    free(errstring);
+  }
+
 
   if (crypto_global_init(get_options()->HardwareAccel,
                          get_options()->AccelName,
@@ -2485,6 +2507,8 @@ tor_initb()
   if (tor_init_libevent_rng() < 0) {
     log_warn(LD_NET, "Problem initializing libevent RNG.");
   }
+
+  return 0;
 }
 
 /** A lockfile structure, used to prevent two Tors from messing with the
@@ -2994,7 +3018,7 @@ torc_new_identity()
 }
 
 void
-torc_main(int bindPort, const char* socksUsername, const char* socksPassword)
+torc_main(int bindPort, const char* socksUsername, const char* socksPassword, const char* dataDir)
 {
   continueRunning = 1;
 #ifdef _WIN32
@@ -3010,40 +3034,22 @@ torc_main(int bindPort, const char* socksUsername, const char* socksPassword)
   }
 #endif
 
-
   update_approx_time(time(NULL));
   tor_threads_init();
   init_logging(0);
 
-  /* Set up the crypto nice and early */
-  if (crypto_early_init() < 0) {
-    log_err(LD_GENERAL, "Unable to initialize the crypto subsystem!");
+  sconfig = (char*) malloc(sizeof(char) * 150);
+  // snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog info stdout\nDataDirectory %s", bindPort, socksUsername, socksPassword, dataDir);
+  snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog info stdout", bindPort, socksUsername, socksPassword);
+  if(tor_initb() < 0)
+  {
+    log_err(LD_BUG, "Unable to initialize.");
     return;
   }
-
-  /* Initialize the history structures. */
-  rep_hist_init();
-  /* Initialize the service cache. */
-  rend_cache_init();
-  addressmap_init(); /* Init the client dns cache. Do it always, since it's
-                      * cheap. */
-
-  options_init_from_torrc(0, NULL);
-
-  tor_initb();
-
-  // Finally this works.
-  char* sconfig = (char*) malloc(sizeof(char) * 150);
-  snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s", bindPort, socksUsername, socksPassword);
-  char* errstring = NULL;
-  options_init_from_string(NULL, sconfig, CMD_RUN_TOR, NULL, &errstring);
-  if (errstring != NULL)
-  {
-    log_err(LD_GENERAL, "Error setting options %s", errstring);
-    free(errstring);
-  }
+  free(sconfig);
 
   do_main_loop();
+
   tor_cleanup();
 }
 
