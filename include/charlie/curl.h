@@ -47,9 +47,11 @@ CURLcode curl_read(const std::string& url, std::ostream& os, long* status_code =
 #endif
         && (headers == NULL || CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers)));
     if (proxy != NULL && proxy->length() > 0)
-        isOk = CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_PROXY, proxy->c_str()));
-    if (proxyAuth != NULL && proxyAuth->length() > 0)
+    {
+      isOk = CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_PROXY, proxy->c_str()));
+      if (proxyAuth != NULL && proxyAuth->length() > 0)
         isOk = CURLE_OK == (code = curl_easy_setopt(curl, CURLOPT_PROXYUSERPWD, proxyAuth->c_str()));
+    }
     if (isOk)
     {
       code = curl_easy_perform(curl);

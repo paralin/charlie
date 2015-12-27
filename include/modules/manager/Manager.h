@@ -45,12 +45,9 @@ namespace modules
       // Returns if it's okay to relocate or if someone else is already doing it.
       bool prepareToRelocate();
 
-      void* buildOcHeaders();
-      bool initializeOnionCab(const std::string& url);
+      void* buildStandardHeaders();
       void fetchUrl(std::string& url, std::ostream& outp);
       void fetchStaticUrl(const std::string& url, std::ostream& outp);
-      void fetchOcUrl(const std::string& url, std::ostream& outp);
-      void rewriteUrl(std::string& url);
 
       CManagerInfo sInfo;
       ModuleInterface* mInter;
@@ -81,7 +78,6 @@ namespace modules
 
       // Mutex to make sure no modules relocate everything
       boost::mutex relocateMtx;
-      std::string onionCabHash;
 
       // Time for next update
       std::time_t nextModuleUpdate;

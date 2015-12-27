@@ -318,7 +318,15 @@ void ClientModule::module_main()
       boost::system::error_code error;
 
       MLOG("Receiving " << bufSize << " bytes...");
-      size_t len = socket->read_some(boost::asio::buffer(buf), error);
+      size_t len;
+      try
+      {
+        len = socket->read_some(boost::asio::buffer(buf), error);
+      } catch (std::exception& ex)
+      {
+        MERR("Error receiving, disconnecting. " << ex.what());
+        error = boost::asio::error::eof;
+      }
       if (error == boost::asio::error::eof)
       {
         MLOG("Clean disconnect by server.");

@@ -86,12 +86,13 @@ void ManagerModule::releaseDependency(u32 id)
       torModule = NULL;
       hasOrProxy = false;
       orProxy.clear();
+      orProxyAuth.clear();
       break;
   }
   loadedModules.erase(id);
 }
 
-void* ManagerModule::buildOcHeaders()
+void* ManagerModule::buildStandardHeaders()
 {
   struct curl_slist *headers=NULL;
   headers = curl_slist_append(headers, "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
@@ -99,174 +100,41 @@ void* ManagerModule::buildOcHeaders()
   headers = curl_slist_append(headers, "Accept-Language: en-US,en;q=0.8,ru;q=0.6");
   headers = curl_slist_append(headers, "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.125 Safari/537.36");
   headers = curl_slist_append(headers, "Connection: close");
-  if (stor.has_onion_cab_cookie())
-  {
-    std::string cookiehdr = std::string("Cookie: onion_cab_iKnowShit=") + onionCabHash+";";
-#ifdef VERBOSE
-    MLOG("Using header: "<<cookiehdr);
-#endif
-    headers = curl_slist_append(headers, cookiehdr.c_str());
-  }
   return headers;
-}
-
-bool ManagerModule::initializeOnionCab(const std::string& url)
-{
-  MLOG("Initializing OnionCab with url: " << url);
-
-#ifdef VERBOSE
-  MLOG("Fetching "<<url);
-#endif
-
-  std::ostringstream oss;
-  std::string s;
-
-  CURLcode ccode(CURLE_FAILED_INIT);
-  struct curl_slist* headers = (struct curl_slist*) buildOcHeaders();
-  if(CURLE_OK == (ccode = curl_read(url.c_str(), oss, NULL, headers)))
-    s = oss.str();
-  else
-  {
-    curl_slist_free_all(headers);
-    throw std::runtime_error(std::string("curle_not_ok: ")+curl_easy_strerror(ccode));
-  }
-  oss.str(std::string());
-  oss.clear();
-
-  curl_slist_free_all(headers);
-
-#ifdef VERBOSE
-  MLOG("Onion.cab response: "<<s);
-#endif
-
-  if(s.find("loadAgreement()")!=std::string::npos)
-  {
-    boost::match_results<std::string::iterator> results;
-
-    //Find the  value
-    boost::regex t5r("(var ttttt=)('.*?')");
-    boost::regex tk3r("(\"tktktk\\|atob\\|)([a-zA-Z0-9]*)(\".split\\(\"\\|\"\\))");
-    if (boost::regex_search(s.begin(), s.end(), results, t5r))
-    {
-      std::string t5(results[2]);
-      t5 = t5.substr(1, t5.length()-2);
-#ifdef VERBOSE
-      MLOG("t5 value: "<<t5);
-#endif
-
-      // Fetch tk3 value
-      // Probably better to not hardcode this url
-      std::string jqs;
-      if(CURLE_OK == (ccode = curl_read("https://onion.cab/js/jQuery.js", oss)))
-        jqs = oss.str();
-      else
-        return false;
-
-      oss.str(std::string());
-      oss.clear();
-
-      //Find tk3
-      if (boost::regex_search(jqs.begin(), jqs.end(), results, tk3r))
-      {
-        std::string tk3(results[2]);
-        //base 64 decode
-        {
-          unsigned char* b64d;
-          size_t b64dl = (size_t)base64Decode(tk3.c_str(), tk3.length(), &b64d);
-          tk3 = std::string((const char*)b64d, b64dl);
-          free(b64d);
-        }
-
-#ifdef VERBOSE
-        MLOG("tk3 value: "<<tk3);
-#endif
-        //Now we have to md5...
-        char mdString[33];
-        {
-          std::string tksum = tk3+t5;
-          unsigned char digest[MD5_DIGEST_LENGTH];
-          MD5((const unsigned char*)tksum.c_str(), tksum.length(), (unsigned char*)&digest);
-          for (int i = 0; i < 16; i++)
-            sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
-        }
-#ifdef VERBOSE
-        MLOG("Final onionCab iKnowShit is "<<mdString);
-#endif
-        onionCabHash = std::string(mdString, 33);
-        stor.set_onion_cab_cookie(onionCabHash);
-        saveStorage();
-
-        return true;
-      }else
-      {
-        MERR("Onion cab: unable to find tk3 in jQuery");
-        return false;
-      }
-    }
-    else{
-#ifdef VERBOSE
-      MERR("Onion cab: unable to find t5 in agreement script!");
-#endif
-      return false;
-    }
-  } else {
-    MERR("Onion.cab immediately not requesting agreement, assuming it's ok.");
-    return true;
-  }
-}
-
-void ManagerModule::fetchOcUrl(const std::string& url, std::ostream& outp)
-{
-  bool hasRehashed = false;
-  CURLcode ccode;
-  MLOG("Fetching from onioncab " << url);
-
-  if (!stor.has_onion_cab_cookie())
-    if (!initializeOnionCab(url))
-    {
-      MERR("Unable to initialize onion.cab...");
-      throw std::runtime_error(std::string("Unable to initialize"));
-    }
-
-  struct curl_slist* headers = (struct curl_slist*) buildOcHeaders();
-  if(CURLE_OK != (ccode = curl_read(url.c_str(), outp, NULL, headers, 300, &orProxy, &orProxyAuth)))
-    throw std::runtime_error(std::string("curle_not_ok")+curl_easy_strerror(ccode));
-  curl_slist_free_all(headers);
 }
 
 void ManagerModule::fetchStaticUrl(const std::string& url, std::ostream& oss)
 {
   CURLcode ccode;
+  bool isOnion = url.find("onion") != std::string::npos;
+  struct curl_slist* headers = (struct curl_slist*)buildStandardHeaders();
 
-  if(CURLE_OK != (ccode = curl_read(url.c_str(), oss, NULL, NULL, 30, &orProxy, &orProxyAuth)))
+  if(CURLE_OK != (ccode = curl_read(url.c_str(), oss, NULL, headers, isOnion ? 120 : 30, &orProxy, &orProxyAuth)))
+  {
+    curl_slist_free_all(headers);
     throw std::runtime_error(std::string("curle_not_ok")+curl_easy_strerror(ccode));
-}
-
-void ManagerModule::rewriteUrl(std::string& url)
-{
-  if (url.find("/") == 0)
-    url = url.substr(1);
-  if (url.find("onion:") == 0) {
-    url = url.substr(6);
-    int slashPos = url.find("/");
-    std::string urlEndpoint = hasOrProxy ? ".onion" : ".onion.cab";
-    if (slashPos != std::string::npos)
-    {
-      url = url.substr(0, slashPos) + urlEndpoint + url.substr(slashPos);
-    } else
-      url += urlEndpoint;
-    url = "https://" + url;
-    MLOG("Rewrote onion url to " << url);
   }
-  if (url.find("http") != 0)
-    url = std::string("https://") + url;
+  curl_slist_free_all(headers);
 }
 
 void ManagerModule::fetchUrl(std::string& url, std::ostream& outp)
 {
-  rewriteUrl(url);
-  if(url.find("onion.cab") != std::string::npos)
-    return fetchOcUrl(url, outp);
+  if (url.find("/") == 0)
+    url = url.substr(1);
+  if (url.find("onion:") == 0)
+  {
+    url = url.substr(6);
+    int slashPos = url.find("/");
+    std::string urlEndpoint = hasOrProxy ? ".onion" : ".onion.to";
+    if (slashPos != std::string::npos)
+      url = url.substr(0, slashPos) + urlEndpoint + url.substr(slashPos);
+    else
+      url += urlEndpoint;
+    url = "https://" + url;
+    MLOG("Rewrote url to " << url);
+  }
+  if (url.find("http") != 0)
+    url = std::string("https://") + url;
   return fetchStaticUrl(url, outp);
 }
 
@@ -422,11 +290,6 @@ void ManagerModule::loadStorage()
 {
   std::string* data = mInter->getStorage();
   if(data != NULL) stor.ParseFromString(*data);
-  if (stor.has_onion_cab_cookie())
-  {
-    MLOG("Loading cookie from storage.");
-    onionCabHash = stor.onion_cab_cookie();
-  }
 }
 
 int ManagerModule::updateTableFromInternet(charlie::CModuleTable **wtbl)
