@@ -3038,8 +3038,8 @@ torc_main(int bindPort, const char* socksUsername, const char* socksPassword, co
   tor_threads_init();
   init_logging(0);
 
-  sconfig = (char*) malloc(sizeof(char) * 150);
-  snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout\nDataDirectory %s", bindPort, socksUsername, socksPassword, dataDir);
+  sconfig = (char*) malloc(sizeof(char) * 800);
+  snprintf(sconfig, 800, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout\nDataDirectory %s", bindPort, socksUsername, socksPassword, dataDir);
   // snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout", bindPort, socksUsername, socksPassword);
   if(tor_initb() < 0)
   {

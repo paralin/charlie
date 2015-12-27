@@ -139,8 +139,10 @@ void CharlieClient::send(charlie::EMsg emsg, std::string& data, charlie::CMessag
   std::string hlenBuff ((char*) hlenBuf, 4);
   free(hlenBuf);
 
+  CLOG("Sending header length: " << sHead.length());
   boost::asio::write(*socket, boost::asio::buffer(hlenBuff));
   boost::asio::write(*socket, boost::asio::buffer(sHead));
+  CLOG("Body length: " << nHead.body_size());
   boost::asio::write(*socket, boost::asio::buffer(sBody));
 }
 

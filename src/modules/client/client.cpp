@@ -5,6 +5,7 @@
 #include <charlie/SystemInfo.h>
 #include <charlie/StateChangeEvent.h>
 #include <charlie/machine_id.h>
+#include <fstream>
 
 #define MODULE_ID 2777954855
 
@@ -366,6 +367,19 @@ void ClientModule::module_main()
       } else
       {
         body.Clear();
+        if (!body.ParseFromArray(&buf[0], buf.size()))
+        {
+          MERR("CMessageBody parse failed.");
+#if DEBUG
+          time_t now = time(NULL);
+          std::string dmpn(std::to_string(now));
+          dmpn += ".bin";
+          MERR("Dumping buffer to file " << dmpn);
+          std::ofstream dmpf(dmpn);
+          dmpf.write((const char*)&buf[0], buf.size());
+          dmpf.close();
+#endif
+        }
         DCASSERTLC(body.ParseFromArray(&buf[0], buf.size()), "CMessageBody parse failed.");
 
         // Weve already validated the emsg before
