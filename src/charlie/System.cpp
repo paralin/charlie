@@ -584,8 +584,8 @@ int System::main(int argc, const char* argv[])
         boost::this_thread::sleep( boost::posix_time::milliseconds(200) );
       } catch(int e)
       {
-        CLOG("Exception during sleep, assuming shutdown.");
 #ifdef DEBUG
+        CLOG("Exception during sleep, assuming shutdown.");
         continueLoop = false;
 #endif
       }

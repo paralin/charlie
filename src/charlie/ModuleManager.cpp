@@ -253,8 +253,7 @@ charlie::CModuleBinary* ModuleManager::selectBinary(charlie::CModule* mod, int *
 // Find the applicable module for a binary
 charlie::CModule* ModuleManager::selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bino)
 {
-  charlie::CModule* emod;
-  int i;
+  charlie::CModule* emod = NULL;
   int maxPriority = -1;
 
   for (auto mod : mods)
@@ -385,26 +384,20 @@ void ModuleManager::evaluateRequirements()
 
 void ModuleManager::deferRecheckModules()
 {
-  mtx.lock();
   CLOG("Deferring modules update...");
   modulesDirty = true;
-  mtx.unlock();
 }
 
 void ModuleManager::deferSaveConfig()
 {
-  mtx.lock();
   CLOG("Deferring config save...");
   configDirty = true;
-  mtx.unlock();
 }
 
 void ModuleManager::deferReloadModule(u32 id)
 {
-  mtx.lock();
   CLOG("Deferring reload of "<<id<<"...");
   toReload.insert(id);
-  mtx.unlock();
 }
 
 void ModuleManager::updateEverything()
