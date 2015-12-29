@@ -11,8 +11,7 @@ namespace server_modules
     public:
       ServerModuleInterface(CharlieClient* cli);
 
-      Crypto* getSessionCrypto();
-      Crypto* getServerCrypto();
+      std::shared_ptr<Crypto> getSessionCrypto();
       std::string getClientId();
       std::string getClientPubkey();
       void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);

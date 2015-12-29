@@ -74,6 +74,7 @@ int System::loadCrypto()
     }
 
     std::string pkey = ident.private_key();
+    privateKey = pkey;
     if (crypt->setLocalPriKey((unsigned char*)pkey.c_str(), pkey.length()) != SUCCESS)
     {
       CERR("Private key is invalid.");

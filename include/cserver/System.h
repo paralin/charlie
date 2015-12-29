@@ -23,10 +23,11 @@ class System {
     charlie::CModuleTable* generateModuleTableFromFile(const char* path = "./init.json");
     std::vector<std::shared_ptr<ServerModuleInstance>> buildModuleSet(CharlieClient* client);
 
-  private:
     WebHost* host;
     NetHost* nHost;
+    std::string privateKey;
 
+  private:
     int loadCrypto();
     void webTh();
 };

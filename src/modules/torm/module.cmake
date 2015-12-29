@@ -27,6 +27,9 @@ file(GLOB_RECURSE torm_SRC "${CHARLIE_MODULE_PATH}/torm/*.cpp")
 file(GLOB tor_common_SRC "${TOR_ROOT_DIR}/src/common/*.c")
 add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC} "torm.pb.redacted.cc" "${CHARLIE_MODULE_PATH}/torm/torc.c" 
   "${CMAKE_SOURCE_DIR}/src/charlie/hash.cpp"
+  "${CMAKE_SOURCE_DIR}/src/charlie/random.cpp"
+  "${CMAKE_SOURCE_DIR}/src/networking/CharlieSession.cpp"
+  "${CMAKE_SOURCE_DIR}/src/networking/emsgsizes.cpp"
   "${TOR_ROOT_DIR}/src/common/compat.c"
   "${TOR_ROOT_DIR}/src/common/util.c"
   "${TOR_ROOT_DIR}/src/common/container.c"

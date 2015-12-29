@@ -17,9 +17,9 @@ namespace modules
 
       bool prepareToRelocate();
       CManagerInfo* getInfo();
+
       void fetchUrl(std::string& url, std::ostream& outp);
       void handleCommand(const charlie::CMessageTarget& targ, std::string& data);
-
       void setOrProxy(std::string proxy, std::string auth);
 
     private:

@@ -7,16 +7,21 @@
 
 #include <set>
 #include <vector>
+
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 
 #include "ClientInter.h"
 #include <ModuleNet.h>
 #include <modules/manager/ManagerInter.h>
+
 #include <protogen/charlie.pb.h>
 #include <protogen/client.pb.h>
+
 #include <charlie/Crypto.h>
 #include <charlie/CryptoBuf.h>
+
+#include <networking/CharlieSession.h>
 
 namespace modules
 {
@@ -24,7 +29,7 @@ namespace modules
   {
     using boost::asio::ip::tcp;
 
-    class ClientModule : public modules::Module
+    class ClientModule : public modules::Module, public ISessionController
     {
     public:
       ClientModule();
@@ -40,76 +45,39 @@ namespace modules
 
       void sendSystemInfo();
       void retryConnectionsNow();
+      void unexpectedDataReceived();
 
     private:
       ModuleInterface* mInter;
-      ClientInter *pInter;
       CClientInfo sInfo;
+      std::shared_ptr<ClientInter> pInter;
       modules::manager::ManagerInter* manager;
+      Crypto* systemCrypto;
 
-      std::set<std::string> serverKeys;
       boost::mutex managerMtx;
-      std::set<std::string> server;
-      std::vector<unsigned char> buf;
+      std::set<std::string> serverKeys;
 
       void populateServerKeys();
       int parseModuleInfo();
 
-      void initNetworking();
-      void releaseNetworking();
-      void disconnect();
-      void resetReceiveContext();
-      void unexpectedDataReceived();
-      void handleMessage(std::string& data);
+      void handleMessage(charlie::CMessageHeader& head, std::string& data);
 
       void selectNetworkModule();
 
-      void send(charlie::EMsg emsg, u32 target, std::string& data, u32 jobid = 0, u32 targetEmsg = 0);
-      void send(u32 targetModule, u32 jobId, u32 targetEmsg, std::string& data);
-
-      void sendClientIdentify();
-      void sendClientAccept();
+      void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);
+      void send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data);
 
       bool tryConnectAllEndpoints();
       bool tryConnectNetModules();
       bool tryConnectEndpoint(const char* endp);
 
-      bool validateMessageHeader();
-      bool validateMessageBody();
-      bool handleServerIdentify();
-
-      void handleServerAccept(std::string& data);
-
-      bool shouldFreeSocket;
-      bool isTorSocket;
-
-      boost::asio::io_service* io_service;
-      tcp::resolver* resolver;
-      tcp::socket* socket;
+      boost::asio::io_service io_service;
+      tcp::resolver resolver;
+      std::shared_ptr<tcp::socket> pendingSocket;
+      std::shared_ptr<CharlieSession> session;
 
       bool running;
-      bool connected;
-      bool wasConnected;
-
-      // State for the connection
-      bool expectingHeaderLengthPrefix;
-      u32 expectedHeaderSize;
-      bool expectingHeader;
-      u32 expectedBodySize;
-      bool handshakeComplete;
-      charlie::CMessageHeader head;
-      charlie::CMessageBody body;
-      std::time_t timeConnected;
-
-      // Value to hash in identify
-      std::string serverChallenge;
-      std::string clientChallenge;
-      Crypto* sessionCrypto;
-      Crypto* systemCrypto;
-
-      // Handshake phases
-      bool receivedServerIdentify;
-      bool sentClientIdentify;
+      bool isDirect;
 
       // Sub-networking module
       u32 netModuleId;
@@ -117,17 +85,12 @@ namespace modules
       ModuleNet* torModule;
       std::time_t nextConnectAttempt;
 
+      std::map<u32, ModuleAPI*> loadedModules;
       std::map<u32, ModuleNet*> loadedNetModules;
       std::set<u32> netModuleIds;
 
-      std::map<u32, ModuleAPI*> loadedModules;
-
-      // Number of messages sent
-      unsigned char mi;
-      // Number of message received
-      unsigned char mr;
-
-      boost::mutex sendMtx;
+      void onDisconnected();
+      void onHandshakeComplete();
     };
   };
 };

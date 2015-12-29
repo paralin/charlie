@@ -6,6 +6,7 @@
 
 using boost::asio::ip::tcp;
 
+class CharlieSession;
 namespace modules
 {
   class VISIBLE ModuleNet : public ModuleAPI
@@ -20,6 +21,6 @@ namespace modules
       // Disconnect, your connection is invalid.
       virtual void disconnectInvalid() = 0;
       // Return the socket.
-      virtual tcp::socket* getSocket(std::time_t* timeConnected) = 0;
+      virtual std::shared_ptr<CharlieSession> getSession() = 0;
   };
 }

@@ -14,8 +14,7 @@ namespace server_modules
     public:
       ~SModuleInterface() {}
       //Return the crypto class
-      virtual Crypto* getSessionCrypto() = 0;
-      virtual Crypto* getServerCrypto() = 0;
+      virtual std::shared_ptr<Crypto> getSessionCrypto() = 0;
       virtual std::string getClientId() = 0;
       virtual std::string getClientPubkey() = 0;
       virtual void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL) = 0;

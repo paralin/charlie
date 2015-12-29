@@ -19,7 +19,7 @@
 
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
-
+#include <networking/ISessionController.h>
 
 using boost::asio::ip::tcp;
 
@@ -27,7 +27,7 @@ namespace modules
 {
   namespace torm
   {
-    class TormModule : public modules::Module
+    class TormModule : public modules::Module, public ISessionController
     {
     public:
       TormModule();
@@ -42,11 +42,15 @@ namespace modules
       void module_main();
 
       bool running;
-      bool connected;
       bool inited;
 
       void newIdentity();
-      tcp::socket* getSocket(std::time_t* timeConnected);
+      std::shared_ptr<CharlieSession> getSession();
+      std::shared_ptr<CharlieSession> session;
+
+      void handleMessage(charlie::CMessageHeader& head, std::string& body);
+      void onDisconnected();
+      void onHandshakeComplete();
 
     private:
       TormInter *pInter;
@@ -71,9 +75,8 @@ namespace modules
 
       boost::asio::io_service io_service;
       tcp::resolver resolver;
-      tcp::socket socket;
+      std::shared_ptr<tcp::socket> socket;
 
-      std::time_t timeConnected;
       std::map<unsigned int, std::time_t> endpointTimeouts;
     };
   };

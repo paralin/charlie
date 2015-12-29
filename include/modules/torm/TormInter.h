@@ -18,7 +18,7 @@ namespace modules
 
       bool ready();
       void disconnectInvalid();
-      tcp::socket* getSocket(std::time_t* timeConnected);
+      std::shared_ptr<CharlieSession> getSession();
 
     private:
       TormModule* mod;

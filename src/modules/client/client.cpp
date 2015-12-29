@@ -1,13 +1,16 @@
 #include <Module.h>
 #include <modules/client/Client.h>
 #include <networking/EMsgSizes.h>
+#include <networking/CharlieSession.h>
 #include <charlie/random.h>
 #include <charlie/SystemInfo.h>
 #include <charlie/StateChangeEvent.h>
 #include <charlie/machine_id.h>
 #include <fstream>
-
+#include <chrono>
 #define MODULE_ID 2777954855
+
+typedef std::chrono::high_resolution_clock Clock;
 
 // 30 second allowed skew
 #define ALLOWED_TIME_SKEW 30
@@ -25,80 +28,26 @@ using namespace modules::client;
 ClientModule::ClientModule() :
   netModuleId(0),
   running(true),
-  socket(NULL),
+  isDirect(false),
+  pendingSocket(NULL),
   torModule(NULL),
-  resolver(NULL),
-  io_service(NULL),
-  sessionCrypto(NULL),
+  io_service(),
+  resolver(io_service),
   mInter(NULL),
-  pInter(NULL),
+  pInter(new ClientInter(this)),
   nextConnectAttempt(0)
 {
   MLOG("Client module constructed...");
-  pInter = new ClientInter(this);
-  mi = mr = 0;
-  clientChallenge = gen_random(10);
-  // This will set everything to an init value
-  releaseNetworking();
 }
 
 ClientModule::~ClientModule()
 {
-  delete pInter;
-  releaseNetworking();
 }
 
-void ClientModule::releaseNetworking()
+void ClientModule::unexpectedDataReceived()
 {
-  disconnect();
-  shouldFreeSocket = false;
-  socket = NULL;
-  if (io_service)
-  {
-    delete io_service;
-  }
-  if (resolver)
-  {
-    delete resolver;
-  }
-  io_service = NULL;
-  resolver = NULL;
-}
-
-void ClientModule::disconnect()
-{
-  if (socket && shouldFreeSocket)
-  {
-    delete socket;
-    socket = NULL;
-  } else if (isTorSocket && torModule)
-    torModule->disconnectInvalid();
-  connected = false;
-  wasConnected = false;
-  handshakeComplete = false;
-  isTorSocket = false;
-  expectingHeaderLengthPrefix = true;
-  expectingHeader = false;
-  receivedServerIdentify = false;
-  sentClientIdentify = false;
-  usingNetModule = false;
-  head.Clear();
-  body.Clear();
-  serverChallenge = "";
-  resetReceiveContext();
-  mi = mr = 0;
-  if (sessionCrypto)
-  {
-    delete sessionCrypto;
-    sessionCrypto = NULL;
-  }
-}
-
-void ClientModule::resetReceiveContext()
-{
-  expectingHeaderLengthPrefix = true;
-  expectingHeader = false;
-  expectedBodySize = 0;
+  MLOG("Unexpected data received, disconnecting.");
+  session.reset();
 }
 
 // Select a sub-networking module
@@ -137,7 +86,7 @@ void ClientModule::selectNetworkModule()
 #endif
 
   // Dont mess with a working connection
-  if (connected)
+  if (session)
     return;
 
   // See if there's a better module to require explicitly
@@ -163,15 +112,6 @@ void ClientModule::selectNetworkModule()
   MLOG("Selecting network proxy module " << netModuleId);
   mInter->releaseDependency(netModuleId);
   mInter->requireDependency(netModuleId, true);
-}
-
-void ClientModule::initNetworking()
-{
-  MLOG("Init io_service...");
-  io_service = new boost::asio::io_service();
-  MLOG("Init resolver...");
-  resolver = new tcp::resolver(*io_service);
-  MLOG("Ready to start connection attempts.");
 }
 
 void ClientModule::shutdown()
@@ -210,29 +150,20 @@ void ClientModule::releaseDependency(u32 id)
   if (netModuleId == id && usingNetModule)
   {
     MLOG("Network module we were using was dropped, disconnecting...");
-    disconnect();
+    session.reset();
   }
   loadedModules.erase(id);
 }
 
 void* ClientModule::getPublicInterface()
 {
-  return pInter;
+  return pInter.get();
 }
 
 int ClientModule::parseModuleInfo()
 {
   std::string info = mInter->getModuleInfo();
   return sInfo.ParseFromString(info) == 0;
-}
-
-void ClientModule::unexpectedDataReceived()
-{
-  MLOG("Unexpected data received, disconnect.");
-  // disconnect();
-  resetReceiveContext();
-  connected = false;
-  wasConnected = true;
 }
 
 void ClientModule::sendSystemInfo()
@@ -245,7 +176,7 @@ void ClientModule::sendSystemInfo()
   cinfo.set_cpu_hash(info->cpu_hash);
 
   std::string data = cinfo.SerializeAsString();
-  send(MODULE_ID, 0, EClientEMsg_SystemInfo, data);
+  send(MODULE_ID, EClientEMsg_SystemInfo, 0, data);
 }
 
 // Main function
@@ -273,191 +204,38 @@ void ClientModule::module_main()
 
   MLOG("Parsing module info...");
   parseModuleInfo();
-  MLOG("Initializing networking...");
-  initNetworking();
 
-  // Main state loop
-  try {
-    while (running)
+  while (running)
+  {
+    if (session)
     {
-      if (!connected)
+      if (isDirect)
       {
-        if (wasConnected)
-        {
-          disconnect();
-          resetReceiveContext();
-          nextConnectAttempt = time(NULL) + 3;
-          while (time(NULL) < nextConnectAttempt)
-            boost::this_thread::sleep(boost::posix_time::milliseconds(100));
-        }
-        if (tryConnectNetModules() || tryConnectAllEndpoints())
-        {
-          connected = true;
-          wasConnected = true;
-          resetReceiveContext();
-        }
-        else
-        {
-          MLOG("Connections unsuccessful, will try again...");
-          boost::this_thread::sleep(boost::posix_time::seconds(10));
-        }
+        auto t1 = Clock::now();
+        io_service.poll_one();
+        auto t2 = Clock::now();
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+        if (ms < 50)
+          boost::this_thread::sleep(boost::posix_time::milliseconds(50 - ms));
         continue;
       }
-
-      // expected size of incoming data
-      u32 bufSize;
-      // Header length prefix = 32 bit = 4 byte unsigned integer.
-      if (expectingHeaderLengthPrefix)
-        bufSize = 4;
-      else if (expectingHeader)
-        bufSize = expectedHeaderSize;
-      else
-        bufSize = expectedBodySize;
-
-      buf.resize(bufSize);
-      boost::system::error_code error;
-
-      MLOG("Receiving " << bufSize << " bytes...");
-      size_t len;
-      try
+      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    } else
+    {
+      if (tryConnectNetModules() || tryConnectAllEndpoints())
       {
-        len = socket->read_some(boost::asio::buffer(buf), error);
-      } catch (std::exception& ex)
-      {
-        MERR("Error receiving, disconnecting. " << ex.what());
-        error = boost::asio::error::eof;
-      }
-      if (error == boost::asio::error::eof)
-      {
-        MLOG("Clean disconnect by server.");
-        disconnect();
-        continue;
-      }
-      else if (error)
-      {
-        MERR("Unexpected disconnect with error " << error);
-        disconnect();
-        continue;
-      }
-
-      MLOG("Received " << bufSize << " of data.");
-      if (expectingHeaderLengthPrefix)
-      {
-        expectingHeaderLengthPrefix = false;
-        expectingHeader = true;
-        expectedHeaderSize = 0;
-
-        // Order is
-        //  - 0 -> 2
-        //  - 1 -> 0
-        //  - 2 -> 3
-        //  - 3 -> 1
-        // Also each is xor by the number of messages sent
-        char cnt = mr++;
-        if (mr >= UCHAR_MAX)
-          mr = 0;
-
-        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[2] ^ cnt) & 0XFF);
-        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[0] ^ cnt) & 0XFF);
-        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[3] ^ cnt) & 0XFF);
-        expectedHeaderSize = expectedHeaderSize * 256 + (static_cast<char>(buf[1] ^ cnt) & 0XFF);
-
-        DCASSERTLC(expectedHeaderSize < 80, "Expected header size = " << expectedHeaderSize << " which is too big.");
-      } else if (expectingHeader)
-      {
-        head.Clear();
-
-        DCASSERTLC(head.ParseFromArray(&buf[0], buf.size()), "CMessageHeader parse failed.");
-        DCASSERTLC(validateMessageHeader(), "Message header failed validation.");
-
-        expectingHeader = false;
-        expectedBodySize = head.body_size();
+        MLOG("Session acquired.");
       } else
       {
-        body.Clear();
-        if (!body.ParseFromArray(&buf[0], buf.size()))
-        {
-          MERR("CMessageBody parse failed.");
-#if DEBUG
-          time_t now = time(NULL);
-          std::string dmpn(std::to_string(now));
-          dmpn += ".bin";
-          MERR("Dumping buffer to file " << dmpn);
-          std::ofstream dmpf(dmpn);
-          dmpf.write((const char*)&buf[0], buf.size());
-          dmpf.close();
-#endif
-        }
-        DCASSERTLC(body.ParseFromArray(&buf[0], buf.size()), "CMessageBody parse failed.");
-
-        // Weve already validated the emsg before
-        if (!handshakeComplete && head.emsg() == charlie::EMsgServerIdentify)
-        {
-          DCASSERTLC(handleServerIdentify(), "Invalid server identify.");
-          receivedServerIdentify = true;
-        }
-
-        DCASSERTLC(validateMessageBody(), "Message body validation failed.");
-
-        // Everything after this should be encrypted
-        if (receivedServerIdentify && sentClientIdentify)
-        {
-          unsigned char* decrypted;
-
-          int len = decryptRsaBuf((charlie::CRSABuffer*)&body.rsa_body(), systemCrypto, &decrypted, false);
-          DCASSERTLC(len != FAILURE, "Unable to decrypt rsa buffer.");
-
-          std::string data((char*) decrypted, len);
-          free(decrypted);
-          handleMessage(data);
-        }
-        else
-          sendClientIdentify();
-
-        resetReceiveContext();
+        boost::this_thread::sleep(boost::posix_time::milliseconds(3000));
       }
     }
-  } catch (std::exception& ex)
-  {
-    MLOG("Caught overall exception " << ex.what());
   }
-
-  MLOG("Releasing networking...");
-  releaseNetworking();
 }
 
-void ClientModule::sendClientIdentify()
+void ClientModule::handleMessage(charlie::CMessageHeader& head, std::string& data)
 {
-  charlie::CClientIdentify ident;
-  unsigned char* sig;
-  unsigned char* pubkey;
-
-  int sigLen = systemCrypto->digestSign((const unsigned char*) serverChallenge.c_str(), serverChallenge.length(), &sig, false);
-  int len = systemCrypto->getLocalPubKey(&pubkey);
-
-  ident.set_client_pubkey(pubkey, len);
-  ident.set_client_challenge(clientChallenge);
-  ident.set_challenge_response(sig, sigLen);
-
-  free(pubkey);
-  free(sig);
-
-  std::string outp = ident.SerializeAsString();
-  sentClientIdentify = true;
-  send(charlie::EMsgClientIdentify, 0, outp);
-}
-
-void ClientModule::handleMessage(std::string& data)
-{
-  if (!handshakeComplete)
-  {
-    if (head.emsg() == charlie::EMsgServerAccept)
-      handleServerAccept(data);
-    else
-      DCASSERTL(false, "Unknown emsg during handshake: " << head.emsg());
-    return;
-  }
-  else if (head.emsg() == charlie::EMsgRoutedMessage)
+  if (head.emsg() == charlie::EMsgRoutedMessage)
   {
     DCASSERTL(head.has_target() && head.target().target_module() != 0, "Target module not specified, assuming something's wrong.");
 
@@ -470,7 +248,7 @@ void ClientModule::handleMessage(std::string& data)
       charlie::CNetFailure fail;
       fail.set_fail_type(charlie::FAILURE_MODULE_NOTFOUND);
       std::string data = fail.SerializeAsString();
-      send(charlie::EMsgFailure, head.target().target_module(), data, head.target().job_id());
+      send(charlie::EMsgFailure, data);
       return;
     }
 
@@ -485,9 +263,15 @@ void ClientModule::handleMessage(std::string& data)
       fail.set_fail_type(charlie::FAILURE_EXCEPTION_RAISED);
       fail.set_error_message(ex.what());
       std::string data = fail.SerializeAsString();
-      send(charlie::EMsgFailure, head.target().target_module(), data, head.target().job_id());
+      send(charlie::EMsgFailure, data);
       return;
     }
+  }
+  else if (head.emsg() == charlie::EMsgKeepalive)
+  {
+    charlie::CKeepAlive ka;
+    std::string d = ka.SerializeAsString();
+    send(charlie::EMsgKeepalive, d);
   }
   else
   {
@@ -495,276 +279,14 @@ void ClientModule::handleMessage(std::string& data)
   }
 }
 
-void ClientModule::handleServerAccept(std::string& data)
+void ClientModule::send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target)
 {
-  charlie::CServerAccept ident;
-
-  // Parse
-  DCASSERTL(ident.ParseFromString(data), "Unable to parse CServerAccept.");
-
-  // Validate the server challenge response
-  DCASSERTL(ident.has_challenge_response(), "Server didn't send challenge response.");
-  DCASSERTL(sessionCrypto->digestVerify((const unsigned char*) clientChallenge.c_str(), clientChallenge.length(), (unsigned char*) ident.challenge_response().c_str(), true), "Invalid server challenge response.");
-
-  sendClientAccept();
-  handshakeComplete = true;
-  MLOG("Handshake complete.");
+  session->send(emsg, data, target);
 }
 
-void ClientModule::sendClientAccept()
+void ClientModule::send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data)
 {
-  MLOG("Accepting the server.");
-  charlie::CClientAccept accp;
-
-  std::string outp = accp.SerializeAsString();
-  send(charlie::EMsgClientAccept, 0, outp);
-}
-
-void ClientModule::send(u32 targetModule, u32 jobId, u32 targetEmsg, std::string& data)
-{
-  send(charlie::EMsgRoutedMessage, targetModule, data, jobId, targetEmsg);
-}
-
-void ClientModule::send(charlie::EMsg emsg, u32 targetModule, std::string& data, u32 jobid, u32 targetEmsg)
-{
-  boost::unique_lock<boost::mutex> scoped_lock(sendMtx);
-
-  charlie::CMessageBody nBody;
-
-  // Timestamp code
-  {
-    std::time_t now;
-    std::time(&now);
-    u32 timestamp = now - timeConnected;
-    nBody.set_timestamp(timestamp);
-    unsigned char* tsBuf = (unsigned char*) malloc(sizeof(unsigned char) * 4);
-    tsBuf[0] = static_cast<unsigned char>((timestamp >> 24) & 0xFF);
-    tsBuf[1] = static_cast<unsigned char>((timestamp >> 16) & 0xFF);
-    tsBuf[2] = static_cast<unsigned char>((timestamp >> 8) & 0xFF);
-    tsBuf[3] = static_cast<unsigned char>(timestamp & 0xFF);
-
-    unsigned char* tsSigBuf;
-    int digestLen = systemCrypto->digestSign((const unsigned char*) tsBuf, 4, &tsSigBuf, false);
-    free(tsBuf);
-    nBody.set_timestamp_signature(tsSigBuf, digestLen);
-    free(tsSigBuf);
-  }
-
-  charlie::CRSABuffer* buf = new charlie::CRSABuffer();
-  encryptRsaBuf(buf, sessionCrypto, (const unsigned char*) data.c_str(), data.length(), true);
-  nBody.set_allocated_rsa_body(buf);
-
-  {
-    const std::string& toSign = nBody.rsa_body().data();
-    unsigned char* bodySigBuf;
-    int digestLen = systemCrypto->digestSign((const unsigned char*) toSign.c_str(), toSign.length(), &bodySigBuf, false);
-    nBody.set_signature((const char*) bodySigBuf, digestLen);
-    free(bodySigBuf);
-  }
-
-  std::string sBody = nBody.SerializeAsString();
-
-  charlie::CMessageHeader nHead;
-  nHead.set_emsg(emsg);
-  nHead.set_body_size(sBody.length());
-  if (targetModule)
-  {
-    charlie::CMessageTarget* target = nHead.mutable_target();
-    target->set_target_module(targetModule);
-    target->set_emsg(targetEmsg);
-  }
-
-  std::string sHead = nHead.SerializeAsString();
-
-  // Order is
-  //  - 0 -> 2
-  //  - 1 -> 0
-  //  - 2 -> 3
-  //  - 3 -> 1
-  // Also each is xor by the number of messages sent
-  char cnt = mi++;
-  if (mi >= UCHAR_MAX)
-    mi = 0;
-
-  unsigned char* hlenBuf = (unsigned char*) malloc(sizeof(unsigned char) * 4);
-  hlenBuf[2] = (static_cast<unsigned char>((sHead.length() >> 24) & 0xFF)) ^ cnt;
-  hlenBuf[0] = (static_cast<unsigned char>((sHead.length() >> 16) & 0xFF)) ^ cnt;
-  hlenBuf[3] = (static_cast<unsigned char>((sHead.length() >> 8) & 0xFF)) ^ cnt;
-  hlenBuf[1] = (static_cast<unsigned char>(sHead.length() & 0xFF)) ^ cnt;
-
-  std::string hlenBuff ((char*) hlenBuf, 4);
-  free(hlenBuf);
-
-  boost::asio::write(*socket, boost::asio::buffer(hlenBuff));
-  boost::asio::write(*socket, boost::asio::buffer(sHead));
-  boost::asio::write(*socket, boost::asio::buffer(sBody));
-}
-
-bool ClientModule::validateMessageHeader()
-{
-  if (!charlie::EMsg_IsValid(head.emsg()))
-  {
-    MERR("EMsg type " << head.emsg() << " is invalid.");
-    return false;
-  }
-
-  // Validate handshake phase
-  if (!handshakeComplete)
-  {
-    charlie::EMsg expected;
-    // Expecting a CServerIdentify if !handshakeComplete and !receivedServerIdentify
-    if (!receivedServerIdentify)
-      expected = charlie::EMsgServerIdentify;
-    else
-      expected = charlie::EMsgServerAccept;
-
-    if (expected != head.emsg())
-    {
-      MERR("Unexpected message " << head.emsg() << " during handshake phase.");
-      return false;
-    }
-  }
-
-  // Verify it is less than the known maximum
-  {
-    std::map<charlie::EMsg, int>::iterator it = charlie::networking::StaticDefinitions::EMsgSizes.find(head.emsg());
-    // 50kb max size default
-    int maxSize = 50000;
-    if (it != charlie::networking::StaticDefinitions::EMsgSizes.end())
-      maxSize = it->second;
-    if (head.body_size() > maxSize)
-    {
-      MERR("Size for " << head.emsg() << " - " << head.body_size() << " bytes > expected maximum of " << maxSize << " bytes.");
-      return false;
-    }
-  }
-
-  // Validate the target module
-  // XXX
-  return true;
-}
-
-bool ClientModule::validateMessageBody()
-{
-  if (!body.has_signature())
-  {
-    MERR("Body is missing contents signature.");
-    return false;
-  }
-
-  if (!body.has_timestamp_signature())
-  {
-    MERR("Body is missing timestamp signature.");
-    return false;
-  }
-
-  if (!body.has_timestamp())
-  {
-    MERR("Body is missing timestamp.");
-    return false;
-  }
-
-  {
-    std::time_t now;
-    std::time(&now);
-    now -= timeConnected;
-    std::time_t timestamp = body.timestamp();
-    std::time_t diff = std::abs(now - timestamp);
-    if (diff > ALLOWED_TIME_SKEW)
-    {
-      MERR("Time skew of " << diff << " greater than " << ALLOWED_TIME_SKEW << ".");
-      return false;
-    }
-
-    unsigned char* tsBuf = (unsigned char*) malloc(sizeof(unsigned char) * 4);
-    tsBuf[0] = static_cast<unsigned char>((timestamp >> 24) & 0xFF);
-    tsBuf[1] = static_cast<unsigned char>((timestamp >> 16) & 0xFF);
-    tsBuf[2] = static_cast<unsigned char>((timestamp >> 8) & 0xFF);
-    tsBuf[3] = static_cast<unsigned char>(timestamp & 0xFF);
-    if (sessionCrypto->digestVerify((unsigned char*) tsBuf, 4, (unsigned char*) body.timestamp_signature().c_str(), body.timestamp_signature().length(), true) != SUCCESS)
-    {
-      MERR("Digest verification of timestamp incorrect.");
-      return false;
-    }
-    MLOG("Verification of signature for timestamp " << timestamp << " vs. " << now << " succeeded.");
-  }
-
-  bool rsaBody = false;
-  if (!body.has_rsa_body())
-  {
-    if (body.has_unenc_body())
-    {
-      if (head.emsg() != charlie::EMsgServerIdentify)
-      {
-        MERR("Only EMsgServerIdentify should be unencrypted.");
-        return false;
-      }
-      rsaBody = false;
-    } else {
-      MERR("Body has no contents!");
-      return false;
-    }
-  } else
-    rsaBody = true;
-
-  const std::string& contents = rsaBody ? body.rsa_body().data() : body.unenc_body();
-
-  // Verify the signature
-  if (sessionCrypto->digestVerify((const unsigned char*) contents.c_str(), contents.length(), (unsigned char*) body.signature().c_str(), body.signature().length(), true) != SUCCESS)
-  {
-    MERR("Incorrect signature for contents.");
-    return false;
-  }
-
-  return true;
-}
-
-bool ClientModule::handleServerIdentify()
-{
-  // We expect unencrypted data
-  if (!body.has_unenc_body())
-  {
-    MERR("Received server identify without unenc body, invalid.");
-    return false;
-  }
-
-  // We expect a signature
-  if (!body.has_unenc_body())
-  {
-    MERR("Received server identify without unenc body, invalid.");
-    return false;
-  }
-
-  // Load up the message
-  charlie::CServerIdentify ident;
-  if (!ident.ParseFromString(body.unenc_body()))
-  {
-    MERR("Unable to parse CServerIdentify from body.");
-    return false;
-  }
-
-  if (!ident.has_server_pubkey() || !ident.has_server_challenge())
-  {
-    MERR("Server identify is missing challenge or pubkey.");
-    return false;
-  }
-
-  if (sessionCrypto)
-    delete sessionCrypto;
-
-  sessionCrypto = new Crypto();
-  MLOG("Setting remote pubkey...");
-  if (sessionCrypto->setRemotePubKey((unsigned char*)ident.server_pubkey().c_str(), ident.server_pubkey().length()) != SUCCESS)
-  {
-    MERR("Unable to parse remote public key");
-    return false;
-  }
-  MLOG("Remote pubkey set...");
-  // Todo: validate this pubkey against stored pubkey
-
-  // Validate against this pubkey later
-  serverChallenge = ident.server_challenge();
-  return true;
+  session->send(targetModule, targetEmsg, jobid, data);
 }
 
 bool ClientModule::tryConnectNetModules()
@@ -776,18 +298,22 @@ bool ClientModule::tryConnectNetModules()
     if (m->ready())
     {
       MLOG("Module " << p.first << " ready.");
-      socket = m->getSocket(&timeConnected);
-      shouldFreeSocket = false;
-      isTorSocket = true;
+      pendingSocket.reset();
+      session = m->getSession();
+      session->setController(this);
+      isDirect = false;
       torModule = m;
-      if (socket == NULL)
+
+      if (!session)
       {
-        MLOG("... but network module returned null socket.");
+        MLOG("... but network module returned null pendingSocket.");
         m->disconnectInvalid();
         continue;
+      } else
+      {
+        MLOG("Received session from tor.");
       }
-      connected = true;
-      wasConnected = true;
+
       return true;
     } else
     {
@@ -806,11 +332,28 @@ bool ClientModule::tryConnectAllEndpoints()
     if (tryConnectEndpoint(endp.c_str()))
     {
       MLOG("Connection successful...");
-      std::time(&timeConnected);
+      isDirect = true;
+      unsigned char* key;
+      int klen = mInter->getCrypto()->getLocalPriKey(&key);
+      std::string ke((char*) key, klen);
+      free(key);
+      session = std::make_shared<CharlieSession>(pendingSocket, this, ke);
+      session->start();
+      pendingSocket.reset();
       return true;
     }
   }
   return false;
+}
+
+void ClientModule::onDisconnected()
+{
+  MLOG("Disconnected.");
+  session.reset();
+}
+
+void ClientModule::onHandshakeComplete()
+{
 }
 
 bool ClientModule::tryConnectEndpoint(const char* endp)
@@ -831,22 +374,18 @@ bool ClientModule::tryConnectEndpoint(const char* endp)
 
   try {
     tcp::resolver::query query(ipadd, port, boost::asio::ip::resolver_query_base::numeric_service);
-    tcp::resolver::iterator endpoint_iterator = resolver->resolve(query);
+    tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
 
-    shouldFreeSocket = true;
-    isTorSocket = false;
-    socket = new boost::asio::ip::tcp::socket(*io_service);
+    pendingSocket = std::make_shared<tcp::socket>(io_service);
     try {
-      boost::asio::connect(*socket, endpoint_iterator);
+      boost::asio::connect(*pendingSocket, endpoint_iterator);
       return true;
     }
     catch (const boost::system::error_code& ex)
     {
       MERR("Unable to connect, error: " << ex);
-      if (socket && shouldFreeSocket)
-        delete socket;
-      shouldFreeSocket = false;
-      socket = NULL;
+      if (pendingSocket)
+        pendingSocket.reset();
       return false;
     }
   }
@@ -867,7 +406,7 @@ void ClientModule::handleEvent(u32 eve, void* data)
 {
   charlie::EModuleEvents event = (charlie::EModuleEvents) eve;
   if (event == charlie::EVENT_MODULE_TABLE_RELOADED)
-      selectNetworkModule();
+    selectNetworkModule();
   else if (event == charlie::EVENT_MODULE_STATE_CHANGE)
   {
     selectNetworkModule();

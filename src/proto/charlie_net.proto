@@ -4,11 +4,14 @@ option optimize_for = LITE_RUNTIME;
 
 enum EMsg
 {
-  EMsgServerIdentify = 1;
-  EMsgClientIdentify = 2;
-  EMsgServerAccept = 3;
-  EMsgClientAccept = 4;
+// Server sends an identify
+// Client responds with identify
+  EMsgIdentify = 1;
+// Server responds with accept & challenge response
+// Client responds with accept
+  EMsgAccept = 3;
 
+  EMsgKeepalive = 6;
   // Message to be targeted at a module
   EMsgRoutedMessage = 5;
 
@@ -22,21 +25,20 @@ message CMessageTarget
   optional uint32 job_id = 3;
 }
 
+// Changes
+// - Moved a lot into CMessageHeader
+// - Body is just the body (previously rsa_body)
 message CMessageHeader
 {
-  optional uint32 body_size = 1;
-  optional EMsg emsg = 2;
-  optional CMessageTarget target = 3;
+  optional EMsg emsg = 1;
+  optional uint32 timestamp = 2;
+  optional bytes timestamp_signature = 3;
+  optional CMessageTarget target = 4;
+  optional bytes signature = 5;
+  optional uint32 body_size = 6;
 }
 
-message CMessageBody
-{
-  optional bytes signature = 1;
-  optional CRSABuffer rsa_body = 2;
-  optional bytes timestamp_signature = 3;
-  optional uint32 timestamp = 4;
-  optional bytes unenc_body = 5;
-}
+// CMessageBody removed in favor of just placing the contents there
 
 enum ENetFailure
 {
@@ -50,24 +52,18 @@ message CNetFailure
   optional string error_message = 2;
 }
 
-message CServerIdentify
+message CNetIdentify
 {
-  optional string server_challenge = 1;
-  optional bytes server_pubkey = 2;
-}
-
-message CClientIdentify
-{
-  optional bytes client_pubkey = 1;
-  optional string client_challenge = 2;
+  optional bytes pubkey = 1;
+  optional string challenge = 2;
   optional bytes challenge_response = 3;
 }
 
-message CServerAccept
+message CNetAccept
 {
   optional bytes challenge_response = 1;
 }
 
-message CClientAccept
+message CKeepAlive
 {
 }

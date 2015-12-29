@@ -7,6 +7,10 @@
 #include <charlie/random.h>
 #include <charlie/hash.h>
 #include <modules/manager/ManagerInter.h>
+#include <networking/CharlieSession.h>
+#include <chrono>
+
+typedef std::chrono::high_resolution_clock Clock;
 
 #define DEBUGGING_TORC
 
@@ -16,13 +20,11 @@ TormModule::TormModule() :
   mInter(NULL),
   pInter(new TormInter(this)),
   running(true),
-  connected(false),
   inited(false),
   manager(NULL),
   client(NULL),
   io_service(),
-  resolver(io_service),
-  socket(io_service)
+  resolver(io_service)
 {
   MLOG("Torm module constructed...");
 }
@@ -103,7 +105,8 @@ void TormModule::connectControl()
     {
       MLOG("Waiting for Tor to finish starting up...");
       justCompleted = true;
-      connected = false;
+      socket.reset();
+      session.reset();
       boost::this_thread::sleep(boost::posix_time::milliseconds(1000));
       continue;
     }
@@ -117,12 +120,19 @@ void TormModule::connectControl()
       hasGivenManagerProxy = false;
     } else if (!hasGivenManagerProxy)
     {
+#ifdef GIVE_MANAGER_PROXY
       manager->setOrProxy(std::string("socks5h://127.0.0.1:") + std::to_string(torPort), socksUsername + ":" + socksPassword);
+#endif
       hasGivenManagerProxy = true;
     }
-    if (connected)
+    if (session)
     {
-      boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+      auto t1 = Clock::now();
+      io_service.poll_one();
+      auto t2 = Clock::now();
+      auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+      if (ms < 50)
+        boost::this_thread::sleep(boost::posix_time::milliseconds(50 - ms));
       continue;
     }
     if (!tryConnectAllEndpoints())
@@ -151,7 +161,16 @@ bool TormModule::tryConnectAllEndpoints()
     if (tryConnectEndpoint(endp))
     {
       MLOG("Connection successful...");
-      time(&timeConnected);
+      unsigned char* key;
+      int klen = mInter->getCrypto()->getLocalPriKey(&key);
+      std::string ke((char*) key, klen);
+      free(key);
+      session = std::make_shared<CharlieSession>(socket, this, ke);
+      session->start();
+      socket.reset();
+      MLOG("Notifying client we're connected.");
+      if (client)
+        client->retryConnectionsNow();
       return true;
     }
   }
@@ -189,18 +208,18 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
     connReq.Reserved = 0x0;
     // Assume onion routing
     connReq.AddrType = 0x03;
-    socket.send(boost::asio::buffer(&connReq, sizeof(socks5::socks5_req)));
+    socket->send(boost::asio::buffer(&connReq, sizeof(socks5::socks5_req)));
     unsigned char ipaddlen = ipadd.length();
-    socket.send(boost::asio::buffer(&ipaddlen, sizeof(unsigned char)));
-    socket.send(boost::asio::buffer(ipadd.data(), ipadd.length()));
+    socket->send(boost::asio::buffer(&ipaddlen, sizeof(unsigned char)));
+    socket->send(boost::asio::buffer(ipadd.data(), ipadd.length()));
     unsigned char dportb[2];
     dportb[0] = (unsigned char)((dport >> 8) & 0xff);
     dportb[1] = (unsigned char)(dport & 0xff);
-    socket.send(boost::asio::buffer(&dportb, 2));
+    socket->send(boost::asio::buffer(&dportb, 2));
   }
   {
     socks5::socks5_resp cresp;
-    socket.receive(boost::asio::buffer(&cresp, sizeof(socks5::socks5_resp)));
+    socket->receive(boost::asio::buffer(&cresp, sizeof(socks5::socks5_resp)));
     if (cresp.Version != socks5::version)
     {
       MERR("Version in connect response is wrong.");
@@ -216,38 +235,34 @@ bool TormModule::tryConnectEndpoint(std::string& endp)
     {
       unsigned char dnlen;
       char* domainName;
-      socket.receive(boost::asio::buffer(&dnlen, sizeof(unsigned char)));
+      socket->receive(boost::asio::buffer(&dnlen, sizeof(unsigned char)));
       if (dnlen > 80 || dnlen < 2)
       {
         MERR("Domain name len is " << ((int)dnlen) << " which is suspicious.");
         return false;
       }
       domainName = (char*) malloc(sizeof(char) * dnlen);
-      socket.receive(boost::asio::buffer(domainName, dnlen));
+      socket->receive(boost::asio::buffer(domainName, dnlen));
       MLOG("Confirmed domain is " << domainName);
       free(domainName);
     }
     else if (cresp.AddrType == 0x01)
     {
       unsigned char ipv4b[4];
-      socket.receive(boost::asio::buffer(&ipv4b, 4));
+      socket->receive(boost::asio::buffer(&ipv4b, 4));
     }
     else if (cresp.AddrType == 0x04)
     {
       unsigned char ipv6b[16];
-      socket.receive(boost::asio::buffer(&ipv6b, 16));
+      socket->receive(boost::asio::buffer(&ipv6b, 16));
     } else
     {
       MLOG("Unknown response address type " << ((int)cresp.AddrType));
     }
     unsigned char portdb[2];
-    socket.receive(boost::asio::buffer(&portdb, 2));
+    socket->receive(boost::asio::buffer(&portdb, 2));
     // MLOG("Confirmed port is " << port);
   }
-  MLOG("Notifying client we're connected.");
-  connected = true;
-  if (client)
-    client->retryConnectionsNow();
   return true;
 }
 
@@ -289,13 +304,10 @@ void TormModule::handleEndpointFailure(unsigned int endpHash, unsigned char err)
   }
 }
 
-tcp::socket* TormModule::getSocket(std::time_t* tc)
+std::shared_ptr<CharlieSession> TormModule::getSession()
 {
-  MLOG("Returning socket " << &socket);
-  if (tc != NULL)
-    *tc = timeConnected;
-  else {MLOG("Warning: timeConnected ptr null.");}
-  return &socket;
+  MLOG("Returning session.");
+  return session;
 }
 
 bool TormModule::tryEstablishSocksConnection()
@@ -305,9 +317,9 @@ bool TormModule::tryEstablishSocksConnection()
 
   tcp::resolver::query query(localhost, port, boost::asio::ip::resolver_query_base::numeric_service);
   tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-  socket = boost::asio::ip::tcp::socket(io_service);
+  socket = std::make_shared<tcp::socket>(io_service);
   try {
-    boost::asio::connect(socket, endpoint_iterator);
+    boost::asio::connect(*socket, endpoint_iterator);
   }
   catch (const boost::system::error_code& ex)
   {
@@ -324,9 +336,9 @@ bool TormModule::tryEstablishSocksConnection()
     ireq.NumberOfMethods = 2;
     ireq.Methods[0] = 0x00;
     ireq.Methods[1] = 0x02;
-    socket.send(boost::asio::buffer(&ireq, sizeof(socks5::socks5_ident_req)));
+    socket->send(boost::asio::buffer(&ireq, sizeof(socks5::socks5_ident_req)));
     socks5::socks5_ident_resp iresp;
-    socket.receive(boost::asio::buffer(&iresp, sizeof(iresp)));
+    socket->receive(boost::asio::buffer(&iresp, sizeof(iresp)));
     if (iresp.Version != socks5::version)
     {
       MERR("Socks server version " << ((int) iresp.Version) << " incorrect.");
@@ -344,16 +356,16 @@ bool TormModule::tryEstablishSocksConnection()
       negotiateBuf[0] = (char) 0x01;
       // length of name
       negotiateBuf[1] = (char) socksUsername.length();
-      socket.send(boost::asio::buffer(negotiateBuf, 2));
+      socket->send(boost::asio::buffer(negotiateBuf, 2));
       // name
-      socket.send(boost::asio::buffer(socksUsername.c_str(), socksUsername.length()));
+      socket->send(boost::asio::buffer(socksUsername.c_str(), socksUsername.length()));
       // length of password
       char pwlen = socksPassword.length();
-      socket.send(boost::asio::buffer(&pwlen, sizeof(char)));
+      socket->send(boost::asio::buffer(&pwlen, sizeof(char)));
       // password
-      socket.send(boost::asio::buffer(socksPassword.c_str(), socksPassword.length()));
+      socket->send(boost::asio::buffer(socksPassword.c_str(), socksPassword.length()));
       socks5::socks5_generic_response aresp;
-      socket.receive(boost::asio::buffer(&aresp, sizeof(socks5::socks5_generic_response)));
+      socket->receive(boost::asio::buffer(&aresp, sizeof(socks5::socks5_generic_response)));
       if (aresp.Version != 0x01)
       {
         MERR("Socks version wrong in auth response, assuming error.");
@@ -379,13 +391,31 @@ bool TormModule::tryEstablishSocksConnection()
   return true;
 }
 
+void TormModule::handleMessage(charlie::CMessageHeader& head, std::string& body)
+{
+  MERR("Unhandled message " << head.emsg() << ", client hasn't set handler yet.");
+}
+
+void TormModule::onDisconnected()
+{
+  MERR("Disconnected...");
+  session.reset();
+  socket.reset();
+}
+
+void TormModule::onHandshakeComplete()
+{
+  MLOG("Handshake complete.");
+}
+
 void TormModule::handleEvent(u32 eve, void* data)
 {
 }
 
 void TormModule::newIdentity()
 {
-  connected = false;
+  session.reset();
+  socket.reset();
   if (!running || !inited)
     return;
 
@@ -400,7 +430,7 @@ TormInter::TormInter(TormModule * mod)
 
 bool TormInter::ready()
 {
-  return mod->connected;
+  return (bool) mod->session;
 }
 
 void TormInter::disconnectInvalid()
@@ -409,9 +439,9 @@ void TormInter::disconnectInvalid()
   mod->newIdentity();
 }
 
-tcp::socket* TormInter::getSocket(std::time_t* timeConnected)
+std::shared_ptr<CharlieSession> TormInter::getSession()
 {
-  return mod->getSocket(timeConnected);
+  return mod->getSession();
 }
 
 TormInter::~TormInter()

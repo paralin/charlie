@@ -109,7 +109,7 @@ void ManagerModule::fetchStaticUrl(const std::string& url, std::ostream& oss)
   bool isOnion = url.find("onion") != std::string::npos;
   struct curl_slist* headers = (struct curl_slist*)buildStandardHeaders();
 
-  if(CURLE_OK != (ccode = curl_read(url.c_str(), oss, NULL, headers, isOnion ? 120 : 30, &orProxy, &orProxyAuth)))
+  if(CURLE_OK != (ccode = curl_read(url.c_str(), oss, NULL, headers, isOnion ? 300 : 30, &orProxy, &orProxyAuth)))
   {
     curl_slist_free_all(headers);
     throw std::runtime_error(std::string("curle_not_ok")+curl_easy_strerror(ccode));
@@ -130,11 +130,11 @@ void ManagerModule::fetchUrl(std::string& url, std::ostream& outp)
       url = url.substr(0, slashPos) + urlEndpoint + url.substr(slashPos);
     else
       url += urlEndpoint;
-    url = "https://" + url;
+    url = (hasOrProxy ? "http://" : "https://") + url;
     MLOG("Rewrote url to " << url);
   }
   if (url.find("http") != 0)
-    url = std::string("https://") + url;
+    url = std::string(hasOrProxy ? "http://" : "https://") + url;
   return fetchStaticUrl(url, outp);
 }
 

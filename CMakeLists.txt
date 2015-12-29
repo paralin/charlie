@@ -271,9 +271,11 @@ if(NOT WINCC)
 
   file(GLOB cserver_SRC "src/cserver/*.cpp")
   file(GLOB http_SRC "src/http/*.cpp")
+  file(GLOB networking_SRC "src/networking/*.cpp")
   MESSAGE( STATUS "Protogen files: ${protogen_SRC}")
   add_executable(cserver ${cserver_SRC} ${protogen_SRC} ${http_SRC}
-    "src/networking/emsgsizes.cpp"
+    ${networking_SRC}
+    "src/charlie/random.cpp"
     "src/charlie/Crypto.cpp"
     "src/charlie/CryptoBuf.cpp"
     "src/charlie/base64.cpp"
@@ -281,6 +283,6 @@ if(NOT WINCC)
     "src/charlie/xor.cpp"
     )
   target_link_libraries(cserver ${SERVER_LIBS})
-  set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS} -DDO_CHARLIE_LOG")
+  set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS} -DDO_CHARLIE_LOG -DIS_CSERVER")
   set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
  endif()
