@@ -63,6 +63,7 @@ namespace modules
       void handleMessage(charlie::CMessageHeader& head, std::string& data);
 
       void selectNetworkModule();
+      void dependAllModules();
 
       void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);
       void send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data);

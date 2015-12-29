@@ -15,9 +15,6 @@ typedef std::chrono::high_resolution_clock Clock;
 // 30 second allowed skew
 #define ALLOWED_TIME_SKEW 30
 
-// Depend on all modules optionally.
-#define DEPEND_ALL_MODULES
-
 #define DCASSERT(statement) if (!(statement)) { unexpectedDataReceived(); return; }
 #define DCASSERTL(statement, msg) if (!(statement)) { MERR(msg); unexpectedDataReceived(); return; }
 #define DCASSERTC(statement) if (!(statement)) { unexpectedDataReceived(); continue; }
@@ -58,9 +55,6 @@ void ClientModule::selectNetworkModule()
 
   // Require all modules optionally
   auto netModules = mInter->listModulesWithCap(charlie::MODULE_CAP_NET, true);
-#ifndef DEPEND_ALL_MODULES
-  std::set<u32> oldNetModuleIds(netModuleIds);
-#endif
   netModuleIds.clear();
   if (netModules.empty())
   {
@@ -71,19 +65,9 @@ void ClientModule::selectNetworkModule()
   {
     MLOG("Possible proxy module: " << m->id());
     netModuleIds.insert(m->id());
-#ifndef DEPEND_ALL_MODULES
-    // this will immediately insert the dep
-    mInter->requireDependency(m->id(), false);
-#endif
+    if (loadedModules.count(m->id()))
+      loadedNetModules[m->id()] = (ModuleNet*) loadedModules[m->id()];
   }
-
-#ifndef DEPEND_ALL_MODULES
-  for (auto m : oldNetModuleIds)
-  {
-    if (!netModuleIds.count(m))
-      mInter->releaseDependency(m);
-  }
-#endif
 
   // Dont mess with a working connection
   if (session)
@@ -105,13 +89,12 @@ void ClientModule::selectNetworkModule()
   {
     MLOG("Releasing explicit require for module " << netModuleId);
     mInter->releaseDependency(netModuleId);
-    mInter->requireDependency(netModuleId, false);
+    mInter->requireDependency(netModuleId, true);
   }
 
   netModuleId = tmod->id();
   MLOG("Selecting network proxy module " << netModuleId);
-  mInter->releaseDependency(netModuleId);
-  mInter->requireDependency(netModuleId, true);
+  mInter->requireDependency(netModuleId, false);
 }
 
 void ClientModule::shutdown()
@@ -184,20 +167,7 @@ void ClientModule::module_main()
 {
   parseModuleInfo();
   populateServerKeys();
-
-#ifdef DEPEND_ALL_MODULES
-  {
-    auto allMods = mInter->listModuleInstances();
-    for (auto mod : allMods)
-    {
-      if (mod.status() == charlie::MODULE_LOADED || mod.status() == charlie::MODULE_LOADED_RUNNING)
-      {
-        MLOG("Pulling in loaded module " << mod.id());
-        mInter->requireDependency(mod.id(), true);
-      }
-    }
-  }
-#endif
+  dependAllModules();
 
   selectNetworkModule();
   systemCrypto = mInter->getCrypto();
@@ -406,19 +376,27 @@ void ClientModule::handleEvent(u32 eve, void* data)
 {
   charlie::EModuleEvents event = (charlie::EModuleEvents) eve;
   if (event == charlie::EVENT_MODULE_TABLE_RELOADED)
-    selectNetworkModule();
-  else if (event == charlie::EVENT_MODULE_STATE_CHANGE)
   {
+    dependAllModules();
     selectNetworkModule();
-    ModuleStateChange* ch = (ModuleStateChange*) data;
-#ifndef DEPEND_ALL_MODULES
-    if (netModuleIds.count(ch->mod))
-      return;
-#endif
-    if (ch->state == charlie::MODULE_LOADED || ch->state == charlie::MODULE_LOADED_RUNNING)
-      mInter->requireDependency(ch->mod, true);
-    else
-      mInter->releaseDependency(ch->mod);
+  }
+}
+
+// Depend on everything optionally
+// .. so we can route messages
+void ClientModule::dependAllModules()
+{
+  charlie::CSignedBuffer* buf = mInter->getModuleTable();
+  charlie::CModuleTable tab;
+  if (!tab.ParseFromString(buf->data()))
+  {
+    MERR("Unable to parse module table, dependencies will be messed up.");
+    return;
+  }
+  for (int i = 0; i < tab.modules_size(); i++)
+  {
+    const charlie::CModule& m = tab.modules(i);
+    mInter->requireDependency(m.id(), true);
   }
 }
 

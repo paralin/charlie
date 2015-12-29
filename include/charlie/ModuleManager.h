@@ -79,7 +79,7 @@ private:
 
   //Merge a final array of needed modules
   void evaluateRequirements();
-  std::map <int, std::shared_ptr<ModuleInstance>> minstances;
+  std::map<u32, std::shared_ptr<ModuleInstance>> minstances;
   std::set<u32> toReload;
   std::set<u32> pendingLoad;
   std::set<u32> notifyRelease;

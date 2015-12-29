@@ -223,6 +223,7 @@ int ModuleManager::launchModule(charlie::CModule* mod)
     CERR("Unable to load module "<<mod->id()<<"...");
     return 1;
   }
+  minstances[mod->id()] = inst;
   //Iterate over existing instances
   for(auto &any : minstances)
   {
@@ -230,7 +231,6 @@ int ModuleManager::launchModule(charlie::CModule* mod)
     if(tinst->modReqs.count(mod->id())>0 || tinst->modOptReqs.count(mod->id())>0)
       tinst->notifyModuleLoaded(mod->id(), inst->publicInterface);
   }
-  minstances.insert(std::pair<int, std::shared_ptr<ModuleInstance>>(mod->id(), inst));
   return 0;
 }
 
@@ -297,8 +297,9 @@ std::set<charlie::CModule*> ModuleManager::listModulesWithCap(u32 capability, bo
 void ModuleManager::evaluateRequirements()
 {
   bool solved = false;
-  std::map<int, std::shared_ptr<ModuleInstance>> solmods(minstances);
+  std::map<u32, std::shared_ptr<ModuleInstance>> solmods(minstances);
   std::set<u32> solution;
+  CLOG("=== Solving Modules ===");
   while(!solved)
   {
     //Solution now contains all requirements
@@ -308,7 +309,16 @@ void ModuleManager::evaluateRequirements()
     solved = true;
     for (auto &any : solmods ) {
       std::shared_ptr<ModuleInstance> inst = any.second;
+#ifdef DEBUG
+      CLOG(any.first << ":");
+      for (auto mod : inst->modReqs)
+      {
+        CLOG(" -> " << mod);
+        solution.insert(mod);
+      }
+#else
       solution.insert(inst->modReqs.begin(), inst->modReqs.end());
+#endif
     }
     solution.insert(tlReqs.begin(), tlReqs.end());
     std::set<u32> toRemove;
