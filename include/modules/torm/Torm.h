@@ -6,6 +6,7 @@
 #include <IntTypes.h>
 
 #include "TormInter.h"
+#include "TorC.h"
 
 #include <charlie/Crypto.h>
 #include <charlie/CryptoBuf.h>
@@ -52,10 +53,22 @@ namespace modules
       void onDisconnected();
       void onHandshakeComplete();
 
+      void serializeData(const char* torfname, const char* data, size_t len, bool append);
+      file_status_t statData(const char* torfname);
+      char* readData(const char* torfname, bool isBinary);
+      void deleteData(const char* fname);
+
     private:
       TormInter *pInter;
       ModuleInterface* mInter;
       CTormInfo sInfo;
+      CTormStorage stor;
+
+      void loadStorage();
+      void loadTorData();
+      void saveTorData();
+      void saveStorage();
+
       modules::manager::ManagerInter* manager;
       modules::client::ClientInter* client;
 
@@ -78,6 +91,7 @@ namespace modules
       std::shared_ptr<tcp::socket> socket;
 
       std::map<unsigned int, std::time_t> endpointTimeouts;
+      std::map<unsigned int, std::string> torData;
     };
   };
 };

@@ -45,7 +45,7 @@
 [submodule "deps/tor"]
 	path = deps/tor
 	url = https://git.torproject.org/tor.git
-  ignore = dirty
+  ignore = all
 [submodule "deps/libevent"]
 	path = deps/libevent
 	url = https://github.com/libevent/libevent.git

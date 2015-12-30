@@ -49,6 +49,7 @@
 #include "scheduler.h"
 #include "statefile.h"
 #include "status.h"
+#include "util.h"
 #include "util_process.h"
 #include "ext_orport.h"
 #ifdef USE_DMALLOC
@@ -56,7 +57,6 @@
 #include <openssl/crypto.h>
 #endif
 #include "memarea.h"
-#include "sandbox.h"
 
 #ifdef HAVE_EVENT2_EVENT_H
 #include <event2/event.h>
@@ -72,6 +72,7 @@
 
 int continueRunning = 1;
 char* sconfig;
+void* tormModule;
 
 const char tor_git_revision[] = "";
 
@@ -88,7 +89,6 @@ static int conn_close_if_marked(int i);
 static void connection_start_reading_from_linked_conn(connection_t *conn);
 static int connection_should_read_from_linked_conn(connection_t *conn);
 static int run_main_loop_until_done(void);
-static void process_signal(int sig);
 
 /********* START VARIABLES **********/
 
@@ -177,32 +177,6 @@ int quiet_level = 0;
  * variables (which are global within this file and unavailable outside it).
  *
  ****************************************************************************/
-
-#if 0 && defined(USE_BUFFEREVENTS)
-static void
-free_old_inbuf(connection_t *conn)
-{
-  if (! conn->inbuf)
-    return;
-
-  tor_assert(conn->outbuf);
-  tor_assert(buf_datalen(conn->inbuf) == 0);
-  tor_assert(buf_datalen(conn->outbuf) == 0);
-  buf_free(conn->inbuf);
-  buf_free(conn->outbuf);
-  conn->inbuf = conn->outbuf = NULL;
-
-  if (conn->read_event) {
-    event_del(conn->read_event);
-    tor_event_free(conn->read_event);
-  }
-  if (conn->write_event) {
-    event_del(conn->read_event);
-    tor_event_free(conn->write_event);
-  }
-  conn->read_event = conn->write_event = NULL;
-}
-#endif
 
 #if defined(_WIN32) && defined(USE_BUFFEREVENTS)
 /** Remove the kernel-space send and receive buffers for <b>s</b>. For use
@@ -1939,90 +1913,6 @@ dns_servers_relaunch_checks(void)
   }
 }
 
-/** Called when we get a SIGHUP: reload configuration files and keys,
- * retry all connections, and so on. */
-static int
-do_hup(void)
-{
-  const or_options_t *options = get_options();
-
-#ifdef USE_DMALLOC
-  dmalloc_log_stats();
-  dmalloc_log_changed(0, 1, 0, 0);
-#endif
-
-  log_notice(LD_GENERAL,"Received reload signal (hup). Reloading config and "
-             "resetting internal state.");
-  if (accounting_is_enabled(options))
-    accounting_record_bandwidth_usage(time(NULL), get_or_state());
-
-  router_reset_warnings();
-  routerlist_reset_warnings();
-  /* first, reload config variables, in case they've changed */
-  if (options->ReloadTorrcOnSIGHUP) {
-    /* no need to provide argc/v, they've been cached in init_from_config */
-    if (options_init_from_torrc(0, NULL) < 0) {
-      log_err(LD_CONFIG,"Reading config failed--see warnings above. "
-              "For usage, try -h.");
-      return -1;
-    }
-    options = get_options(); /* they have changed now */
-    /* Logs are only truncated the first time they are opened, but were
-       probably intended to be cleaned up on signal. */
-    if (options->TruncateLogFile)
-      truncate_logs();
-  } else {
-    char *msg = NULL;
-    log_notice(LD_GENERAL, "Not reloading config file: the controller told "
-               "us not to.");
-    /* Make stuff get rescanned, reloaded, etc. */
-    if (set_options((or_options_t*)options, &msg) < 0) {
-      if (!msg)
-        msg = tor_strdup("Unknown error");
-      log_warn(LD_GENERAL, "Unable to re-set previous options: %s", msg);
-      tor_free(msg);
-    }
-  }
-  if (authdir_mode_handles_descs(options, -1)) {
-    /* reload the approved-routers file */
-    if (dirserv_load_fingerprint_file() < 0) {
-      /* warnings are logged from dirserv_load_fingerprint_file() directly */
-      log_info(LD_GENERAL, "Error reloading fingerprints. "
-               "Continuing with old list.");
-    }
-  }
-
-  /* Rotate away from the old dirty circuits. This has to be done
-   * after we've read the new options, but before we start using
-   * circuits for directory fetches. */
-  circuit_mark_all_dirty_circs_as_unusable();
-
-  /* retry appropriate downloads */
-  router_reset_status_download_failures();
-  router_reset_descriptor_download_failures();
-  if (!options->DisableNetwork)
-    update_networkstatus_downloads(time(NULL));
-
-  /* We'll retry routerstatus downloads in about 10 seconds; no need to
-   * force a retry there. */
-
-  if (server_mode(options)) {
-    /* Maybe we've been given a new ed25519 key or certificate?
-     */
-    time_t now = approx_time();
-    if (load_ed_keys(options, now) < 0 ||
-         generate_ed_link_cert(options, now)) {
-      log_warn(LD_OR, "Problem reloading Ed25519 keys; still using old keys.");
-    }
-
-    /* Update cpuworker and dnsworker processes, so they get up-to-date
-     * configuration options. */
-    cpuworkers_rotate_keyinfo();
-    dns_reset();
-  }
-  return 0;
-}
-
 /**
  * Run the main loop a single time. Return 0 for "exit"; -1 for "exit with
  * error", and 1 for "run this again."
@@ -2246,22 +2136,6 @@ run_main_loop_until_done(void)
   return loop_result;
 }
 
-/** Libevent callback: invoked when we get a signal.
- */
-static void
-signal_callback(evutil_socket_t fd, short events, void *arg)
-{
-#ifdef DEBUG
-  printf("[torc] Received signal!");
-#endif
-}
-
-/** Do the work of acting on a signal received in <b>sig</b> */
-static void
-process_signal(int sig)
-{
-}
-
 /** Returns Tor's uptime. */
 MOCK_IMPL(long,
 get_uptime,(void))
@@ -2413,11 +2287,6 @@ exit_function(void)
 #else
 #define UNIX_ONLY 1
 #endif
-static struct {
-  int signal_value;
-  int try_to_register;
-  struct event *signal_event;
-} signal_handlers[] = {};
 
 /** Set up the signal handlers for either parent or child process */
 void
@@ -2611,7 +2480,6 @@ tor_free_all(int postfork)
   microdesc_free_all();
   ext_orport_free_all();
   control_free_all();
-  sandbox_free_getaddrinfo_cache();
   if (!postfork) {
     config_free_all();
     or_state_free_all();
@@ -2763,252 +2631,11 @@ do_dump_config(void)
   return 0;
 }
 
-static void
-init_addrinfo(void)
-{
-  char hname[256];
-
-  // host name to sandbox
-  gethostname(hname, sizeof(hname));
-  sandbox_add_addrinfo(hname);
-}
-
-static sandbox_cfg_t*
-sandbox_init_filter(void)
-{
-  const or_options_t *options = get_options();
-  sandbox_cfg_t *cfg = sandbox_cfg_new();
-  int i;
-
-  sandbox_cfg_allow_openat_filename(&cfg,
-      get_datadir_fname("cached-status"));
-
-#define OPEN(name)                              \
-  sandbox_cfg_allow_open_filename(&cfg, tor_strdup(name))
-
-#define OPEN_DATADIR(name)                      \
-  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname(name))
-
-#define OPEN_DATADIR2(name, name2)                       \
-  sandbox_cfg_allow_open_filename(&cfg, get_datadir_fname2((name), (name2)))
-
-#define OPEN_DATADIR_SUFFIX(name, suffix) do {  \
-    OPEN_DATADIR(name);                         \
-    OPEN_DATADIR(name suffix);                  \
-  } while (0)
-
-#define OPEN_DATADIR2_SUFFIX(name, name2, suffix) do {  \
-    OPEN_DATADIR2(name, name2);                         \
-    OPEN_DATADIR2(name, name2 suffix);                  \
-  } while (0)
-
-  OPEN_DATADIR_SUFFIX("cached-certs", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("unverified-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("unverified-microdesc-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-microdesc-consensus", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-microdescs", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-microdescs.new", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-descriptors", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-descriptors.new", ".tmp");
-  OPEN_DATADIR("cached-descriptors.tmp.tmp");
-  OPEN_DATADIR_SUFFIX("cached-extrainfo", ".tmp");
-  OPEN_DATADIR_SUFFIX("cached-extrainfo.new", ".tmp");
-  OPEN_DATADIR("cached-extrainfo.tmp.tmp");
-  OPEN_DATADIR_SUFFIX("state", ".tmp");
-  OPEN_DATADIR_SUFFIX("unparseable-desc", ".tmp");
-  OPEN_DATADIR_SUFFIX("v3-status-votes", ".tmp");
-  OPEN_DATADIR("key-pinning-journal");
-  OPEN("/dev/srandom");
-  OPEN("/dev/urandom");
-  OPEN("/dev/random");
-  OPEN("/etc/hosts");
-  OPEN("/proc/meminfo");
-
-  if (options->BridgeAuthoritativeDir)
-    OPEN_DATADIR_SUFFIX("networkstatus-bridges", ".tmp");
-
-  if (authdir_mode_handles_descs(options, -1))
-    OPEN_DATADIR("approved-routers");
-
-  if (options->ServerDNSResolvConfFile)
-    sandbox_cfg_allow_open_filename(&cfg,
-                                tor_strdup(options->ServerDNSResolvConfFile));
-  else
-    sandbox_cfg_allow_open_filename(&cfg, tor_strdup("/etc/resolv.conf"));
-
-  for (i = 0; i < 2; ++i) {
-    if (get_torrc_fname(i)) {
-      sandbox_cfg_allow_open_filename(&cfg, tor_strdup(get_torrc_fname(i)));
-    }
-  }
-
-#define RENAME_SUFFIX(name, suffix)        \
-  sandbox_cfg_allow_rename(&cfg,           \
-      get_datadir_fname(name suffix),      \
-      get_datadir_fname(name))
-
-#define RENAME_SUFFIX2(prefix, name, suffix) \
-  sandbox_cfg_allow_rename(&cfg,                                        \
-                           get_datadir_fname2(prefix, name suffix),     \
-                           get_datadir_fname2(prefix, name))
-
-  RENAME_SUFFIX("cached-certs", ".tmp");
-  RENAME_SUFFIX("cached-consensus", ".tmp");
-  RENAME_SUFFIX("unverified-consensus", ".tmp");
-  RENAME_SUFFIX("unverified-microdesc-consensus", ".tmp");
-  RENAME_SUFFIX("cached-microdesc-consensus", ".tmp");
-  RENAME_SUFFIX("cached-microdescs", ".tmp");
-  RENAME_SUFFIX("cached-microdescs", ".new");
-  RENAME_SUFFIX("cached-microdescs.new", ".tmp");
-  RENAME_SUFFIX("cached-descriptors", ".tmp");
-  RENAME_SUFFIX("cached-descriptors", ".new");
-  RENAME_SUFFIX("cached-descriptors.new", ".tmp");
-  RENAME_SUFFIX("cached-extrainfo", ".tmp");
-  RENAME_SUFFIX("cached-extrainfo", ".new");
-  RENAME_SUFFIX("cached-extrainfo.new", ".tmp");
-  RENAME_SUFFIX("state", ".tmp");
-  RENAME_SUFFIX("unparseable-desc", ".tmp");
-  RENAME_SUFFIX("v3-status-votes", ".tmp");
-
-  if (options->BridgeAuthoritativeDir)
-    RENAME_SUFFIX("networkstatus-bridges", ".tmp");
-
-#define STAT_DATADIR(name)                      \
-  sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname(name))
-
-#define STAT_DATADIR2(name, name2)                                      \
-  sandbox_cfg_allow_stat_filename(&cfg, get_datadir_fname2((name), (name2)))
-
-  STAT_DATADIR(NULL);
-  STAT_DATADIR("lock");
-  STAT_DATADIR("state");
-  STAT_DATADIR("router-stability");
-  STAT_DATADIR("cached-extrainfo.new");
-
-  {
-    smartlist_t *files = smartlist_new();
-    tor_log_get_logfile_names(files);
-    SMARTLIST_FOREACH(files, char *, file_name, {
-      /* steals reference */
-      sandbox_cfg_allow_open_filename(&cfg, file_name);
-    });
-    smartlist_free(files);
-  }
-
-  {
-    smartlist_t *files = smartlist_new();
-    smartlist_t *dirs = smartlist_new();
-    rend_services_add_filenames_to_lists(files, dirs);
-    SMARTLIST_FOREACH(files, char *, file_name, {
-      char *tmp_name = NULL;
-      tor_asprintf(&tmp_name, "%s.tmp", file_name);
-      sandbox_cfg_allow_rename(&cfg,
-                               tor_strdup(tmp_name), tor_strdup(file_name));
-      /* steals references */
-      sandbox_cfg_allow_open_filename(&cfg, file_name);
-      sandbox_cfg_allow_open_filename(&cfg, tmp_name);
-    });
-    SMARTLIST_FOREACH(dirs, char *, dir, {
-      /* steals reference */
-      sandbox_cfg_allow_stat_filename(&cfg, dir);
-    });
-    smartlist_free(files);
-    smartlist_free(dirs);
-  }
-
-  {
-    char *fname;
-    if ((fname = get_controller_cookie_file_name())) {
-      sandbox_cfg_allow_open_filename(&cfg, fname);
-    }
-    if ((fname = get_ext_or_auth_cookie_file_name())) {
-      sandbox_cfg_allow_open_filename(&cfg, fname);
-    }
-  }
-
-  if (options->DirPortFrontPage) {
-    sandbox_cfg_allow_open_filename(&cfg,
-                                    tor_strdup(options->DirPortFrontPage));
-  }
-
-  // orport
-  if (server_mode(get_options())) {
-
-    OPEN_DATADIR2_SUFFIX("keys", "secret_id_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "secret_onion_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "secret_onion_key_ntor", ".tmp");
-    OPEN_DATADIR2("keys", "secret_id_key.old");
-    OPEN_DATADIR2("keys", "secret_onion_key.old");
-    OPEN_DATADIR2("keys", "secret_onion_key_ntor.old");
-
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_secret_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_secret_key_encrypted",
-                         ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_master_id_public_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_secret_key", ".tmp");
-    OPEN_DATADIR2_SUFFIX("keys", "ed25519_signing_cert", ".tmp");
-
-    OPEN_DATADIR2_SUFFIX("stats", "bridge-stats", ".tmp");
-    OPEN_DATADIR2_SUFFIX("stats", "dirreq-stats", ".tmp");
-
-    OPEN_DATADIR2_SUFFIX("stats", "entry-stats", ".tmp");
-    OPEN_DATADIR2_SUFFIX("stats", "exit-stats", ".tmp");
-    OPEN_DATADIR2_SUFFIX("stats", "buffer-stats", ".tmp");
-    OPEN_DATADIR2_SUFFIX("stats", "conn-stats", ".tmp");
-
-    OPEN_DATADIR("approved-routers");
-    OPEN_DATADIR_SUFFIX("fingerprint", ".tmp");
-    OPEN_DATADIR_SUFFIX("hashed-fingerprint", ".tmp");
-    OPEN_DATADIR_SUFFIX("router-stability", ".tmp");
-
-    OPEN("/etc/resolv.conf");
-
-    RENAME_SUFFIX("fingerprint", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_onion_key_ntor", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_id_key", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_id_key.old", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_onion_key", ".tmp");
-    RENAME_SUFFIX2("keys", "secret_onion_key.old", ".tmp");
-    RENAME_SUFFIX2("stats", "bridge-stats", ".tmp");
-    RENAME_SUFFIX2("stats", "dirreq-stats", ".tmp");
-    RENAME_SUFFIX2("stats", "entry-stats", ".tmp");
-    RENAME_SUFFIX2("stats", "exit-stats", ".tmp");
-    RENAME_SUFFIX2("stats", "buffer-stats", ".tmp");
-    RENAME_SUFFIX2("stats", "conn-stats", ".tmp");
-    RENAME_SUFFIX2("stats", "hidserv-stats", ".tmp");
-    RENAME_SUFFIX("hashed-fingerprint", ".tmp");
-    RENAME_SUFFIX("router-stability", ".tmp");
-
-    RENAME_SUFFIX2("keys", "ed25519_master_id_secret_key", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_master_id_secret_key_encrypted", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_master_id_public_key", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_signing_secret_key", ".tmp");
-    RENAME_SUFFIX2("keys", "ed25519_signing_cert", ".tmp");
-
-    sandbox_cfg_allow_rename(&cfg,
-             get_datadir_fname2("keys", "secret_onion_key"),
-             get_datadir_fname2("keys", "secret_onion_key.old"));
-    sandbox_cfg_allow_rename(&cfg,
-             get_datadir_fname2("keys", "secret_onion_key_ntor"),
-             get_datadir_fname2("keys", "secret_onion_key_ntor.old"));
-
-    STAT_DATADIR("keys");
-    STAT_DATADIR("stats");
-    STAT_DATADIR2("stats", "dirreq-stats");
-  }
-
-  init_addrinfo();
-
-  return cfg;
-}
-
 void
 torc_shutdown()
 {
   log_err(LD_GENERAL, "Attempting to shut things down...");
   continueRunning = 0;
-  // tor_cleanup();
 }
 
 void
@@ -3017,10 +2644,43 @@ torc_new_identity()
   signewnym_impl(time(NULL));
 }
 
+int
+write_bytes_to_file_impl(const char* fname, const char* str, size_t len, int flags)
+{
+  torc_serialize_data(tormModule, fname, str, len, flags);
+  return 0;
+}
+
+int
+write_chunks_to_file_impl(const char* fname, const struct smartlist_t* chunks, int openFlags)
+{
+  if ((openFlags & OPEN_FLAGS_APPEND) == 0)
+    torc_delete_data(tormModule, fname);
+
+  SMARTLIST_FOREACH(chunks, sized_chunk_t *, chunk,
+  {
+    torc_serialize_data(tormModule, fname, chunk->bytes, chunk->len, openFlags | OPEN_FLAGS_APPEND);
+  });
+  return 0;
+}
+
+file_status_t
+file_status(const char* fname)
+{
+  return torc_stat_data(tormModule, fname);
+}
+
+char*
+read_file_to_str(const char* filename, int flags, struct stat *stat_out)
+{
+  return torc_read_data(tormModule, filename, flags & RFTS_BIN);
+}
+
 void
-torc_main(int bindPort, const char* socksUsername, const char* socksPassword, const char* dataDir)
+torc_main(int bindPort, const char* socksUsername, const char* socksPassword, void* torminst)
 {
   continueRunning = 1;
+  tormModule = torminst;
 #ifdef _WIN32
   /* Call SetProcessDEPPolicy to permanently enable DEP.
      The function will not resolve on earlier versions of Windows,
@@ -3039,8 +2699,7 @@ torc_main(int bindPort, const char* socksUsername, const char* socksPassword, co
   init_logging(0);
 
   sconfig = (char*) malloc(sizeof(char) * 800);
-  snprintf(sconfig, 800, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout\nDataDirectory %s", bindPort, socksUsername, socksPassword, dataDir);
-  // snprintf(sconfig, 150, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout", bindPort, socksUsername, socksPassword);
+  snprintf(sconfig, 800, "SocksPort %u\nSocks5ProxyUsername %s\nSocks5ProxyPassword %s\nLog notice stdout", bindPort, socksUsername, socksPassword);
   if(tor_initb() < 0)
   {
     log_err(LD_BUG, "Unable to initialize.");

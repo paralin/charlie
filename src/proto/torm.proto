@@ -8,3 +8,13 @@ message CTormInfo
   // Endpoints to connect to
   repeated string endpoints = 1;
 }
+
+message CTormStorage
+{
+  repeated CKeyValue tor_data = 1;
+  message CKeyValue
+  {
+    optional uint32 key = 1;
+    optional bytes value = 2;
+  }
+}

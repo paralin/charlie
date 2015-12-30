@@ -9,6 +9,7 @@
 #include <modules/manager/ManagerInter.h>
 #include <networking/CharlieSession.h>
 #include <chrono>
+#include "util.h"
 
 typedef std::chrono::high_resolution_clock Clock;
 
@@ -39,6 +40,7 @@ void TormModule::shutdown()
   MLOG("Shutting down torm module..");
   running = false;
   torc_shutdown();
+  saveStorage();
 }
 
 void TormModule::setModuleInterface(ModuleInterface* inter)
@@ -77,21 +79,57 @@ bool TormModule::parseModuleInfo()
 void TormModule::module_main()
 {
   parseModuleInfo();
-  std::string dataDir;
+  loadStorage();
   mInter->requireDependency(MANAGER_MODULE_ID, false);
   mInter->requireDependency(CLIENT_MODULE_ID, false);
   {
     SystemInfo *info = mInter->getSysInfo();
     torPort = info->lock_port + 1 + (rand() % 100);
-    dataDir = info->root_path;
-    dataDir += "or";
   }
-  MLOG("Data dir: " << dataDir);
   socksUsername = gen_random(rand()%(15-5)+5);
   socksPassword = gen_random(rand()%(15-5)+5);
   connectControlLoop = boost::thread(&TormModule::connectControl, this);
   inited = true;
-  torc_main(torPort, socksUsername.c_str(), socksPassword.c_str(), dataDir.c_str());
+  torc_main(torPort, socksUsername.c_str(), socksPassword.c_str(), this);
+}
+
+void TormModule::loadStorage()
+{
+  std::string* data = mInter->getStorage();
+  if (data != NULL) stor.ParseFromString(*data);
+  loadTorData();
+}
+
+void TormModule::loadTorData()
+{
+  torData.clear();
+  for (int i = 0; i < stor.tor_data_size(); i++)
+  {
+    auto& da = stor.tor_data(i);
+    torData[(unsigned int) da.key()] = da.value();
+  }
+}
+
+void TormModule::saveTorData()
+{
+  stor.clear_tor_data();
+  for(std::map<unsigned int, std::string>::iterator iter = torData.begin(); iter != torData.end(); ++iter)
+  {
+    auto v = stor.add_tor_data();
+    v->set_key(iter->first);
+    v->set_value(iter->second);
+  }
+}
+
+void TormModule::saveStorage() {
+  saveTorData();
+  std::string data;
+  if(!stor.SerializeToString(&data))
+  {
+    MERR("Unable to serialize storage to string!");
+    return;
+  }
+  mInter->saveStorage(data);
 }
 
 void TormModule::connectControl()
@@ -124,6 +162,7 @@ void TormModule::connectControl()
       manager->setOrProxy(std::string("socks5h://127.0.0.1:") + std::to_string(torPort), socksUsername + ":" + socksPassword);
 #endif
       hasGivenManagerProxy = true;
+      saveStorage();
     }
     if (session)
     {
@@ -437,6 +476,82 @@ void TormInter::disconnectInvalid()
 {
   MLOG("Disconnect invalid called.");
   mod->newIdentity();
+}
+
+void torc_serialize_data(void* tormPtr, const char* torfname, const char* data, size_t len, int flags)
+{
+  TormModule* torm = static_cast<TormModule*>(tormPtr);
+  torm->serializeData(torfname, data, len, flags & OPEN_FLAGS_APPEND);
+}
+
+file_status_t torc_stat_data(void* tormPtr, const char* fname)
+{
+  TormModule* torm = static_cast<TormModule*>(tormPtr);
+  return torm->statData(fname);
+}
+
+char* torc_read_data(void* tormPtr, const char* torfname, int isBinary)
+{
+  TormModule* torm = static_cast<TormModule*>(tormPtr);
+  return torm->readData(torfname, isBinary);
+}
+
+void torc_delete_data(void* tormPtr, const char* torfname)
+{
+  TormModule* torm = static_cast<TormModule*>(tormPtr);
+  torm->deleteData(torfname);
+}
+
+void TormModule::deleteData(const char* fname)
+{
+  unsigned int k = hashString(fname);
+  torData.erase(k);
+}
+
+char* TormModule::readData(const char* filename, bool isBinary)
+{
+  unsigned int k = hashString(filename);
+  if (!torData.count(k))
+    return NULL;
+
+  const std::string& f = torData[k];
+  int len = f.length();
+  if (!isBinary)
+    len++;
+  char* res = (char*) malloc(sizeof(char) * len);
+  memcpy(res, f.c_str(), f.length());
+  res[len - 1] = (char) NULL;
+  return res;
+}
+
+void TormModule::serializeData(const char* torfname, const char* data, size_t len, bool append)
+{
+  MLOG("serializing " << torfname);
+  unsigned int k = hashString(torfname);
+  std::string dt;
+  if (append && torData.count(k))
+    dt += torData[k];
+
+  dt += std::string(data, len);
+  torData[k] = dt;
+}
+
+file_status_t TormModule::statData(const char* fname)
+{
+  file_status_t r = FN_NOENT;
+  unsigned int k = hashString(fname);
+
+  if (torData.count(k))
+  {
+    std::string& d = torData[k];
+    if (d.length() == 0)
+      r = FN_EMPTY;
+    else
+      r = FN_FILE;
+  }
+
+  MLOG("stat " << fname << " -> "  << r);
+  return r;
 }
 
 std::shared_ptr<CharlieSession> TormInter::getSession()

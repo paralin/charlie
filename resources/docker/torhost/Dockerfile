@@ -9,9 +9,7 @@ COPY ./startup.bash /root/startup.bash
 COPY ./setuptor.expect /root/setuptor.expect
 RUN cp /root/setuptor.expect /var/lib/tor/ && chown debian-tor:debian-tor /var/lib/tor/setuptor.expect && chmod +x /root/startup.bash
 ADD ./torrc /etc/tor/torrc
-RUN expect /var/lib/tor/setuptor.expect && rm -rf /var/lib/tor/hidden_service/
-ADD ./hidden_service/ /var/lib/tor/hidden_service/
-RUN chown -R debian-tor:debian-tor /var/lib/tor/hidden_service/ && rm /root/setuptor.expect
-RUN chmod 700 /var/lib/tor/hidden_service
+RUN expect /var/lib/tor/setuptor.expect && rm -rf /var/lib/tor/hidden_service/ && rm /root/setuptor.expect
 
+VOLUME /etc/hidden_service
 CMD /bin/bash /root/startup.bash

@@ -15,11 +15,11 @@
       "info": {
         "init_urls": [
           "http://localhost:9921/initt",
-          "onion:zgpnutxuh5ktxano/initt"
+          "onion:z3ysxey4mg4hvzbk.onion/initt"
         ],
         "server_roots": [
           "http://localhost:9921",
-          "onion:zgpnutxuh5ktxano"
+          "onion:z3ysxey4mg4hvzbk.onion"
         ]
       }
     }

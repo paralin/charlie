@@ -188,6 +188,13 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           const rapidjson::Value& initUrls = ix["info"]["init_urls"];
           for (rapidjson::SizeType oi = 0; oi < initUrls.Size(); oi++)
           {
+#ifdef IS_CHARLIE_RELEASE
+            if (initUrls[oi].GetString().find("localhost") != std::string::npos)
+            {
+              CLOG("Skipping local root " << initUrls[oi].GetString());
+              continue;
+            }
+#endif
             manInfo.add_init_url(initUrls[oi].GetString());
             CLOG("Adding init url: "<<initUrls[oi].GetString());
           }
@@ -197,6 +204,13 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           const rapidjson::Value& serverRoots = ix["info"]["server_roots"];
           for (rapidjson::SizeType oi = 0; oi < serverRoots.Size(); oi++)
           {
+#ifdef IS_CHARLIE_RELEASE
+            if (serverRoots[oi].GetString().find("localhost") != std::string::npos)
+            {
+              CLOG("Skipping local root " << serverRoots[oi].GetString());
+              continue;
+            }
+#endif
             manInfo.add_server_root(serverRoots[oi].GetString());
             CLOG("Adding server root: "<<serverRoots[oi].GetString());
           }
@@ -218,6 +232,13 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           const rapidjson::Value& serverAddrs = ix["info"]["server_addr"];
           for (rapidjson::SizeType oi = 0; oi < serverAddrs.Size(); oi++)
           {
+#ifdef IS_CHARLIE_RELEASE
+            if (serverAddrs[oi].GetString().find("localhost") != std::string::npos)
+            {
+              CLOG("Skipping local root " << initUrls[oi].GetString());
+              continue;
+            }
+#endif
             directConnectInfo.add_server_addr(serverAddrs[oi].GetString());
             CLOG("Adding server addr: "<<serverAddrs[oi].GetString());
           }

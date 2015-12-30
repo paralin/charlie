@@ -21,6 +21,9 @@ ModuleManager::ModuleManager(System* system)
 
 ModuleManager::~ModuleManager()
 {
+  // Will unload all of the modules
+  minstances.clear();
+  pendingStatusNotify.clear();
   hasShutdown = false;
   sys = NULL;
 }

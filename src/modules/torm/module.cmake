@@ -25,7 +25,7 @@ file(GLOB_RECURSE torext_LIBS "${TOR_ROOT_DIR}/src/ext/${CMAKE_STATIC_LIBRARY_PR
 # Build torm
 file(GLOB_RECURSE torm_SRC "${CHARLIE_MODULE_PATH}/torm/*.cpp")
 file(GLOB tor_common_SRC "${TOR_ROOT_DIR}/src/common/*.c")
-add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC} "torm.pb.redacted.cc" "${CHARLIE_MODULE_PATH}/torm/torc.c" 
+add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC} "torm.pb.redacted.cc" "${CHARLIE_MODULE_PATH}/torm/torc.c"
   "${CMAKE_SOURCE_DIR}/src/charlie/hash.cpp"
   "${CMAKE_SOURCE_DIR}/src/charlie/random.cpp"
   "${CMAKE_SOURCE_DIR}/src/networking/CharlieSession.cpp"
@@ -50,7 +50,7 @@ add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC} "torm.pb.redacted.cc" 
   "${TOR_ROOT_DIR}/src/ext/csiphash.c"
   "${TOR_ROOT_DIR}/src/ext/curve25519_donna/curve25519-donna-c64.c"
   )
-set_target_properties(torm PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"tor\"'")
+set_target_properties(torm PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -DCHARLIE_MODULE_NAME='\"tor\"' -DIS_CHARLIE -fPIC")
 set_target_properties(torm PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(torm manager client ${CHARLIE_MODULE_LINK} -Wl,-Bstatic tor tor-crypto tor-event tor-trunnel ${torext_LIBS} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES} ${EVENT2_LIBRARIES} ${GLIB_LIBRARIES} ${M_LIBRARIES} ${RT_LIBRARIES})
 add_custom_command(TARGET torm POST_BUILD

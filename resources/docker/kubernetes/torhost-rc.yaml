@@ -13,15 +13,17 @@ spec:
       labels:
         app: torhost
     spec:
+      volumes:
+      - name: hs-config
+        secret:
+          secretName: "hs-config"
       containers:
       - image: gcr.io/faceit-ltd/torhost:latest
         imagePullPolicy: Always
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - killall
-              - mono
+        volumeMounts:
+        - name: hs-config
+          readOnly: true
+          mountPath: /etc/hidden_service
         name: torhost
       dnsPolicy: ClusterFirst
       restartPolicy: Always

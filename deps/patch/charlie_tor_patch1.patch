@@ -1,0 +1,1176 @@
+From f236d4327e12f57f00414e062557ad0e2a19376f Mon Sep 17 00:00:00 2001
+From: Christian Stewart <christian@paral.in>
+Date: Tue, 29 Dec 2015 16:48:50 -0800
+Subject: [PATCH] Patch tor to allow external file management
+
+---
+ .charlie_patch1_applied |   0
+ src/common/compat.c     |   6 +
+ src/common/log.c        |   5 +-
+ src/common/util.c       | 146 ++-----------
+ src/common/util.h       |   2 +
+ src/include.am          |   1 -
+ src/or/config.c         | 554 ++----------------------------------------------
+ src/or/control.c        |  20 --
+ src/or/main.c           |   4 +
+ src/or/networkstatus.c  |   4 +-
+ src/or/or.h             |   1 -
+ src/or/router.c         |   4 -
+ src/or/routerkeys.c     |   6 -
+ 13 files changed, 47 insertions(+), 706 deletions(-)
+ create mode 100644 .charlie_patch1_applied
+
+diff --git a/.charlie_patch1_applied b/.charlie_patch1_applied
+new file mode 100644
+index 0000000..e69de29
+diff --git a/src/common/compat.c b/src/common/compat.c
+index 7d72b4b..32a494a 100644
+--- a/src/common/compat.c
++++ b/src/common/compat.c
+@@ -908,6 +908,9 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
+   tor_lockfile_t *result;
+   int fd;
+   *locked_out = 0;
++#ifdef IS_CHARLIE
++  fd = 0;
++#else
+ 
+   log_info(LD_FS, "Locking \"%s\"", filename);
+   fd = tor_open_cloexec(filename, O_RDWR|O_CREAT|O_TRUNC, 0600);
+@@ -952,6 +955,7 @@ tor_lockfile_lock(const char *filename, int blocking, int *locked_out)
+     }
+   }
+ #endif
++#endif
+ 
+   result = tor_malloc(sizeof(tor_lockfile_t));
+   result->filename = tor_strdup(filename);
+@@ -965,6 +969,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
+ {
+   tor_assert(lockfile);
+ 
++#ifndef IS_CHARLIE
+   log_info(LD_FS, "Unlocking \"%s\"", lockfile->filename);
+ #ifdef _WIN32
+   _lseek(lockfile->fd, 0, SEEK_SET);
+@@ -982,6 +987,7 @@ tor_lockfile_unlock(tor_lockfile_t *lockfile)
+ #endif
+ 
+   close(lockfile->fd);
++#endif
+   lockfile->fd = -1;
+   tor_free(lockfile->filename);
+   tor_free(lockfile);
+diff --git a/src/common/log.c b/src/common/log.c
+index e23691b..22400de 100644
+--- a/src/common/log.c
++++ b/src/common/log.c
+@@ -470,7 +470,10 @@ MOCK_IMPL(STATIC void,
+ logv,(int severity, log_domain_mask_t domain, const char *funcname,
+      const char *suffix, const char *format, va_list ap))
+ {
+-  char buf[10240];
++  char buf[10240];//patched
++#ifndef DEBUG
++return;
++#endif
+   size_t msg_len = 0;
+   int formatted = 0;
+   logfile_t *lf;
+diff --git a/src/common/util.c b/src/common/util.c
+index b33c80f..be02a41 100644
+--- a/src/common/util.c
++++ b/src/common/util.c
+@@ -1971,6 +1971,7 @@ clean_name_for_stat(char *name)
+  * FN_ERROR for any other file type.
+  * On FN_ERROR and FN_NOENT, sets errno.  (errno is not set when FN_ERROR
+  * is returned due to an unhandled file type.) */
++#ifndef IS_CHARLIE
+ file_status_t
+ file_status(const char *fname)
+ {
+@@ -2009,6 +2010,7 @@ file_status(const char *fname)
+     return FN_ERROR;
+   }
+ }
++#endif
+ 
+ /** Check whether <b>dirname</b> exists and is private.  If yes return 0.  If
+  * it does not exist, and <b>check</b>&CPD_CREATE is set, try to create it
+@@ -2029,136 +2031,6 @@ int
+ check_private_dir(const char *dirname, cpd_check_t check,
+                   const char *effective_user)
+ {
+-  int r;
+-  struct stat st;
+-  char *f;
+-#ifndef _WIN32
+-  unsigned unwanted_bits = 0;
+-  const struct passwd *pw = NULL;
+-  uid_t running_uid;
+-  gid_t running_gid;
+-#else
+-  (void)effective_user;
+-#endif
+-
+-  tor_assert(dirname);
+-  f = tor_strdup(dirname);
+-  clean_name_for_stat(f);
+-  log_debug(LD_FS, "stat()ing %s", f);
+-  r = stat(sandbox_intern_string(f), &st);
+-  tor_free(f);
+-  if (r) {
+-    if (errno != ENOENT) {
+-      log_warn(LD_FS, "Directory %s cannot be read: %s", dirname,
+-               strerror(errno));
+-      return -1;
+-    }
+-    if (check & CPD_CREATE) {
+-      log_info(LD_GENERAL, "Creating directory %s", dirname);
+-#if defined (_WIN32)
+-      r = mkdir(dirname);
+-#else
+-      if (check & CPD_GROUP_READ) {
+-        r = mkdir(dirname, 0750);
+-      } else {
+-        r = mkdir(dirname, 0700);
+-      }
+-#endif
+-      if (r) {
+-        log_warn(LD_FS, "Error creating directory %s: %s", dirname,
+-            strerror(errno));
+-        return -1;
+-      }
+-    } else if (!(check & CPD_CHECK)) {
+-      log_warn(LD_FS, "Directory %s does not exist.", dirname);
+-      return -1;
+-    }
+-    /* XXXX In the case where check==CPD_CHECK, we should look at the
+-     * parent directory a little harder. */
+-    return 0;
+-  }
+-  if (!(st.st_mode & S_IFDIR)) {
+-    log_warn(LD_FS, "%s is not a directory", dirname);
+-    return -1;
+-  }
+-#ifndef _WIN32
+-  if (effective_user) {
+-    /* Look up the user and group information.
+-     * If we have a problem, bail out. */
+-    pw = tor_getpwnam(effective_user);
+-    if (pw == NULL) {
+-      log_warn(LD_CONFIG, "Error setting configured user: %s not found",
+-               effective_user);
+-      return -1;
+-    }
+-    running_uid = pw->pw_uid;
+-    running_gid = pw->pw_gid;
+-  } else {
+-    running_uid = getuid();
+-    running_gid = getgid();
+-  }
+-
+-  if (st.st_uid != running_uid) {
+-    const struct passwd *pw = NULL;
+-    char *process_ownername = NULL;
+-
+-    pw = tor_getpwuid(running_uid);
+-    process_ownername = pw ? tor_strdup(pw->pw_name) : tor_strdup("<unknown>");
+-
+-    pw = tor_getpwuid(st.st_uid);
+-
+-    log_warn(LD_FS, "%s is not owned by this user (%s, %d) but by "
+-        "%s (%d). Perhaps you are running Tor as the wrong user?",
+-                         dirname, process_ownername, (int)running_uid,
+-                         pw ? pw->pw_name : "<unknown>", (int)st.st_uid);
+-
+-    tor_free(process_ownername);
+-    return -1;
+-  }
+-  if ( (check & (CPD_GROUP_OK|CPD_GROUP_READ))
+-       && (st.st_gid != running_gid) ) {
+-    struct group *gr;
+-    char *process_groupname = NULL;
+-    gr = getgrgid(running_gid);
+-    process_groupname = gr ? tor_strdup(gr->gr_name) : tor_strdup("<unknown>");
+-    gr = getgrgid(st.st_gid);
+-
+-    log_warn(LD_FS, "%s is not owned by this group (%s, %d) but by group "
+-             "%s (%d).  Are you running Tor as the wrong user?",
+-             dirname, process_groupname, (int)running_gid,
+-             gr ?  gr->gr_name : "<unknown>", (int)st.st_gid);
+-
+-    tor_free(process_groupname);
+-    return -1;
+-  }
+-  if (check & (CPD_GROUP_OK|CPD_GROUP_READ)) {
+-    unwanted_bits = 0027;
+-  } else {
+-    unwanted_bits = 0077;
+-  }
+-  if ((st.st_mode & unwanted_bits) != 0) {
+-    unsigned new_mode;
+-    if (check & CPD_CHECK_MODE_ONLY) {
+-      log_warn(LD_FS, "Permissions on directory %s are too permissive.",
+-               dirname);
+-      return -1;
+-    }
+-    log_warn(LD_FS, "Fixing permissions on directory %s", dirname);
+-    new_mode = st.st_mode;
+-    new_mode |= 0700; /* Owner should have rwx */
+-    if (check & CPD_GROUP_READ) {
+-      new_mode |= 0050; /* Group should have rx */
+-    }
+-    new_mode &= ~unwanted_bits; /* Clear the bits that we didn't want set...*/
+-    if (chmod(dirname, new_mode)) {
+-      log_warn(LD_FS, "Could not chmod directory %s: %s", dirname,
+-               strerror(errno));
+-      return -1;
+-    } else {
+-      return 0;
+-    }
+-  }
+-#endif
+   return 0;
+ }
+ 
+@@ -2377,8 +2249,9 @@ abort_writing_to_file(open_file_t *file_data)
+  * <b>fname</b> and write all the sized_chunk_t structs in <b>chunks</b> to
+  * the file.  Do so as atomically as possible e.g. by opening temp files and
+  * renaming. */
+-static int
+-write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
++#ifndef IS_CHARLIE
++int
++write_chunks_to_file_impl(const char *fname, const struct smartlist_t *chunks,
+                           int open_flags)
+ {
+   open_file_t *file = NULL;
+@@ -2403,6 +2276,7 @@ write_chunks_to_file_impl(const char *fname, const smartlist_t *chunks,
+   abort_writing_to_file(file);
+   return -1;
+ }
++#endif
+ 
+ /** Given a smartlist of sized_chunk_t, write them to a file
+  * <b>fname</b>, overwriting or creating the file as necessary.
+@@ -2421,9 +2295,10 @@ write_chunks_to_file(const char *fname, const smartlist_t *chunks, int bin,
+   return write_chunks_to_file_impl(fname, chunks, flags);
+ }
+ 
++#ifndef IS_CHARLIE
+ /** Write <b>len</b> bytes, starting at <b>str</b>, to <b>fname</b>
+     using the open() flags passed in <b>flags</b>. */
+-static int
++int
+ write_bytes_to_file_impl(const char *fname, const char *str, size_t len,
+                          int flags)
+ {
+@@ -2435,6 +2310,7 @@ write_bytes_to_file_impl(const char *fname, const char *str, size_t len,
+   smartlist_free(chunks);
+   return r;
+ }
++#endif
+ 
+ /** As write_str_to_file, but does not assume a NUL-terminated
+  * string. Instead, we write <b>len</b> bytes, starting at <b>str</b>. */
+@@ -2458,6 +2334,7 @@ append_bytes_to_file(const char *fname, const char *str, size_t len,
+ 
+ /** Like write_str_to_file(), but also return -1 if there was a file
+     already residing in <b>fname</b>. */
++/* charlie-patch: Not used anywhere. Making sure of this here.
+ int
+ write_bytes_to_new_file(const char *fname, const char *str, size_t len,
+                         int bin)
+@@ -2466,6 +2343,7 @@ write_bytes_to_new_file(const char *fname, const char *str, size_t len,
+                                   OPEN_FLAGS_DONT_REPLACE|
+                                   (bin?O_BINARY:O_TEXT));
+ }
++*/
+ 
+ /**
+  * Read the contents of the open file <b>fd</b> presuming it is a FIFO
+@@ -2529,6 +2407,7 @@ read_file_to_str_until_eof(int fd, size_t max_bytes_to_read, size_t *sz_out)
+  * the call to stat and the call to read_all: the resulting string will
+  * be truncated.
+  */
++#ifndef IS_CHARLIE
+ char *
+ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
+ {
+@@ -2629,6 +2508,7 @@ read_file_to_str(const char *filename, int flags, struct stat *stat_out)
+ 
+   return string;
+ }
++#endif
+ 
+ #define TOR_ISODIGIT(c) ('0' <= (c) && (c) <= '7')
+ 
+diff --git a/src/common/util.h b/src/common/util.h
+index 8bb4505..7eaf82f 100644
+--- a/src/common/util.h
++++ b/src/common/util.h
+@@ -573,3 +573,5 @@ STATIC int format_helper_exit_status(unsigned char child_state,
+ 
+ #endif
+ 
++int write_bytes_to_file_impl(const char* fname, const char* str, size_t len, int flags);
++int write_chunks_to_file_impl(const char* fname, const struct smartlist_t* chunks, int flags);
+diff --git a/src/include.am b/src/include.am
+index c468af3..e86e867 100644
+--- a/src/include.am
++++ b/src/include.am
+@@ -2,7 +2,6 @@ include src/ext/include.am
+ include src/trunnel/include.am
+ include src/common/include.am
+ include src/or/include.am
+-include src/test/include.am
+ include src/tools/include.am
+ include src/win32/include.am
+ include src/config/include.am
+diff --git a/src/or/config.c b/src/or/config.c
+index fa860af..0b5a7eb 100644
+--- a/src/or/config.c
++++ b/src/or/config.c
+@@ -211,7 +211,6 @@ static config_var_t option_vars_[] = {
+   V(CookieAuthFileGroupReadable, BOOL,     "0"),
+   V(CookieAuthFile,              STRING,   NULL),
+   V(CountPrivateBandwidth,       BOOL,     "0"),
+-  V(DataDirectory,               FILENAME, NULL),
+   V(DisableNetwork,              BOOL,     "0"),
+   V(DirAllowPrivateAddresses,    BOOL,     "0"),
+   V(TestingAuthDirTimeToLearnReachability, INTERVAL, "30 minutes"),
+@@ -568,9 +567,6 @@ static int parse_ports(or_options_t *options, int validate_only,
+ static int check_server_ports(const smartlist_t *ports,
+                               const or_options_t *options);
+ 
+-static int validate_data_directory(or_options_t *options);
+-static int write_configuration_file(const char *fname,
+-                                    const or_options_t *options);
+ static int options_init_logs(const or_options_t *old_options,
+                              or_options_t *options, int validate_only);
+ 
+@@ -617,8 +613,10 @@ static char *torrc_defaults_fname;
+ static config_line_t *global_cmdline_options = NULL;
+ /** Non-configuration options set by the command line */
+ static config_line_t *global_cmdline_only_options = NULL;
++#if 0
+ /** Boolean: Have we parsed the command line? */
+ static int have_parsed_cmdline = 0;
++#endif
+ /** Contents of most recently read DirPortFrontPage file. */
+ static char *global_dirfrontpagecontents = NULL;
+ /** List of port_cfg_t for all configured ports. */
+@@ -1185,17 +1183,6 @@ options_act_reversible(const or_options_t *old_options, char **msg)
+     }
+   }
+ 
+-  /* Ensure data directory is private; create if possible. */
+-  if (check_private_dir(options->DataDirectory,
+-                        running_tor ? CPD_CREATE : CPD_CHECK,
+-                        options->User)<0) {
+-    tor_asprintf(msg,
+-              "Couldn't access/create private data directory \"%s\"",
+-              options->DataDirectory);
+-    goto done;
+-    /* No need to roll back, since you can't change the value. */
+-  }
+-
+   /* Bail out at this point if we're not going to be a client or server:
+    * we don't run Tor itself. */
+   if (!running_tor)
+@@ -1531,7 +1518,8 @@ options_act(const or_options_t *old_options)
+   /* Finish backgrounding the process */
+   if (options->RunAsDaemon) {
+     /* We may be calling this for the n'th time (on SIGHUP), but it's safe. */
+-    finish_daemon(options->DataDirectory);
++    /* charlie patch: daemonizing will be broken. */
++    finish_daemon(NULL);
+   }
+ 
+   /* We want to reinit keys as needed before we do much of anything else:
+@@ -2107,6 +2095,7 @@ options_trial_assign(config_line_t *list, int use_defaults,
+ }
+ 
+ /** Print a usage message for tor. */
++#if 0
+ static void
+ print_usage(void)
+ {
+@@ -2118,7 +2107,9 @@ print_usage(void)
+ "See man page for options, or https://www.torproject.org/ for "
+ "documentation.\n");
+ }
++#endif
+ 
++#if 0
+ /** Print all non-obsolete torrc options. */
+ static void
+ list_torrc_options(void)
+@@ -2134,6 +2125,7 @@ list_torrc_options(void)
+   }
+   smartlist_free(lines);
+ }
++#endif
+ 
+ /** Last value actually set by resolve_my_address. */
+ static uint32_t last_resolved_addr = 0;
+@@ -2649,7 +2641,6 @@ warn_about_relative_paths(or_options_t *options)
+   warn_if_option_path_is_relative("GeoIPv6File",options->GeoIPv6File);
+   warn_if_option_path_is_relative("Log",options->DebugLogFile);
+   warn_if_option_path_is_relative("AccelDir",options->AccelDir);
+-  warn_if_option_path_is_relative("DataDirectory",options->DataDirectory);
+   warn_if_option_path_is_relative("PidFile",options->PidFile);
+ 
+   for (config_line_t *hs_line = options->RendConfigLines; hs_line;
+@@ -2704,9 +2695,6 @@ options_validate(or_options_t *old_options, or_options_t *options,
+   if (parse_outbound_addresses(options, 1, msg) < 0)
+     return -1;
+ 
+-  if (validate_data_directory(options)<0)
+-    REJECT("Invalid DataDirectory");
+-
+   if (options->Nickname == NULL) {
+     if (server_mode(options)) {
+         options->Nickname = tor_strdup(UNNAMED_ROUTER_NICKNAME);
+@@ -3983,14 +3971,6 @@ options_transition_allowed(const or_options_t *old,
+     return -1;
+   }
+ 
+-  if (strcmp(old->DataDirectory,new_val->DataDirectory)!=0) {
+-    tor_asprintf(msg,
+-               "While Tor is running, changing DataDirectory "
+-               "(\"%s\"->\"%s\") is not allowed.",
+-               old->DataDirectory, new_val->DataDirectory);
+-    return -1;
+-  }
+-
+   if (!opt_streq(old->User, new_val->User)) {
+     *msg = tor_strdup("While Tor is running, changing User is not allowed.");
+     return -1;
+@@ -4076,8 +4056,7 @@ static int
+ options_transition_affects_workers(const or_options_t *old_options,
+                                    const or_options_t *new_options)
+ {
+-  if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
+-      old_options->NumCPUs != new_options->NumCPUs ||
++  if (old_options->NumCPUs != new_options->NumCPUs ||
+       !config_lines_eq(old_options->ORPort_lines, new_options->ORPort_lines) ||
+       old_options->ServerDNSSearchDomains !=
+                                        new_options->ServerDNSSearchDomains ||
+@@ -4102,8 +4081,7 @@ options_transition_affects_descriptor(const or_options_t *old_options,
+ {
+   /* XXX We can be smarter here. If your DirPort isn't being
+    * published and you just turned it off, no need to republish. Etc. */
+-  if (!opt_streq(old_options->DataDirectory, new_options->DataDirectory) ||
+-      !opt_streq(old_options->Nickname,new_options->Nickname) ||
++  if (!opt_streq(old_options->Nickname,new_options->Nickname) ||
+       !opt_streq(old_options->Address,new_options->Address) ||
+       !config_lines_eq(old_options->ExitPolicy,new_options->ExitPolicy) ||
+       old_options->ExitRelay != new_options->ExitRelay ||
+@@ -4276,324 +4254,6 @@ check_nickname_list(char **lst, const char *name, char **msg)
+   return r;
+ }
+ 
+-/** Learn config file name from command line arguments, or use the default.
+- *
+- * If <b>defaults_file</b> is true, we're looking for torrc-defaults;
+- * otherwise, we're looking for the regular torrc_file.
+- *
+- * Set *<b>using_default_fname</b> to true if we're using the default
+- * configuration file name; or false if we've set it from the command line.
+- *
+- * Set *<b>ignore_missing_torrc</b> to true if we should ignore the resulting
+- * filename if it doesn't exist.
+- */
+-static char *
+-find_torrc_filename(config_line_t *cmd_arg,
+-                    int defaults_file,
+-                    int *using_default_fname, int *ignore_missing_torrc)
+-{
+-  char *fname=NULL;
+-  config_line_t *p_index;
+-  const char *fname_opt = defaults_file ? "--defaults-torrc" : "-f";
+-  const char *ignore_opt = defaults_file ? NULL : "--ignore-missing-torrc";
+-
+-  if (defaults_file)
+-    *ignore_missing_torrc = 1;
+-
+-  for (p_index = cmd_arg; p_index; p_index = p_index->next) {
+-    if (!strcmp(p_index->key, fname_opt)) {
+-      if (fname) {
+-        log_warn(LD_CONFIG, "Duplicate %s options on command line.",
+-            fname_opt);
+-        tor_free(fname);
+-      }
+-      fname = expand_filename(p_index->value);
+-
+-      {
+-        char *absfname;
+-        absfname = make_path_absolute(fname);
+-        tor_free(fname);
+-        fname = absfname;
+-      }
+-
+-      *using_default_fname = 0;
+-    } else if (ignore_opt && !strcmp(p_index->key,ignore_opt)) {
+-      *ignore_missing_torrc = 1;
+-    }
+-  }
+-
+-  if (*using_default_fname) {
+-    /* didn't find one, try CONFDIR */
+-    const char *dflt = get_default_conf_file(defaults_file);
+-    file_status_t st = file_status(dflt);
+-    if (dflt && (st == FN_FILE || st == FN_EMPTY)) {
+-      fname = tor_strdup(dflt);
+-    } else {
+-#ifndef _WIN32
+-      char *fn = NULL;
+-      if (!defaults_file) {
+-        fn = expand_filename("~/.torrc");
+-      }
+-      if (fn) {
+-        file_status_t hmst = file_status(fn);
+-        if (hmst == FN_FILE || hmst == FN_EMPTY || dflt == NULL) {
+-          fname = fn;
+-        } else {
+-          tor_free(fn);
+-          fname = tor_strdup(dflt);
+-        }
+-      } else {
+-        fname = dflt ? tor_strdup(dflt) : NULL;
+-      }
+-#else
+-      fname = dflt ? tor_strdup(dflt) : NULL;
+-#endif
+-    }
+-  }
+-  return fname;
+-}
+-
+-/** Read the torrc from standard input and return it as a string.
+- * Upon failure, return NULL.
+- */
+-static char *
+-load_torrc_from_stdin(void)
+-{
+-   size_t sz_out;
+-
+-   return read_file_to_str_until_eof(STDIN_FILENO,SIZE_MAX,&sz_out);
+-}
+-
+-/** Load a configuration file from disk, setting torrc_fname or
+- * torrc_defaults_fname if successful.
+- *
+- * If <b>defaults_file</b> is true, load torrc-defaults; otherwise load torrc.
+- *
+- * Return the contents of the file on success, and NULL on failure.
+- */
+-static char *
+-load_torrc_from_disk(config_line_t *cmd_arg, int defaults_file)
+-{
+-  char *fname=NULL;
+-  char *cf = NULL;
+-  int using_default_torrc = 1;
+-  int ignore_missing_torrc = 0;
+-  char **fname_var = defaults_file ? &torrc_defaults_fname : &torrc_fname;
+-
+-  if (*fname_var == NULL) {
+-    fname = find_torrc_filename(cmd_arg, defaults_file,
+-                                &using_default_torrc, &ignore_missing_torrc);
+-    tor_free(*fname_var);
+-    *fname_var = fname;
+-  } else {
+-    fname = *fname_var;
+-  }
+-  log_debug(LD_CONFIG, "Opening config file \"%s\"", fname?fname:"<NULL>");
+-
+-  /* Open config file */
+-  file_status_t st = fname ? file_status(fname) : FN_EMPTY;
+-  if (fname == NULL ||
+-      !(st == FN_FILE || st == FN_EMPTY) ||
+-      !(cf = read_file_to_str(fname,0,NULL))) {
+-    if (using_default_torrc == 1 || ignore_missing_torrc) {
+-      if (!defaults_file)
+-        log_notice(LD_CONFIG, "Configuration file \"%s\" not present, "
+-            "using reasonable defaults.", fname);
+-      tor_free(fname); /* sets fname to NULL */
+-      *fname_var = NULL;
+-      cf = tor_strdup("");
+-    } else {
+-      log_warn(LD_CONFIG,
+-          "Unable to open configuration file \"%s\".", fname);
+-      goto err;
+-    }
+-  } else {
+-    log_notice(LD_CONFIG, "Read configuration file \"%s\".", fname);
+-  }
+-
+-  return cf;
+- err:
+-  tor_free(fname);
+-  *fname_var = NULL;
+-  return NULL;
+-}
+-
+-/** Read a configuration file into <b>options</b>, finding the configuration
+- * file location based on the command line.  After loading the file
+- * call options_init_from_string() to load the config.
+- * Return 0 if success, -1 if failure. */
+-int
+-options_init_from_torrc(int argc, char **argv)
+-{
+-  char *cf=NULL, *cf_defaults=NULL;
+-  int command;
+-  int retval = -1;
+-  char *command_arg = NULL;
+-  char *errmsg=NULL;
+-  config_line_t *p_index = NULL;
+-  config_line_t *cmdline_only_options = NULL;
+-
+-  /* Go through command-line variables */
+-  if (! have_parsed_cmdline) {
+-    /* Or we could redo the list every time we pass this place.
+-     * It does not really matter */
+-    if (config_parse_commandline(argc, argv, 0, &global_cmdline_options,
+-                                 &global_cmdline_only_options) < 0) {
+-      goto err;
+-    }
+-    have_parsed_cmdline = 1;
+-  }
+-  cmdline_only_options = global_cmdline_only_options;
+-
+-  if (config_line_find(cmdline_only_options, "-h") ||
+-      config_line_find(cmdline_only_options, "--help")) {
+-    print_usage();
+-    exit(0);
+-  }
+-  if (config_line_find(cmdline_only_options, "--list-torrc-options")) {
+-    /* For documenting validating whether we've documented everything. */
+-    list_torrc_options();
+-    exit(0);
+-  }
+-
+-  if (config_line_find(cmdline_only_options, "--version")) {
+-    printf("Tor version %s.\n",get_version());
+-    exit(0);
+-  }
+-
+-  if (config_line_find(cmdline_only_options, "--library-versions")) {
+-    printf("Tor version %s. \n", get_version());
+-    printf("Library versions\tCompiled\t\tRuntime\n");
+-    printf("Libevent\t\t%-15s\t\t%s\n",
+-                      tor_libevent_get_header_version_str(),
+-                      tor_libevent_get_version_str());
+-    printf("OpenSSL \t\t%-15s\t\t%s\n",
+-                      crypto_openssl_get_header_version_str(),
+-                      crypto_openssl_get_version_str());
+-    printf("Zlib    \t\t%-15s\t\t%s\n",
+-                      tor_zlib_get_header_version_str(),
+-                      tor_zlib_get_version_str());
+-    //TODO: Hex versions?
+-    exit(0);
+-  }
+-
+-  command = CMD_RUN_TOR;
+-  for (p_index = cmdline_only_options; p_index; p_index = p_index->next) {
+-    if (!strcmp(p_index->key,"--keygen")) {
+-      command = CMD_KEYGEN;
+-    } else if (!strcmp(p_index->key,"--list-fingerprint")) {
+-      command = CMD_LIST_FINGERPRINT;
+-    } else if (!strcmp(p_index->key, "--hash-password")) {
+-      command = CMD_HASH_PASSWORD;
+-      command_arg = p_index->value;
+-    } else if (!strcmp(p_index->key, "--dump-config")) {
+-      command = CMD_DUMP_CONFIG;
+-      command_arg = p_index->value;
+-    } else if (!strcmp(p_index->key, "--verify-config")) {
+-      command = CMD_VERIFY_CONFIG;
+-    }
+-  }
+-
+-  if (command == CMD_HASH_PASSWORD) {
+-    cf_defaults = tor_strdup("");
+-    cf = tor_strdup("");
+-  } else {
+-    cf_defaults = load_torrc_from_disk(cmdline_only_options, 1);
+-
+-    const config_line_t *f_line = config_line_find(cmdline_only_options,
+-                                                   "-f");
+-
+-    const int read_torrc_from_stdin =
+-    (f_line != NULL && strcmp(f_line->value, "-") == 0);
+-
+-    if (read_torrc_from_stdin) {
+-      cf = load_torrc_from_stdin();
+-    } else {
+-      cf = load_torrc_from_disk(cmdline_only_options, 0);
+-    }
+-
+-    if (!cf) {
+-      if (config_line_find(cmdline_only_options, "--allow-missing-torrc")) {
+-        cf = tor_strdup("");
+-      } else {
+-        goto err;
+-      }
+-    }
+-  }
+-
+-  retval = options_init_from_string(cf_defaults, cf, command, command_arg,
+-                                    &errmsg);
+-
+-  if (retval < 0)
+-    goto err;
+-
+-  if (config_line_find(cmdline_only_options, "--no-passphrase")) {
+-    if (command == CMD_KEYGEN) {
+-      get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_OFF;
+-    } else {
+-      log_err(LD_CONFIG, "--no-passphrase specified without --keygen!");
+-      exit(1);
+-    }
+-  }
+-
+-  if (config_line_find(cmdline_only_options, "--newpass")) {
+-    if (command == CMD_KEYGEN) {
+-      get_options_mutable()->change_key_passphrase = 1;
+-    } else {
+-      log_err(LD_CONFIG, "--newpass specified without --keygen!");
+-      exit(1);
+-    }
+-  }
+-
+-  {
+-    const config_line_t *fd_line = config_line_find(cmdline_only_options,
+-                                                    "--passphrase-fd");
+-    if (fd_line) {
+-      if (get_options()->keygen_force_passphrase == FORCE_PASSPHRASE_OFF) {
+-        log_err(LD_CONFIG, "--no-passphrase specified with --passphrase-fd!");
+-        exit(1);
+-      } else if (command != CMD_KEYGEN) {
+-        log_err(LD_CONFIG, "--passphrase-fd specified without --keygen!");
+-        exit(1);
+-      } else {
+-        const char *v = fd_line->value;
+-        int ok = 1;
+-        long fd = tor_parse_long(v, 10, 0, INT_MAX, &ok, NULL);
+-        if (fd < 0 || ok == 0) {
+-          log_err(LD_CONFIG, "Invalid --passphrase-fd value %s", escaped(v));
+-          exit(1);
+-        }
+-        get_options_mutable()->keygen_passphrase_fd = (int)fd;
+-        get_options_mutable()->use_keygen_passphrase_fd = 1;
+-        get_options_mutable()->keygen_force_passphrase = FORCE_PASSPHRASE_ON;
+-      }
+-    }
+-  }
+-
+-  {
+-    const config_line_t *key_line = config_line_find(cmdline_only_options,
+-                                                     "--master-key");
+-    if (key_line) {
+-      if (command != CMD_KEYGEN) {
+-        log_err(LD_CONFIG, "--master-key without --keygen!");
+-        exit(1);
+-      } else {
+-        get_options_mutable()->master_key_fname = tor_strdup(key_line->value);
+-      }
+-    }
+-  }
+-
+- err:
+-
+-  tor_free(cf);
+-  tor_free(cf_defaults);
+-  if (errmsg) {
+-    log_warn(LD_CONFIG,"%s", errmsg);
+-    tor_free(errmsg);
+-  }
+-  return retval < 0 ? -1 : 0;
+-}
+-
+ /** Load the options from the configuration in <b>cf</b>, validate
+  * them for consistency and take actions based on them.
+  *
+@@ -6756,63 +6416,6 @@ get_first_advertised_port_by_type_af(int listener_type, int address_family)
+   return 0;
+ }
+ 
+-/** Adjust the value of options->DataDirectory, or fill it in if it's
+- * absent. Return 0 on success, -1 on failure. */
+-static int
+-normalize_data_directory(or_options_t *options)
+-{
+-#ifdef _WIN32
+-  char *p;
+-  if (options->DataDirectory)
+-    return 0; /* all set */
+-  p = tor_malloc(MAX_PATH);
+-  strlcpy(p,get_windows_conf_root(),MAX_PATH);
+-  options->DataDirectory = p;
+-  return 0;
+-#else
+-  const char *d = options->DataDirectory;
+-  if (!d)
+-    d = "~/.tor";
+-
+- if (strncmp(d,"~/",2) == 0) {
+-   char *fn = expand_filename(d);
+-   if (!fn) {
+-     log_warn(LD_CONFIG,"Failed to expand filename \"%s\".", d);
+-     return -1;
+-   }
+-   if (!options->DataDirectory && !strcmp(fn,"/.tor")) {
+-     /* If our homedir is /, we probably don't want to use it. */
+-     /* Default to LOCALSTATEDIR/tor which is probably closer to what we
+-      * want. */
+-     log_warn(LD_CONFIG,
+-              "Default DataDirectory is \"~/.tor\".  This expands to "
+-              "\"%s\", which is probably not what you want.  Using "
+-              "\"%s"PATH_SEPARATOR"tor\" instead", fn, LOCALSTATEDIR);
+-     tor_free(fn);
+-     fn = tor_strdup(LOCALSTATEDIR PATH_SEPARATOR "tor");
+-   }
+-   tor_free(options->DataDirectory);
+-   options->DataDirectory = fn;
+- }
+- return 0;
+-#endif
+-}
+-
+-/** Check and normalize the value of options->DataDirectory; return 0 if it
+- * is sane, -1 otherwise. */
+-static int
+-validate_data_directory(or_options_t *options)
+-{
+-  if (normalize_data_directory(options) < 0)
+-    return -1;
+-  tor_assert(options->DataDirectory);
+-  if (strlen(options->DataDirectory) > (512-128)) {
+-    log_warn(LD_CONFIG, "DataDirectory is too long.");
+-    return -1;
+-  }
+-  return 0;
+-}
+-
+ /** This string must remain the same forevermore. It is how we
+  * recognize that the torrc file doesn't need to be backed up. */
+ #define GENERATED_FILE_PREFIX "# This file was generated by Tor; " \
+@@ -6822,96 +6425,6 @@ validate_data_directory(or_options_t *options)
+ #define GENERATED_FILE_COMMENT "# The old torrc file was renamed " \
+   "to torrc.orig.1 or similar, and Tor will ignore it"
+ 
+-/** Save a configuration file for the configuration in <b>options</b>
+- * into the file <b>fname</b>.  If the file already exists, and
+- * doesn't begin with GENERATED_FILE_PREFIX, rename it.  Otherwise
+- * replace it.  Return 0 on success, -1 on failure. */
+-static int
+-write_configuration_file(const char *fname, const or_options_t *options)
+-{
+-  char *old_val=NULL, *new_val=NULL, *new_conf=NULL;
+-  int rename_old = 0, r;
+-
+-  if (!fname)
+-    return -1;
+-
+-  switch (file_status(fname)) {
+-    /* create backups of old config files, even if they're empty */
+-    case FN_FILE:
+-    case FN_EMPTY:
+-      old_val = read_file_to_str(fname, 0, NULL);
+-      if (!old_val || strcmpstart(old_val, GENERATED_FILE_PREFIX)) {
+-        rename_old = 1;
+-      }
+-      tor_free(old_val);
+-      break;
+-    case FN_NOENT:
+-      break;
+-    case FN_ERROR:
+-    case FN_DIR:
+-    default:
+-      log_warn(LD_CONFIG,
+-               "Config file \"%s\" is not a file? Failing.", fname);
+-      return -1;
+-  }
+-
+-  if (!(new_conf = options_dump(options, OPTIONS_DUMP_MINIMAL))) {
+-    log_warn(LD_BUG, "Couldn't get configuration string");
+-    goto err;
+-  }
+-
+-  tor_asprintf(&new_val, "%s\n%s\n\n%s",
+-               GENERATED_FILE_PREFIX, GENERATED_FILE_COMMENT, new_conf);
+-
+-  if (rename_old) {
+-    int i = 1;
+-    char *fn_tmp = NULL;
+-    while (1) {
+-      tor_asprintf(&fn_tmp, "%s.orig.%d", fname, i);
+-      if (file_status(fn_tmp) == FN_NOENT)
+-        break;
+-      tor_free(fn_tmp);
+-      ++i;
+-    }
+-    log_notice(LD_CONFIG, "Renaming old configuration file to \"%s\"", fn_tmp);
+-    if (tor_rename(fname, fn_tmp) < 0) {//XXXX sandbox doesn't allow
+-      log_warn(LD_FS,
+-               "Couldn't rename configuration file \"%s\" to \"%s\": %s",
+-               fname, fn_tmp, strerror(errno));
+-      tor_free(fn_tmp);
+-      goto err;
+-    }
+-    tor_free(fn_tmp);
+-  }
+-
+-  if (write_str_to_file(fname, new_val, 0) < 0)
+-    goto err;
+-
+-  r = 0;
+-  goto done;
+- err:
+-  r = -1;
+- done:
+-  tor_free(new_val);
+-  tor_free(new_conf);
+-  return r;
+-}
+-
+-/**
+- * Save the current configuration file value to disk.  Return 0 on
+- * success, -1 on failure.
+- **/
+-int
+-options_save_current(void)
+-{
+-  /* This fails if we can't write to our configuration file.
+-   *
+-   * If we try falling back to datadirectory or something, we have a better
+-   * chance of saving the configuration, but a better chance of doing
+-   * something the user never expected. */
+-  return write_configuration_file(get_torrc_fname(0), get_options());
+-}
+-
+ /** Return the number of cpus configured in <b>options</b>.  If we are
+  * told to auto-detect the number of cpus, return the auto-detected number. */
+ int
+@@ -6973,11 +6486,9 @@ options_get_datadir_fname2_suffix(const or_options_t *options,
+                                   const char *suffix)
+ {
+   char *fname = NULL;
+-  size_t len;
++  size_t len = 0;
+   tor_assert(options);
+-  tor_assert(options->DataDirectory);
+   tor_assert(sub1 || !sub2); /* If sub2 is present, sub1 must be present. */
+-  len = strlen(options->DataDirectory);
+   if (sub1) {
+     len += strlen(sub1)+1;
+     if (sub2)
+@@ -6989,14 +6500,12 @@ options_get_datadir_fname2_suffix(const or_options_t *options,
+   fname = tor_malloc(len);
+   if (sub1) {
+     if (sub2) {
+-      tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s"PATH_SEPARATOR"%s",
+-                   options->DataDirectory, sub1, sub2);
+-    } else {
+       tor_snprintf(fname, len, "%s"PATH_SEPARATOR"%s",
+-                   options->DataDirectory, sub1);
++                   sub1, sub2);
++    } else {
++      tor_snprintf(fname, len, "%s",
++                   sub1);
+     }
+-  } else {
+-    strlcpy(fname, options->DataDirectory, len);
+   }
+   if (suffix)
+     strlcat(fname, suffix, len);
+@@ -7006,18 +6515,11 @@ options_get_datadir_fname2_suffix(const or_options_t *options,
+ /** Check wether the data directory has a private subdirectory
+  * <b>subdir</b>. If not, try to create it. Return 0 on success,
+  * -1 otherwise. */
++/* charlie patch: just return true. */
+ int
+ check_or_create_data_subdir(const char *subdir)
+ {
+-  char *statsdir = get_datadir_fname(subdir);
+-  int return_val = 0;
+-
+-  if (check_private_dir(statsdir, CPD_CREATE, get_options()->User) < 0) {
+-    log_warn(LD_HIST, "Unable to create %s/ directory!", subdir);
+-    return_val = -1;
+-  }
+-  tor_free(statsdir);
+-  return return_val;
++  return 0;
+ }
+ 
+ /** Create a file named <b>fname</b> with contents <b>str</b> in the
+@@ -7040,28 +6542,6 @@ write_to_data_subdir(const char* subdir, const char* fname,
+   return return_val;
+ }
+ 
+-/** Given a file name check to see whether the file exists but has not been
+- * modified for a very long time.  If so, remove it. */
+-void
+-remove_file_if_very_old(const char *fname, time_t now)
+-{
+-#define VERY_OLD_FILE_AGE (28*24*60*60)
+-  struct stat st;
+-
+-  log_debug(LD_FS, "stat()ing %s", fname);
+-  if (stat(sandbox_intern_string(fname), &st)==0 &&
+-      st.st_mtime < now-VERY_OLD_FILE_AGE) {
+-    char buf[ISO_TIME_LEN+1];
+-    format_local_iso_time(buf, st.st_mtime);
+-    log_notice(LD_GENERAL, "Obsolete file %s hasn't been modified since %s. "
+-               "Removing it.", fname, buf);
+-    if (unlink(fname) != 0) {
+-      log_warn(LD_FS, "Failed to unlink %s: %s",
+-               fname, strerror(errno));
+-    }
+-  }
+-}
+-
+ /** Return a smartlist of ports that must be forwarded by
+  *  tor-fw-helper. The smartlist contains the ports in a string format
+  *  that is understandable by tor-fw-helper. */
+diff --git a/src/or/control.c b/src/or/control.c
+index 220e7e5..cc200f6 100644
+--- a/src/or/control.c
++++ b/src/or/control.c
+@@ -1427,23 +1427,6 @@ handle_control_authenticate(control_connection_t *conn, uint32_t len,
+   return 0;
+ }
+ 
+-/** Called when we get a SAVECONF command. Try to flush the current options to
+- * disk, and report success or failure. */
+-static int
+-handle_control_saveconf(control_connection_t *conn, uint32_t len,
+-                        const char *body)
+-{
+-  (void) len;
+-  (void) body;
+-  if (options_save_current()<0) {
+-    connection_write_str_to_buf(
+-      "551 Unable to write configuration to disk.\r\n", conn);
+-  } else {
+-    send_control_done(conn);
+-  }
+-  return 0;
+-}
+-
+ struct signal_t {
+   int sig;
+   const char *signal_name;
+@@ -4337,9 +4320,6 @@ connection_control_process_inbuf(control_connection_t *conn)
+   } else if (!strcasecmp(conn->incoming_cmd, "AUTHENTICATE")) {
+     if (handle_control_authenticate(conn, cmd_data_len, args))
+       return -1;
+-  } else if (!strcasecmp(conn->incoming_cmd, "SAVECONF")) {
+-    if (handle_control_saveconf(conn, cmd_data_len, args))
+-      return -1;
+   } else if (!strcasecmp(conn->incoming_cmd, "SIGNAL")) {
+     if (handle_control_signal(conn, cmd_data_len, args))
+       return -1;
+diff --git a/src/or/main.c b/src/or/main.c
+index 9b3dbb5..b6efb78 100644
+--- a/src/or/main.c
++++ b/src/or/main.c
+@@ -1973,11 +1973,13 @@ do_hup(void)
+   /* first, reload config variables, in case they've changed */
+   if (options->ReloadTorrcOnSIGHUP) {
+     /* no need to provide argc/v, they've been cached in init_from_config */
++#if 0
+     if (options_init_from_torrc(0, NULL) < 0) {
+       log_err(LD_CONFIG,"Reading config failed--see warnings above. "
+               "For usage, try -h.");
+       return -1;
+     }
++#endif
+     options = get_options(); /* they have changed now */
+     /* Logs are only truncated the first time they are opened, but were
+        probably intended to be cleaned up on signal. */
+@@ -2706,10 +2708,12 @@ tor_init(int argc, char *argv[])
+   }
+   atexit(exit_function);
+ 
++#if 0
+   if (options_init_from_torrc(argc,argv) < 0) {
+     log_err(LD_CONFIG,"Reading config failed--see warnings above.");
+     return -1;
+   }
++#endif
+ 
+ #ifndef _WIN32
+   if (geteuid()==0)
+diff --git a/src/or/networkstatus.c b/src/or/networkstatus.c
+index 71a2c0f..68bb996 100644
+--- a/src/or/networkstatus.c
++++ b/src/or/networkstatus.c
+@@ -1693,7 +1693,6 @@ void
+ networkstatus_dump_bridge_status_to_file(time_t now)
+ {
+   char *status = networkstatus_getinfo_by_purpose("bridge", now);
+-  const or_options_t *options = get_options();
+   char *fname = NULL;
+   char *thresholds = NULL;
+   char *published_thresholds_and_status = NULL;
+@@ -1706,8 +1705,7 @@ networkstatus_dump_bridge_status_to_file(time_t now)
+   tor_asprintf(&published_thresholds_and_status,
+                "published %s\nflag-thresholds %s\n%s",
+                published, thresholds, status);
+-  tor_asprintf(&fname, "%s"PATH_SEPARATOR"networkstatus-bridges",
+-               options->DataDirectory);
++  tor_asprintf(&fname, "networkstatus-bridges");
+   write_str_to_file(fname,published_thresholds_and_status,0);
+   tor_free(thresholds);
+   tor_free(published_thresholds_and_status);
+diff --git a/src/or/or.h b/src/or/or.h
+index 4496cbc..f6e087f 100644
+--- a/src/or/or.h
++++ b/src/or/or.h
+@@ -3426,7 +3426,6 @@ typedef struct {
+                             before we start writing? */
+ 
+   char *DebugLogFile; /**< Where to send verbose log messages. */
+-  char *DataDirectory; /**< OR only: where to store long-term data. */
+   char *Nickname; /**< OR only: nickname of this onion router. */
+   char *Address; /**< OR only: configured address for this onion router. */
+   char *PidFile; /**< Where to store PID of Tor process. */
+diff --git a/src/or/router.c b/src/or/router.c
+index 8fdad9a..d3dce6b 100644
+--- a/src/or/router.c
++++ b/src/or/router.c
+@@ -833,10 +833,6 @@ init_keys(void)
+   }
+   if (init_keys_common() < 0)
+     return -1;
+-  /* Make sure DataDirectory exists, and is private. */
+-  if (check_private_dir(options->DataDirectory, CPD_CREATE, options->User)) {
+-    return -1;
+-  }
+   /* Check the key directory. */
+   keydir = get_datadir_fname("keys");
+   if (check_private_dir(keydir, CPD_CREATE, options->User)) {
+diff --git a/src/or/routerkeys.c b/src/or/routerkeys.c
+index d88bfca..123d25f 100644
+--- a/src/or/routerkeys.c
++++ b/src/or/routerkeys.c
+@@ -756,12 +756,6 @@ load_ed_keys(const or_options_t *options, time_t now)
+     if (options->command == CMD_KEYGEN)
+       flags |= INIT_ED_KEY_TRY_ENCRYPTED;
+ 
+-    /* Check the key directory */
+-    if (check_private_dir(options->DataDirectory, CPD_CREATE, options->User)) {
+-      log_err(LD_OR, "Can't create/check datadirectory %s",
+-              options->DataDirectory);
+-      goto err;
+-    }
+     char *fname = get_datadir_fname("keys");
+     if (check_private_dir(fname, CPD_CREATE, options->User) < 0) {
+       log_err(LD_OR, "Problem creating/checking key directory %s", fname);
+-- 
+2.5.0
+

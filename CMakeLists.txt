@@ -31,6 +31,8 @@ if(WINCC)
 endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-DDO_CHARLIE_LOG -DDEBUG")
+else()
+  add_definitions("-DIS_CHARLIE_RELEASE")
 endif()
 
 find_package(M REQUIRED)

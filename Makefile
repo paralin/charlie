@@ -24,7 +24,6 @@ finalize: compile
 	cp build/cutils bin/utils
 	cp resources/tor/tor bin/
 	cp resources/startup.bash bin/
-	cp resources/tor/hidden_service/ bin/ -r
 	cp resources/docker/charlie/Dockerfile bin
 
 .setupmxe:
@@ -64,11 +63,9 @@ makessl: .makessl
 makedeps: .makedeps
 
 .maketor:
+	if [ ! -f ./deps/tor/.charlie_patch1_applied ]; then cd deps/tor/ && git am --no-signed < ../patch/charlie_tor_patch1.patch; fi
 	cd deps/tor/ && export CFLAGS="-fPIC" && ./autogen.sh && ./configure --disable-asciidoc
-	sed -i -e "s/-fPIE//g" deps/tor/Makefile
-	sed -i -e "s/int crypto_early_initialized_ = 0/int crypto_early_initialized_ = 1/g" deps/tor/src/common/crypto.c
-	sed -i -e "s/int crypto_global_initialized_ = 0/int crypto_global_initialized_ = 1/g" deps/tor/src/common/crypto.c
-	sed -i -e "s/char buf\[10240\];\$$/char buf[10240];\\/\\/patched\n#ifndef DEBUG\nreturn;\n#endif/g" deps/tor/src/common/log.c
+	cd deps/tor/ && sed -i -e "s/-fPIE //g" Makefile
 	cd deps/tor/ && make -j4
 	touch .maketor
 maketor: .maketor
@@ -168,7 +165,6 @@ pc:
 	-rm -rf ~/.dbus/system/
 
 .torhost_image:
-	rsync -rav ./resources/tor/hidden_service/ ./resources/docker/torhost/hidden_service/
 	cp ./resources/setuptor.expect ./resources/docker/torhost/
 	cd resources/docker/torhost && ./build.bash
 	touch .torhost_image

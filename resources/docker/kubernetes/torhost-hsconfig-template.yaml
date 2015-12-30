@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hs-config
+type: Opaque
+data:
+  hostname: "{{hostname_data}}"
+  privatekey: "{{private_key_data}}"
