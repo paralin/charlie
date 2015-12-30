@@ -14,14 +14,17 @@
  - Add the llvm obfuscation work in for modules
  - Implement the rest of the events
  - Add ping/pong in server/client
- - Have a separate buffer for headersize/header/body. This would save
-   re-allocation of memory every time
  - Add tor config options to CTormInfo
+ - Override the `start_write_to_file` functions in tor to write to
+   internal configs instead. The problem with these functions is that
+    they will write to normal files like (cached-microdescriptors.new)
+  which are upwards of 2mb. We don't know the size before we start
+writing, though. So there'll be some awkward solution like writing to a
+temporary file and when the file is closed, serializing it into the
+storage and deleting the temp file.
 
 Possible bugs:
 
- - When the module table is reloaded all of the CModules are probbly
-   released.
  - The module instances use CModule pointers to hold state. Make sure
    these CModule state elements are replicated to the new module table
    and the pointers are updated.
