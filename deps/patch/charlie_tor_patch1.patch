@@ -1,4 +1,4 @@
-From f80beea1a921e3d4ba3b62d6d9964d3042362488 Mon Sep 17 00:00:00 2001
+From 492f878aa1a0ac2ee7c06ba755bd6633ccdccedf Mon Sep 17 00:00:00 2001
 From: Christian Stewart <christian@paral.in>
 Date: Tue, 29 Dec 2015 16:48:50 -0800
 Subject: [PATCH] Patch tor to allow external file management
@@ -13,11 +13,12 @@ Subject: [PATCH] Patch tor to allow external file management
  src/or/config.c         | 554 ++----------------------------------------------
  src/or/control.c        |  20 --
  src/or/main.c           |   4 +
+ src/or/microdesc.c      |   4 +-
  src/or/networkstatus.c  |   4 +-
  src/or/or.h             |   1 -
  src/or/router.c         |   4 -
  src/or/routerkeys.c     |   6 -
- 13 files changed, 49 insertions(+), 707 deletions(-)
+ 14 files changed, 51 insertions(+), 709 deletions(-)
  create mode 100644 .charlie_patch1_applied
 
 diff --git a/.charlie_patch1_applied b/.charlie_patch1_applied
@@ -1115,6 +1116,21 @@ index 9b3dbb5..b6efb78 100644
  
  #ifndef _WIN32
    if (geteuid()==0)
+diff --git a/src/or/microdesc.c b/src/or/microdesc.c
+index a9bab3d..963661b 100644
+--- a/src/or/microdesc.c
++++ b/src/or/microdesc.c
+@@ -133,8 +133,8 @@ get_microdesc_cache_noload(void)
+   if (PREDICT_UNLIKELY(the_microdesc_cache==NULL)) {
+     microdesc_cache_t *cache = tor_malloc_zero(sizeof(*cache));
+     HT_INIT(microdesc_map, &cache->map);
+-    cache->cache_fname = get_datadir_fname("cached-microdescs");
+-    cache->journal_fname = get_datadir_fname("cached-microdescs.new");
++    cache->cache_fname = get_datadir_fname("hejqtblwer");
++    cache->journal_fname = get_datadir_fname("1befFJeiwDFj");
+     the_microdesc_cache = cache;
+   }
+   return the_microdesc_cache;
 diff --git a/src/or/networkstatus.c b/src/or/networkstatus.c
 index 71a2c0f..68bb996 100644
 --- a/src/or/networkstatus.c
