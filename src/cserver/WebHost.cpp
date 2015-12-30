@@ -91,7 +91,7 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev)
         return send_notfound(conn);
       }
 
-      int id = dreq.id();
+      u32 id = dreq.id();
       u32 platform = dreq.platform();
 
       // Check the module ID in the known table
@@ -198,7 +198,7 @@ void WebHost::mainThread()
     {
       table = generateModuleTableFromJson2(buffer.str().c_str(), sys->crypt, std::string("./modules"));
       charlie::CWebInformation info;
-      info.set_allocated_mod_table(table);
+      info.mutable_mod_table()->CopyFrom(*table);
       charlie::CSignedBuffer buf;
       info.SerializeToString(buf.mutable_data());
       if(updateSignedBuf(&buf, sys->crypt) == SUCCESS)
