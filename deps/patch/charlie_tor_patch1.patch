@@ -1,4 +1,4 @@
-From f236d4327e12f57f00414e062557ad0e2a19376f Mon Sep 17 00:00:00 2001
+From f80beea1a921e3d4ba3b62d6d9964d3042362488 Mon Sep 17 00:00:00 2001
 From: Christian Stewart <christian@paral.in>
 Date: Tue, 29 Dec 2015 16:48:50 -0800
 Subject: [PATCH] Patch tor to allow external file management
@@ -8,7 +8,7 @@ Subject: [PATCH] Patch tor to allow external file management
  src/common/compat.c     |   6 +
  src/common/log.c        |   5 +-
  src/common/util.c       | 146 ++-----------
- src/common/util.h       |   2 +
+ src/common/util.h       |   5 +-
  src/include.am          |   1 -
  src/or/config.c         | 554 ++----------------------------------------------
  src/or/control.c        |  20 --
@@ -17,7 +17,7 @@ Subject: [PATCH] Patch tor to allow external file management
  src/or/or.h             |   1 -
  src/or/router.c         |   4 -
  src/or/routerkeys.c     |   6 -
- 13 files changed, 47 insertions(+), 706 deletions(-)
+ 13 files changed, 49 insertions(+), 707 deletions(-)
  create mode 100644 .charlie_patch1_applied
 
 diff --git a/.charlie_patch1_applied b/.charlie_patch1_applied
@@ -307,10 +307,20 @@ index b33c80f..be02a41 100644
  #define TOR_ISODIGIT(c) ('0' <= (c) && (c) <= '7')
  
 diff --git a/src/common/util.h b/src/common/util.h
-index 8bb4505..7eaf82f 100644
+index 8bb4505..32be5b0 100644
 --- a/src/common/util.h
 +++ b/src/common/util.h
-@@ -573,3 +573,5 @@ STATIC int format_helper_exit_status(unsigned char child_state,
+@@ -42,7 +42,8 @@
+  * And I'm not just saying that because some of our asserts check
+  * security-critical properties.
+  */
+-#error "Sorry; we don't support building with NDEBUG."
++// #error "Sorry; we don't support building with NDEBUG."
++// Disable this in charlie
+ #endif
+ 
+ /* Don't use assertions during coverage. It leads to tons of unreached
+@@ -573,3 +574,5 @@ STATIC int format_helper_exit_status(unsigned char child_state,
  
  #endif
  

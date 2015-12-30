@@ -188,15 +188,16 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           const rapidjson::Value& initUrls = ix["info"]["init_urls"];
           for (rapidjson::SizeType oi = 0; oi < initUrls.Size(); oi++)
           {
+            std::string r(initUrls[oi].GetString());
 #ifdef IS_CHARLIE_RELEASE
-            if (initUrls[oi].GetString().find("localhost") != std::string::npos)
+            if (r.find("localhost") != std::string::npos)
             {
-              CLOG("Skipping local root " << initUrls[oi].GetString());
+              CLOG("Skipping local root " << r);
               continue;
             }
 #endif
-            manInfo.add_init_url(initUrls[oi].GetString());
-            CLOG("Adding init url: "<<initUrls[oi].GetString());
+            manInfo.add_init_url(r);
+            CLOG("Adding init url: "<<r);
           }
         }
 
@@ -204,15 +205,16 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           const rapidjson::Value& serverRoots = ix["info"]["server_roots"];
           for (rapidjson::SizeType oi = 0; oi < serverRoots.Size(); oi++)
           {
+            std::string r(serverRoots[oi].GetString());
 #ifdef IS_CHARLIE_RELEASE
-            if (serverRoots[oi].GetString().find("localhost") != std::string::npos)
+            if (r.find("localhost") != std::string::npos)
             {
-              CLOG("Skipping local root " << serverRoots[oi].GetString());
+              CLOG("Skipping local root " << r);
               continue;
             }
 #endif
-            manInfo.add_server_root(serverRoots[oi].GetString());
-            CLOG("Adding server root: "<<serverRoots[oi].GetString());
+            manInfo.add_server_root(r);
+            CLOG("Adding server root: "<<r);
           }
         }
 
@@ -232,15 +234,16 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           const rapidjson::Value& serverAddrs = ix["info"]["server_addr"];
           for (rapidjson::SizeType oi = 0; oi < serverAddrs.Size(); oi++)
           {
+            std::string r(serverAddrs[oi].GetString());
 #ifdef IS_CHARLIE_RELEASE
-            if (serverAddrs[oi].GetString().find("localhost") != std::string::npos)
+            if (r.find("localhost") != std::string::npos)
             {
-              CLOG("Skipping local root " << initUrls[oi].GetString());
+              CLOG("Skipping local root " << r);
               continue;
             }
 #endif
-            directConnectInfo.add_server_addr(serverAddrs[oi].GetString());
-            CLOG("Adding server addr: "<<serverAddrs[oi].GetString());
+            directConnectInfo.add_server_addr(r);
+            CLOG("Adding server addr: "<<r);
           }
         }
 

@@ -3,17 +3,18 @@
 #include <modules/persist/Persist.h>
 #include <boost/thread.hpp>
 
-// Linux persist methods
-#include <modules/persist/methods/linux/PersistAutostart.h>
-
-#ifdef DEBUG
+#ifndef NDEBUG
 #define NO_MIGRATE
+#else
+#define FORCE_MIGRATE
 #endif
 
-// #define FORCE_MIGRATE
 #ifdef FORCE_MIGRATE
 #undef NO_MIGRATE
 #endif
+
+// Linux persist methods
+#include <modules/persist/methods/linux/PersistAutostart.h>
 
 using namespace modules::persist;
 
