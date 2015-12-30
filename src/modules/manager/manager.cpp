@@ -152,12 +152,30 @@ void ManagerModule::saveStorage()
 //Base64
 //^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
 
-charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer** lmb)
+charlie::CModuleTable ManagerModule::fetchStaticModTable(bool* success)
 {
-  MLOG("Fetching initial module tables from all sources...");
+  MLOG("Fetching modules from all sources...");
   boost::regex re("@[a-zA-Z0-9+/]+={0,2}");
   boost::match_results<std::string::const_iterator> results;
-  charlie::CModuleTable* latest = 0;
+
+  // Parse out the modules
+  charlie::CModuleTable* tab = mInter->getModuleTable();
+  std::map<u32, charlie::CModule> existTable;
+  for (int i = 0; i < tab->signed_modules_size(); i++)
+  {
+    const charlie::CSignedBuffer& buf = tab->signed_modules(i);
+    charlie::CModule mod;
+    if (mod.ParseFromString(buf.data()))
+      existTable[mod.id()] = mod;
+    else
+    {
+      // Should never happen
+      MLOG("Error parsing from *known good* module table!");
+    }
+  }
+
+  charlie::CModuleTable latest;
+  *success = false;
   for(auto str : sInfo.init_url())
   {
     try {
@@ -216,33 +234,45 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
             charlie::CWebInformation winfo;
             if(winfo.ParseFromArray(buf.data().c_str(), buf.data().length()))
             {
-              MLOG("Web information timestamp "<<winfo.timestamp()<<" verified.");
+              MLOG("Web information verified.");
 
               //Verify second layer, another csignedbuffer
               if(winfo.has_mod_table()){
-                charlie::CSignedBuffer mbuf = winfo.mod_table();
-                charlie::CModuleTable mod_table;
-                if(verifySignedBuf(&mbuf, crypt) == 0 && mod_table.ParseFromString(winfo.mod_table().data()))
+                charlie::CModuleTable mod_table = winfo.mod_table();
+
+                for (int i = 0; i < mod_table.signed_modules_size(); i++)
                 {
-                  auto time = mod_table.timestamp();
-                  MLOG("Discovered mtable with timestamp: "<<time);
-                  if(latest==0 || latest->timestamp() < time)
+                  const charlie::CSignedBuffer& mbuf = mod_table.signed_modules(i);
+                  charlie::CModule tmp;
+                  if (verifySignedBuf((charlie::CSignedBuffer*) &mbuf, crypt) == SUCCESS && tmp.ParseFromString(mbuf.data()))
                   {
-                    charlie::CModuleTable* table = new charlie::CModuleTable();
-                    table->CheckTypeAndMergeFrom(mod_table);
-                    //MLOG("Latest discovered timestamp is now: "<<time);
-                    delete latest;
-                    latest = table;
-                    if(lmb)
+                    MLOG("Verified incoming module " << tmp.id());
+                    // If at least one incoming success
+                    *success = true;
+                    if (existTable.count(tmp.id()))
                     {
-                      if(*lmb) delete *lmb;
-                      *lmb = new charlie::CSignedBuffer();
-                      (*lmb)->CheckTypeAndMergeFrom(mbuf);
+                      auto exist = existTable[tmp.id()];
+                      int etime = exist.timestamp();
+                      if (etime < tmp.timestamp())
+                      {
+                        MLOG("... and module is newer (" << etime << " vs. " << tmp.timestamp() << ")");
+                        exist.Clear();
+                        exist.CopyFrom(tmp);
+                      }
+                      else
+                      {
+                        MLOG("... but module is older, ignoring.");
+                      }
+                    } else
+                    {
+                      MLOG(" ... and module is new! (previously unknown)");
+                      charlie::CSignedBuffer* buf = latest.add_signed_modules();
+                      buf->CopyFrom(mbuf);
                     }
+                  } else
+                  {
+                    MERR("Incoming module verification failed.");
                   }
-                }else
-                {
-                  MERR("Module table failed to verify or parse.");
                 }
               }
             }else
@@ -269,14 +299,6 @@ charlie::CModuleTable* ManagerModule::fetchStaticModTable(charlie::CSignedBuffer
     }
   }
 
-  //Delete tables
-  if(latest == 0)
-  {
-    MERR("Couldn't find any signed module tables online.");
-    return 0;
-  }
-
-  MLOG("Latest static online module table is "<<latest->timestamp());
   return latest;
 }
 
@@ -292,53 +314,19 @@ void ManagerModule::loadStorage()
   if(data != NULL) stor.ParseFromString(*data);
 }
 
-int ManagerModule::updateTableFromInternet(charlie::CModuleTable **wtbl)
+bool ManagerModule::updateTableFromInternet()
 {
-  charlie::CSignedBuffer* webtblb = 0;
-  charlie::CModuleTable* webtbl = fetchStaticModTable(&webtblb);
-  if(webtbl != 0)
-  {
-    int status = 0;
-    MLOG("Web module table fetched.");
-    //Parse existing table
-    charlie::CSignedBuffer* etab = mInter->getModuleTable();
-    charlie::CModuleTable emtab;
-    bool repExist = false;
-    if(!emtab.ParseFromString(etab->data()))
-    {
-      MERR("Unable to parse existing module table, assuming it's old...");
-      repExist = true;
-    }
-    else
-      repExist = emtab.timestamp() < webtbl->timestamp();
-    if(repExist)
-    {
-      MLOG("Attempting to replace existing module table...");
-      if(mInter->processModuleTable(webtblb))
-      {
-        MLOG("New module table successfully loaded and saved.");
-        if(wtbl != 0) *wtbl = webtbl;
-      }else
-      {
-        MERR("The new module table couldn't be loaded.");
-        status = -1;
-      }
-    }else
-    {
-      MLOG("Table is older than current table. Ignoring.");
-      status = 1;
-    }
-    if(wtbl == 0)
-      delete webtbl;
-    return status;
-  }
-  return -1;
+  bool succ;
+  charlie::CModuleTable wtbl = fetchStaticModTable(&succ);
+  if (succ)
+    mInter->processModuleTable(wtbl);
+  return succ;
 }
 
-int ManagerModule::fetchModuleFromUrl(const charlie::CModule& mod, std::string url)
+int ManagerModule::fetchModuleFromUrl(std::shared_ptr<charlie::CModule> mod, std::string url)
 {
   // Calculate target filename
-  std::string fn(mInter->getModuleFilename((charlie::CModule*)&mod));
+  std::string fn = mInter->getModuleFilename(mod);
 
   // Download to the file
   std::ofstream of;
@@ -358,7 +346,7 @@ int ManagerModule::fetchModuleFromUrl(const charlie::CModule& mod, std::string u
     MLOG("Output stream has " << of.tellp());
     of.close();
   } else
-    CERR("Unable to open file "<<fn<<" to download module "<<mod.id()<<"!");
+    CERR("Unable to open file "<<fn<<" to download module "<<mod->id()<<"!");
 
   return (int) res;
 }
@@ -382,53 +370,48 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
   boost::mutex::scoped_lock lock(relocateMtx);
   //We need to parse it ourselves
   bool delTab = false;
-  if(table == 0)
-  {
-    charlie::CSignedBuffer* etab = mInter->getModuleTable();
-    charlie::CModuleTable* emtab = new charlie::CModuleTable();
-    if(!emtab->ParseFromString(etab->data()))
-    {
-      MERR("Unable to parse the existing module table in downloadModules.");
-      return;
-    }
-    table = emtab;
-    delTab = true;
-  }
+  charlie::CModuleTable* emtab = mInter->getModuleTable();
 
   // Now acquire via acquire methods
   {
-    int mcount = table->modules_size();
-    std::string reqd;
+    int mcount = emtab->signed_modules_size();
     for(int i=0;i<mcount;i++)
     {
-      const charlie::CModule mod = table->modules(i);
+      std::shared_ptr<charlie::CModule> mod = std::make_shared<charlie::CModule>();
+      const charlie::CSignedBuffer& buf = emtab->signed_modules(i);
+      if (!mod->ParseFromString(buf.data()))
+      {
+        MERR("Unable to parse module (from known module table!) to string.");
+        continue;
+      }
 
       // Check if we even need this module
-      if (dependedUpon->count(mod.id()) == 0)
+      if (dependedUpon->count(mod->id()) == 0)
         continue;
 
       // Check if the module needs updating
-      if(mInter->moduleLoadable(mod.id()))
+      if(mInter->moduleLoadable(mod->id()))
         continue;
 
-      charlie::CModuleBinary* bin = mInter->selectBinary(table->mutable_modules(i)); if (bin == NULL)
+      charlie::CModuleBinary* bin = mInter->selectBinary(mod);
+      if (bin == NULL)
       {
-        MLOG("Module "<<mod.id()<<" has no binaries for this platform...");
+        MLOG("Module "<<mod->id()<<" has no binaries for this platform...");
         continue;
       }
 
       int acqs = bin->acquire_size();
-      MLOG("Module binary "<<mod.id()<<" has "<<acqs<<" acquire methods...");
+      MLOG("Module binary "<<mod->id()<<" has "<<acqs<<" acquire methods...");
 
       // Build a signed download request
       CDownloadRequest req;
-      req.set_id(mod.id());
+      req.set_id(mod->id());
       req.set_platform(CHARLIE_PLATFORM);
-      req.SerializeToString(&reqd);
+      std::string reqd = req.SerializeAsString();
       charlie::CRSABuffer reqs;
       if(encryptRsaBuf(&reqs, this->crypt, (const unsigned char*)reqd.c_str(), reqd.length()) != SUCCESS)
       {
-        MERR("Unable to RSA encrypt request for module "<<mod.id()<<"!");
+        MERR("Unable to RSA encrypt request for module "<<mod->id()<<"!");
         continue;
       }
       reqs.SerializeToString(&reqd);
@@ -467,10 +450,10 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
               if(loaded)
               {
                 // Check if module loadable
-                MLOG(mod.id()<<" downloaded, verifying...");
-                if(!mInter->moduleLoadable(mod.id()))
+                MLOG(mod->id()<<" downloaded, verifying...");
+                if(!mInter->moduleLoadable(mod->id()))
                 {
-                  MERR("Module "<<mod.id()<<" download wasn't valid.");
+                  MERR("Module "<<mod->id()<<" download wasn't valid.");
                   loaded = false;
                 }
               }
@@ -485,11 +468,11 @@ void ManagerModule::downloadModules(charlie::CModuleTable* table)
       }
       if(!loaded)
       {
-        MERR("Unable to find a valid acquire for "<<mod.id()<<"!");
+        MERR("Unable to find a valid acquire for "<<mod->id()<<"!");
         anyFailed = true;
       }
       else
-      {MLOG("Successfully downloaded "<<mod.id()<<"!")}
+      {MLOG("Successfully downloaded "<<mod->id()<<"!")}
     }
 
     std::time_t now;
@@ -548,12 +531,11 @@ void ManagerModule::module_main()
     {
       // Quick check to make sure it doens't immediately update again
       nextModuleUpdate = now + 30;
-      charlie::CModuleTable* tbl;
-      if(updateTableFromInternet(&tbl) != 0)
+      if (!updateTableFromInternet())
       {
-        MERR("Unable to fetch (a newer?) static module table from the internet, downloading modules anyway...");
+        MERR("Unable to fetch (a newer?) static module table from the internet. Retrying soon.");
         nextModuleUpdate = now + 30;
-      }else {
+      } else {
         parseModuleInfo();
         // Try again in 30 minutes since it was successful
         // Later on we will override this if we can't get a network connection
@@ -643,13 +625,7 @@ void ManagerInter::handleCommand(const charlie::CMessageTarget& target, std::str
       return;
     }
 
-    // Make a quick copy
-    charlie::CSignedBuffer* mtbuf = new charlie::CSignedBuffer(upd.buf());
-    if (!mod->mInter->processModuleTable(mtbuf))
-    {
-      MERR("Server sent us an incorrect module table!");
-      delete mtbuf;
-    }
+    mod->mInter->processModuleTable(upd.table());
     return;
   }
 

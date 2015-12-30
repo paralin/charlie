@@ -30,7 +30,7 @@ message CDownloadRequest
 // Server sending a new module table
 message CModuleTableUpdate
 {
-  optional charlie.CSignedBuffer buf = 1;
+  optional charlie.CModuleTable table = 1;
 }
 
 enum EManagerEMsg

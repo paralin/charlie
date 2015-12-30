@@ -33,56 +33,71 @@ void ModuleManager::setSystemInfo(SystemInfo* info)
   sysInfo = info;
 }
 
-bool ModuleManager::parseModuleTable(charlie::CSignedBuffer* inbuf, charlie::CModuleTable* target)
+void ModuleManager::loadIncomingModuleTable(const charlie::CModuleTable& tab)
 {
-  CLOG("Verifying signature and parsing module table...");
-  if(verifySignedBuf(inbuf, sys->crypto, true) != SUCCESS)
-  {
-    CERR("Unable to verify module table signature!");
-    return false;
-  }
-  if(!target->ParseFromString(inbuf->data()))
-  {
-    CERR("Unable to parse module table.");
-    return false;
-  }
-  CLOG("Module table verified and parsed, timestamp: "<<target->timestamp());
-  return true;
-}
-
-bool ModuleManager::loadIncomingModuleTable(charlie::CSignedBuffer* buf)
-{
-  charlie::CModuleTable ntab;
-
   CLOG("Verifying incoming module table...");
-  if(!parseModuleTable(buf, &ntab))
+  int broughtIn = 0;
+  for (int i = 0; i < tab.signed_modules_size(); i++)
   {
-    CLOG("Verification failed...");
-    return false;
-  }
-  if(!ntab.has_timestamp())
-  {
-    CERR("Timestamp required on incoming table...");
-    return false;
-  }
-  if(ntab.timestamp() <= sys->modTable.timestamp())
-  {
-    CERR("Incoming table is older / same as current.");
-    return false;
+    const charlie::CSignedBuffer& sb = tab.signed_modules(i);
+    charlie::CModule mod;
+    if (!mod.ParseFromString(sb.data()))
+    {
+      CERR("Parse of module at index " << i << " invalid.");
+      continue;
+    }
+    if ((mod.id() == MANAGER_MODULE_ID && sys->ignoreInvalidManager) || SUCCESS != verifySignedBuf((charlie::CSignedBuffer*) &sb, sys->crypto))
+    {
+      CERR("Verification of buffer idx " << i << " invalid. Skipping.");
+      continue;
+    }
+    int emodidx = -1;
+    charlie::CModule emod;
+    bool currentIsNewer = false;
+    for (int x = 0; x < sys->config.emodtable().signed_modules_size(); x++)
+    {
+      const charlie::CSignedBuffer& nb = sys->config.emodtable().signed_modules(x);
+      emod.Clear();
+      if (!emod.ParseFromString(nb.data()))
+      {
+        CERR("Unable to parse config-stored module.");
+        continue;
+      }
+      if (emod.id() == mod.id())
+      {
+        // Found existing module
+        emodidx = x;
+        if (emod.timestamp() > mod.timestamp())
+          currentIsNewer = true;
+        else
+          broughtIn++;
+        break;
+      }
+    }
+
+    if (currentIsNewer)
+      continue;
+
+    charlie::CSignedBuffer* tbuf = emodidx != -1 ? sys->config.mutable_emodtable()->mutable_signed_modules(emodidx) : sys->config.mutable_emodtable()->add_signed_modules();
+    if (emodidx != -1)
+    {
+      CLOG("Updating existing module " << mod.id());
+    } else
+      CLOG("Registering previously unknown module " << mod.id());
+    tbuf->Clear();
+    tbuf->CopyFrom(sb);
   }
 
-  //Okay, we have a good new module table
-  sys->modTable.Clear();
-  sys->modTable.CheckTypeAndMergeFrom(ntab);
-  CLOG("Merged new verified module table.");
-  sys->config.set_allocated_emodtable(buf);
-  deferSaveConfig();
-  //todo: maybe we need to update all the modules?
-  moduleTableDirty = true;
-  return true;
+  CLOG("Brought in " << broughtIn << " modules from module table.");
+  if (broughtIn > 0)
+  {
+    deferSaveConfig();
+    //todo: maybe we need to update all the modules?
+    moduleTableDirty = true;
+  }
 }
 
-char* ModuleManager::getModuleFilename(charlie::CModule* mod)
+char* ModuleManager::getModuleFilename(std::shared_ptr<charlie::CModule> mod)
 {
   charlie::CModuleBinary* bin = selectBinary(mod);
   if (!bin)
@@ -117,14 +132,16 @@ char* ModuleManager::getModuleFilename(charlie::CModule* mod)
 
 bool ModuleManager::moduleLoadable(u32 id, bool cleanFail)
 {
-  charlie::CModule* mod = findModule(id);
-  if(mod == NULL)
+  std::shared_ptr<charlie::CModule> mod = findModule(id);
+  if (!mod)
     return false;
   return moduleLoadable(mod, cleanFail);
 }
 
-bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
+bool ModuleManager::moduleLoadable(std::shared_ptr<charlie::CModule> mod, bool cleanFail)
 {
+  if (!mod)
+    return false;
   // Check if this module applies to this system
   charlie::CModuleBinary* bin = ModuleManager::selectBinary(mod);
   if (bin == NULL)
@@ -172,19 +189,31 @@ bool ModuleManager::moduleLoadable(charlie::CModule* mod, bool cleanFail)
   return true;
 }
 
-charlie::CModule* ModuleManager::findModule(u32 id, int* idx)
+std::shared_ptr<charlie::CModule> ModuleManager::findModule(u32 id, int* idx)
 {
-  int emcount = sys->modTable.modules_size();
-  charlie::CModule *emod = NULL;
-  int i;
-  for(i=0;i<emcount;i++)
+  int emcount = sys->config.emodtable().signed_modules_size();
+  if (idx != NULL)
+    *idx = -1;
+  for (int i=0; i<sys->config.emodtable().signed_modules_size();i++)
   {
-    emod = sys->modTable.mutable_modules(i);
-    if(emod->id() == id) break;
-    emod = NULL;
+    const charlie::CSignedBuffer& buf = sys->config.emodtable().signed_modules(i);
+    std::shared_ptr<charlie::CModule> mod = std::make_shared<charlie::CModule>();
+    if (!mod->ParseFromString(buf.data()))
+    {
+      // Should never happen
+      CERR("Unable to parse module from internal module table.");
+      continue;
+    }
+
+    if (mod->id() == id)
+    {
+      if (idx != NULL)
+        *idx = i;
+      return mod;
+    }
   }
-  if(idx != NULL) *idx = i;
-  return emod;
+
+  return NULL;
 }
 
 bool ModuleManager::moduleRunning(u32 id)
@@ -194,27 +223,27 @@ bool ModuleManager::moduleRunning(u32 id)
 
 int ModuleManager::launchModuleWithChecks(u32 id)
 {
-  charlie::CModule * mod = findModule(id);
+  std::shared_ptr<charlie::CModule> mod = findModule(id);
   if(mod == NULL) return -1;
   return launchModuleWithChecks(mod);
 }
 
-int ModuleManager::launchModuleWithChecks(charlie::CModule* mod)
+int ModuleManager::launchModuleWithChecks(std::shared_ptr<charlie::CModule> mod)
 {
   //check if module loadable with a hash check
-  if(!moduleLoadable(mod, true)) return 1;
+  if(!moduleLoadable(mod)) return 1;
   return launchModule(mod);
 }
 
 int ModuleManager::launchModule(u32 id)
 {
-  charlie::CModule * mod = findModule(id);
+  std::shared_ptr<charlie::CModule> mod = findModule(id);
   if(mod == NULL) return -1;
   return launchModule(mod);
 }
 
 //Assumes the module exists on the disk and is verified
-int ModuleManager::launchModule(charlie::CModule* mod)
+int ModuleManager::launchModule(std::shared_ptr<charlie::CModule> mod)
 {
   if(moduleRunning(mod->id())) return 0;
   char* path = getModuleFilename(mod);
@@ -238,8 +267,11 @@ int ModuleManager::launchModule(charlie::CModule* mod)
 }
 
 // Find the applicable binary for the module
-charlie::CModuleBinary* ModuleManager::selectBinary(charlie::CModule* mod, int *idx)
+charlie::CModuleBinary* ModuleManager::selectBinary(std::shared_ptr<charlie::CModule> mod, int *idx)
 {
+  if (!mod)
+    return NULL;
+
   int bincount = mod->binary_size();
   charlie::CModuleBinary *bin = NULL;
   int i;
@@ -254,9 +286,9 @@ charlie::CModuleBinary* ModuleManager::selectBinary(charlie::CModule* mod, int *
 }
 
 // Find the applicable module for a binary
-charlie::CModule* ModuleManager::selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bino)
+std::shared_ptr<charlie::CModule> ModuleManager::selectModule(std::vector<std::shared_ptr<charlie::CModule>>& mods, charlie::CModuleBinary** bino)
 {
-  charlie::CModule* emod = NULL;
+  std::shared_ptr<charlie::CModule> emod;
   int maxPriority = -1;
 
   for (auto mod : mods)
@@ -271,26 +303,28 @@ charlie::CModule* ModuleManager::selectModule(std::set<charlie::CModule*>& mods,
   return emod;
 }
 
-charlie::CModule* ModuleManager::selectModule(u32 capability, charlie::CModuleBinary** bino)
+std::shared_ptr<charlie::CModule> ModuleManager::selectModule(u32 capability, charlie::CModuleBinary** bino)
 {
-  std::set<charlie::CModule*> mods = listModulesWithCap(capability, true);
+  std::vector<std::shared_ptr<charlie::CModule>> mods = listModulesWithCap(capability, true);
   return selectModule(mods, bino);
 }
 
-std::set<charlie::CModule*> ModuleManager::listModulesWithCap(u32 capability, bool filterHasBinary) 
+std::vector<std::shared_ptr<charlie::CModule>> ModuleManager::listModulesWithCap(u32 capability, bool filterHasBinary) 
 {
   int i;
-  int emcount = sys->modTable.modules_size();
-  std::set<charlie::CModule*> ret;
+  int emcount = sys->config.emodtable().signed_modules_size();
+  std::vector<std::shared_ptr<charlie::CModule>> ret;
 
   for (i=0;i<emcount;i++)
   {
-    charlie::CModule* emod = sys->modTable.mutable_modules(i);
+    std::shared_ptr<charlie::CModule> emod = std::make_shared<charlie::CModule>();
+    if (!emod->ParseFromString(sys->config.emodtable().signed_modules(i).data()))
+      continue;
     if(!(emod->capabilities() & capability))
       continue;
     if (filterHasBinary && selectBinary(emod) == NULL)
       continue;
-    ret.insert(emod);
+    ret.push_back(emod);
   }
 
   return ret;

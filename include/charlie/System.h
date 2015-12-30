@@ -34,6 +34,7 @@ class System {
     SystemInfo sysInfo;
 
     bool startSubprocess = false;
+    bool ignoreInvalidManager = false;
     std::string subprocessPath;
     std::vector<std::string> subprocessArgs;
 
@@ -62,7 +63,6 @@ class System {
     boost::mutex fsmtx;
     unsigned char*    configData;
     int      configDataSize = 0;
-    charlie::CModuleTable modTable;
 
     void     validateAndSaveConfig();
     int      relocateEverything(const char* targetRoot, const char* targetExecutableName);

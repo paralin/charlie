@@ -39,7 +39,7 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
     CLOG("Building CModuleTable \""<<d["name"].GetString()<<"\"...");
 
   charlie::CModuleTable* table = new charlie::CModuleTable();
-  table->set_timestamp(std::time(0));
+  time_t now = time(NULL);
   const rapidjson::Value& modules = d["modules"];
   for (rapidjson::SizeType i = 0; i < modules.Size(); i++)
   {
@@ -55,38 +55,36 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
       continue;
     }
 
-    charlie::CModule* mod = table->add_modules();
+    charlie::CModule* mod = new charlie::CModule();
+    mod->set_timestamp(now);
     //calculate the ID
     std::string name(ix["name"].GetString());
     CLOG("== "<<name<<" ==");
     unsigned int id = hashString(name.c_str());
     mod->set_id(id);
     CLOG("id:   "<<id);
+
     if(ix.HasMember("mainfcn") && ix["mainfcn"].IsBool())
-    {
       mod->set_mainfcn(ix["mainfcn"].GetBool());
-    }
+
     if(ix.HasMember("initial") && ix["initial"].IsBool())
-    {
       mod->set_initial(ix["initial"].GetBool());
-    }
+
     if (ix.HasMember("priority") && ix["priority"].IsNumber())
-    {
       mod->set_priority(ix["priority"].GetInt());
-    }
+
     if (ix.HasMember("capabilities") && ix["capabilities"].IsNumber())
     {
       mod->set_capabilities(ix["capabilities"].GetInt());
       CLOG("capabilities: " << mod->capabilities());
     }
+
     if (ix.HasMember("bind_lazy") && ix["bind_lazy"].IsBool())
-    {
       mod->set_bind_lazy(ix["bind_lazy"].GetBool());
-    }
+
     if (ix.HasMember("bind_local") && ix["bind_local"].IsBool())
-    {
       mod->set_bind_local(ix["bind_local"].GetBool());
-    }
+
     if (ix.HasMember("binary") && ix["binary"].IsArray())
     {
       const rapidjson::Value& binaries = ix["binary"];
@@ -276,69 +274,17 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
         CLOG("has_info: "<<mod->has_info());
       }
     }
+
+    // Sign it
+    charlie::CSignedBuffer* buf = table->add_signed_modules();
+    buf->set_data(mod->SerializeAsString());
+    delete mod;
+    if (updateSignedBuf(buf, crypt) != SUCCESS)
+    {
+      CERR("Error updating module signed buffer.");
+    }
   }
   return table;
-}
-
-int generateModuleTableFromJson(const char* json, unsigned char** output, Crypto* crypt, size_t* outputSize, std::string rootPath, bool doSign)
-{
-  charlie::CModuleTable* table;
-  try {
-    table = generateModuleTableFromJson2(json, crypt, rootPath);
-  }catch(...)
-  {
-    CERR("Unable to generate module table from json.");
-    return -1;
-  }
-
-  std::string outd;
-  if(!table->SerializeToString(&outd)){
-    CERR("Unable to serialize module table to string.");
-    delete table;
-    return -1;
-  }
-
-  size_t outSize = outd.length();
-  unsigned char* out = (unsigned char*)malloc(outSize*sizeof(unsigned char));
-  memcpy(out, outd.c_str(), outd.length());
-
-  delete table;
-
-  if(doSign)
-  {
-    if(crypt != NULL)
-    {
-      unsigned char* sig;
-      size_t sigLen = (size_t)crypt->digestSign((const unsigned char*)out, outSize, &sig, false);
-      if(sigLen == FAILURE)
-      {
-        CERR("Unable to sign the table.");
-        return -1;
-      }
-      charlie::CSignedBuffer rbuf;
-      rbuf.set_data(out, outSize);
-      rbuf.set_sig(sig, sigLen);
-      free(sig);
-      free(out);
-      CLOG("Signed the module table.");
-      outSize = rbuf.ByteSize();
-      out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
-      *output = out;
-      if(!rbuf.SerializeToArray(out, outSize))
-      {
-        CERR("Unable to serialize signature buffer to array.");
-        free(out);
-        return -1;
-      }
-    }
-    else
-    {
-      CERR("Unable to load crypto to encrypt modtable! Refusing to continue...");
-      return -1;
-    }
-  }
-  *outputSize = outSize;
-  return 0;
 }
 
 const char* platformToPrefix(u32 platform)

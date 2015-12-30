@@ -131,7 +131,7 @@ bool System::validateConfig()
     generateIdentity();
     dirty = true;
   }
-  if(!config.has_emodtable() || !mManager->parseModuleTable(config.mutable_emodtable(), &modTable))
+  if(!config.has_emodtable() || config.emodtable().signed_modules_size() == 0)
   {
     loadDefaultModuleTable();
     dirty = true;
@@ -279,43 +279,36 @@ void System::loadDefaultModuleTable()
     CERR("Unable to load default module table!");
     return;
   }
-  if(!mManager->parseModuleTable(config.mutable_emodtable(), &modTable))
-  {
-    CERR("Unable to parse default module table!");
-    return;
-  }
 }
 
 void System::dropDefaultManager()
 {
   //Load the default module table and grab the manager entry
   charlie::CModuleTable dtab;
-  charlie::CSignedBuffer buf;
-  if(!decryptInitModtable(&buf))
+  if(!decryptInitModtable(&dtab))
   {
     CERR("I can't drop the initial manager without the encrypted table.");
     return;
   }
-  if(!mManager->parseModuleTable(&buf, &dtab))
-  {
-    CERR("Unable to parse default module table in dropping default manager!");
-    return;
-  }
 
   //mod is the default manager
-  charlie::CModule *mod = NULL;
+  std::shared_ptr<charlie::CModule> mod;
   {
-    int mcount = dtab.modules_size();
+    int mcount = dtab.signed_modules_size();
     for(int i=0;i<mcount;i++)
     {
-      if(dtab.modules(i).initial())
+      mod = std::make_shared<charlie::CModule>();
+      if (!mod->ParseFromString(dtab.signed_modules(i).data()))
       {
-        mod = dtab.mutable_modules(i);
-        break;
+        CERR("Unable to parse module from initial module table");
+        mod.reset();
+        continue;
       }
-      mod = NULL;
+      if (mod->initial())
+        break;
+      mod.reset();
     }
-    if(mod == NULL)
+    if(!mod)
     {
       CERR("Can't find the manager module in the default table!");
       return;
@@ -323,7 +316,7 @@ void System::dropDefaultManager()
   }
 
   int i;
-  charlie::CModule *emod = mManager->findModule(MANAGER_MODULE_ID, &i);
+  std::shared_ptr<charlie::CModule> emod = mManager->findModule(MANAGER_MODULE_ID, &i);
 
   //Get the default module data decrypted
   unsigned char* dmandata;
@@ -347,26 +340,28 @@ void System::dropDefaultManager()
     CLOG("Default manager hash doesn't match default module table manager hash...");
 
     //We also need to remove any existing manager module
-    google::protobuf::RepeatedPtrField<charlie::CModule>* mods = modTable.mutable_modules();
+    auto mods = config.mutable_emodtable()->mutable_signed_modules();
     if(emod != NULL)
     {
       CERR("Removing existing initial module definition...");
-      int emcount = modTable.modules_size();
+      int emcount = config.mutable_emodtable()->signed_modules_size();
       if(i != emcount-1) mods->SwapElements(i, emcount-1);
       mods->RemoveLast();
     }
 
-    charlie::CModule* nmod = mods->Add();
-    nmod->set_id(MANAGER_MODULE_ID);
-    nmod->set_initial(true);
-    nmod->set_mainfcn(true);
-    bin = nmod->add_binary();
+    charlie::CSignedBuffer* nmodb = mods->Add();
+    charlie::CModule nmod;
+    nmod.set_id(MANAGER_MODULE_ID);
+    nmod.set_initial(true);
+    nmod.set_mainfcn(true);
+    bin = nmod.add_binary();
     bin->set_hash(digest, SHA256_DIGEST_LENGTH);
     bin->set_platform(CHARLIE_PLATFORM);
     if(mod->has_info())
-      nmod->set_info(emod->info());
+      nmod.set_info(emod->info());
     CLOG("Created new module definition...");
-    mod = nmod;
+    nmodb->set_data(nmod.SerializeAsString());
+    ignoreInvalidManager = true;
   }
 
   char* path = mManager->getModuleFilename(mod);
@@ -409,11 +404,17 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
   }
 
   //Copy the modules
-  int modscount = modTable.modules_size();
+  int modscount = config.mutable_emodtable()->signed_modules_size();
   for(int i=0; i<modscount; i++)
   {
-    charlie::CModule mod = modTable.modules(i);
-    char* fns = mManager->getModuleFilename(&mod);
+    const charlie::CSignedBuffer& buf = config.emodtable().signed_modules(i);
+    std::shared_ptr<charlie::CModule> mod = std::make_shared<charlie::CModule>();
+    if (!mod->ParseFromString(buf.data()))
+    {
+      CERR("Unable to parse one of the stored modules.");
+      continue;
+    }
+    char* fns = mManager->getModuleFilename(mod);
     if (fns == NULL)
       continue;
     fs::path fn = fs::path(fns).filename();
@@ -431,7 +432,7 @@ int System::relocateEverything(const char* targetRoot, const char* targetExecuta
       }
       catch(...)
       {
-        CERR("Unable to copy "<<mod.id()<<"!");
+        CERR("Unable to copy "<<mod->id()<<"!");
       }
     }
   }

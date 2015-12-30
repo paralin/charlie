@@ -54,7 +54,7 @@ void ClientModule::selectNetworkModule()
     return;
 
   // Require all modules optionally
-  auto netModules = mInter->listModulesWithCap(charlie::MODULE_CAP_NET, true);
+  std::vector<std::shared_ptr<charlie::CModule>> netModules = mInter->listModulesWithCap(charlie::MODULE_CAP_NET, true);
   netModuleIds.clear();
   if (netModules.empty())
   {
@@ -74,7 +74,7 @@ void ClientModule::selectNetworkModule()
     return;
 
   // See if there's a better module to require explicitly
-  charlie::CModule* tmod = mInter->selectModule(netModules, NULL);
+  std::shared_ptr<charlie::CModule> tmod = mInter->selectModule(netModules, NULL);
   if (tmod == NULL)
   {
     MLOG("Currently there are no suitable proxy modules.");
@@ -386,16 +386,12 @@ void ClientModule::handleEvent(u32 eve, void* data)
 // .. so we can route messages
 void ClientModule::dependAllModules()
 {
-  charlie::CSignedBuffer* buf = mInter->getModuleTable();
-  charlie::CModuleTable tab;
-  if (!tab.ParseFromString(buf->data()))
+  charlie::CModuleTable* tab = mInter->getModuleTable();
+  for (int i = 0; i < tab->signed_modules_size(); i++)
   {
-    MERR("Unable to parse module table, dependencies will be messed up.");
-    return;
-  }
-  for (int i = 0; i < tab.modules_size(); i++)
-  {
-    const charlie::CModule& m = tab.modules(i);
+    charlie::CModule m;
+    if (!m.ParseFromString(tab->signed_modules(i).data()))
+      continue;
     mInter->requireDependency(m.id(), true);
   }
 }

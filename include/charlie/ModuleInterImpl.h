@@ -21,12 +21,12 @@ class ModuleInterImpl : public modules::ModuleInterface
 
     //Attempts to verify and load a module table.
     //Rejects invalid / old module table.
-    bool processModuleTable(charlie::CSignedBuffer* buf);
+    void processModuleTable(const charlie::CModuleTable& tab);
 
     //Returns a copy of the verified module table data
-    charlie::CSignedBuffer* getModuleTable();
+    charlie::CModuleTable* getModuleTable();
 
-    std::string getModuleFilename(charlie::CModule* mod);
+    std::string getModuleFilename(std::shared_ptr<charlie::CModule> mod);
 
     Crypto* getCrypto();
     SystemInfo* getSysInfo();
@@ -48,11 +48,11 @@ class ModuleInterImpl : public modules::ModuleInterface
 
     bool moduleLoadable(u32 id);
 
-    charlie::CModuleBinary* selectBinary(charlie::CModule* mod);
+    charlie::CModuleBinary* selectBinary(std::shared_ptr<charlie::CModule> mod);
 
-    std::set<charlie::CModule*> listModulesWithCap(u32 cap, bool filterHasBinary);
-    charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL);
-    charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
+    std::vector<std::shared_ptr<charlie::CModule>> listModulesWithCap(u32 cap, bool filterHasBinary);
+    std::shared_ptr<charlie::CModule> selectModule(std::vector<std::shared_ptr<charlie::CModule>>& mods, charlie::CModuleBinary** bin = NULL);
+    std::shared_ptr<charlie::CModule> selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
 
     std::vector<charlie::CModuleInstance> listModuleInstances();
 

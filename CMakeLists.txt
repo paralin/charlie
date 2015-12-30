@@ -149,6 +149,7 @@ else()
     "src/cutils/main.cpp"
     "src/charlie/xor.cpp"
     "src/charlie/Crypto.cpp"
+    "src/charlie/CryptoBuf.cpp"
     "src/charlie/hash.cpp"
     "src/cserver/ModuleTable.cpp"
     ${protogen_SRC}

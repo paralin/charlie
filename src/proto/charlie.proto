@@ -19,8 +19,7 @@ message CSignedBuffer
 message CSaveContainer
 {
   optional CIdentity identity  = 1;
-  //Module table encrypted with server pubkey
-  optional CSignedBuffer emodtable = 2;
+  optional CModuleTable emodtable = 2;
   repeated CModuleStorage mod_storage = 3;
 }
 
@@ -32,8 +31,7 @@ message CIdentity
 
 message CModuleTable
 {
-  repeated CModule modules = 1;
-  optional int64   timestamp = 2;
+  repeated CSignedBuffer signed_modules = 1;
 }
 
 enum CAcquireType
@@ -52,29 +50,30 @@ message CModuleAcquire
 
 message CModule
 {
+  optional uint64 timestamp = 1;
   //ID is the hash of the name str
-  optional uint32 id = 1;
+  optional uint32 id = 2;
   //does it have a main function to be run on a separate thread?
-  optional bool   mainfcn = 2;
+  optional bool   mainfcn = 3;
   //system refuses to start without loading this first
-  optional bool   initial = 3;
-  repeated CModuleBinary binary = 4;
+  optional bool   initial = 4;
+  repeated CModuleBinary binary = 5;
   //Any additional info
-  optional bytes  info = 5;
+  optional bytes  info = 6;
   // Modules with higher priority will be used first
-  optional uint32 priority = 6;
+  optional uint32 priority = 7;
   // See EModuleCapabilities
-  optional uint32 capabilities = 7;
+  optional uint32 capabilities = 8;
   // Bind module lazily
-  optional bool bind_lazy = 8 [default = true];
-  optional bool bind_local = 9 [default = true];
+  optional bool bind_lazy = 9 [default = true];
+  optional bool bind_local = 10 [default = true];
 }
 
 message CModuleBinary
 {
   // hash of the binary ( current version ) sha256
   optional bytes hash = 1;
-  // supported platform flags, see ESystemPlatform
+  // supported platform, see ESystemPlatform
   optional uint32 platform = 2;
   //download information
   repeated CModuleAcquire acquire = 3;
@@ -90,9 +89,7 @@ enum ESystemPlatform
 //Info stored on a static HTTP GET
 message CWebInformation
 {
-  //We have to use a csignedbuffer...
-  optional int64 timestamp = 1;
-  optional CSignedBuffer mod_table = 2;
+  optional CModuleTable mod_table = 2;
 }
 
 // Temporary storage of instance data

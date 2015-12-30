@@ -124,12 +124,9 @@ void CharlieClient::sendModuleTable()
     CERR("Problem generating new module table for client.");
     return;
   }
-  charlie::CSignedBuffer* sbuf = new charlie::CSignedBuffer();
-  sbuf->set_data(table->SerializeAsString());
-  delete table;
-  updateSignedBuf(sbuf, host->sys->crypt);
+
   modules::manager::CModuleTableUpdate upd;
-  upd.set_allocated_buf(sbuf);
+  upd.set_allocated_table(table);
   std::string data = upd.SerializeAsString();
   send(MANAGER_MODULE_ID, modules::manager::EManagerEMsg_ModuleTableUpdate, 0, data);
 }

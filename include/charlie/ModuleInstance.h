@@ -17,7 +17,7 @@ class ModuleManager;
 class ModuleInstance
 {
 public:
-  ModuleInstance(charlie::CModule* mod, std::string path, ModuleManager* man);
+  ModuleInstance(std::shared_ptr<charlie::CModule> mod, std::string path, ModuleManager* man);
   ~ModuleInstance();
 
   bool load();
@@ -33,7 +33,7 @@ public:
   charlie::EModuleStatus status();
   void transmitEvent(charlie::EModuleEvents eve, void* data);
 
-  charlie::CModule* module;
+  std::shared_ptr<charlie::CModule> module;
   void* publicInterface;
 
 private:

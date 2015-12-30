@@ -55,13 +55,13 @@ namespace modules
       void setOrProxy(std::string& proxy, std::string& proxyAuth);
 
     private:
-      charlie::CModuleTable* fetchStaticModTable(charlie::CSignedBuffer** lmb=0);
+      charlie::CModuleTable fetchStaticModTable(bool* success);
       int parseModuleInfo();
       void loadStorage();
       void saveStorage();
-      int updateTableFromInternet(charlie::CModuleTable **wtbl = 0);
+      bool updateTableFromInternet();
       void downloadModules(charlie::CModuleTable* table = 0);
-      int fetchModuleFromUrl(const charlie::CModule& mod, std::string url);
+      int fetchModuleFromUrl(std::shared_ptr<charlie::CModule> mod, std::string url);
 
       ManagerInter* pInter;
       CManagerStorage stor;

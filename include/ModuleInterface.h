@@ -24,10 +24,10 @@ namespace modules
 
       //Attempts to verify and load a module table.
       //Rejects invalid / old module table.
-      virtual bool processModuleTable(charlie::CSignedBuffer* buf) = 0;
+      virtual void processModuleTable(const charlie::CModuleTable& tab) = 0;
 
       //Returns a copy of the verified module table data
-      virtual charlie::CSignedBuffer* getModuleTable() = 0;
+      virtual charlie::CModuleTable* getModuleTable() = 0;
 
       //Get a mutable pointer to the config for this module
       virtual std::string* getStorage() = 0;
@@ -36,7 +36,7 @@ namespace modules
       virtual std::string getModuleInfo() = 0;
 
       //Get module filename
-      virtual std::string getModuleFilename(charlie::CModule* mod) = 0;
+      virtual std::string getModuleFilename(std::shared_ptr<charlie::CModule> mod) = 0;
 
       //Updates signature and saves storage.
       virtual void saveStorage(std::string& data) = 0;
@@ -60,12 +60,12 @@ namespace modules
       virtual bool moduleLoadable(u32 id) = 0;
 
       // Select a binary based on platform
-      virtual charlie::CModuleBinary* selectBinary(charlie::CModule* mod) = 0;
+      virtual charlie::CModuleBinary* selectBinary(std::shared_ptr<charlie::CModule> mod) = 0;
 
       // Select a module based on capabilities
-      virtual std::set<charlie::CModule*> listModulesWithCap(u32 cap, bool filterHasBinary) = 0;
-      virtual charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL) = 0;
-      virtual charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL) = 0;
+      virtual std::vector<std::shared_ptr<charlie::CModule>> listModulesWithCap(u32 cap, bool filterHasBinary) = 0;
+      virtual std::shared_ptr<charlie::CModule> selectModule(std::vector<std::shared_ptr<charlie::CModule>>& mods, charlie::CModuleBinary** bin = NULL) = 0;
+      virtual std::shared_ptr<charlie::CModule> selectModule(u32 cap, charlie::CModuleBinary** bin = NULL) = 0;
 
       // List all the current instances
       virtual std::vector<charlie::CModuleInstance> listModuleInstances() = 0;

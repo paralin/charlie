@@ -28,17 +28,16 @@ public:
   SystemInfo* sysInfo;
 
   void setSystemInfo(SystemInfo* info);
-  bool parseModuleTable(charlie::CSignedBuffer* buf, charlie::CModuleTable* outp);
 
   //Check if the manager lib exists; if not return false
-  bool moduleLoadable(charlie::CModule* mod, bool cleanFail=false);
-  bool moduleLoadable(u32 id, bool cleanFail=false);
-  char* getModuleFilename(charlie::CModule* mod);
-  charlie::CModule* findModule(u32 id, int*idx=NULL);
-  static charlie::CModuleBinary* selectBinary(charlie::CModule* mod, int*idx=NULL);
-  charlie::CModule* selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin = NULL);
-  charlie::CModule* selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
-  std::set<charlie::CModule*> listModulesWithCap(u32 cap, bool filterHasBinary);
+  bool moduleLoadable(std::shared_ptr<charlie::CModule> mod, bool cleanFail=true);
+  bool moduleLoadable(u32 id, bool cleanFail=true);
+  char* getModuleFilename(std::shared_ptr<charlie::CModule> mod);
+  std::shared_ptr<charlie::CModule> findModule(u32 id, int*idx=NULL);
+  static charlie::CModuleBinary* selectBinary(std::shared_ptr<charlie::CModule> mod, int*idx=NULL);
+  std::shared_ptr<charlie::CModule> selectModule(std::vector<std::shared_ptr<charlie::CModule>>& mods, charlie::CModuleBinary** bin = NULL);
+  std::shared_ptr<charlie::CModule> selectModule(u32 cap, charlie::CModuleBinary** bin = NULL);
+  std::vector<std::shared_ptr<charlie::CModule>> listModulesWithCap(u32 cap, bool filterHasBinary);
   bool moduleRunning(u32 id);
 
   //Deferred actions
@@ -58,7 +57,7 @@ public:
   void onModuleReleased(u32 id);
 
   //Verify new module table
-  bool loadIncomingModuleTable(charlie::CSignedBuffer* buf);
+  void loadIncomingModuleTable(const charlie::CModuleTable& tab);
 
   //Get storage for a module
   charlie::CModuleStorage* storageForModule(u32 id);
@@ -69,9 +68,9 @@ public:
 
 private:
   //Don't call these directly
-  int launchModule(charlie::CModule* mod);
+  int launchModule(std::shared_ptr<charlie::CModule> mod);
   int launchModule(u32 id);
-  int launchModuleWithChecks(charlie::CModule* mod);
+  int launchModuleWithChecks(std::shared_ptr<charlie::CModule> mod);
   int launchModuleWithChecks(u32 id);
 
   // Events

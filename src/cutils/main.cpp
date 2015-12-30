@@ -627,6 +627,7 @@ Crypto * loadCrypto(std::string *infile, std::string *identxor)
 int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
 {
   fs::path output_path((*full_path)/comm->output_);
+  std::string rootPath = full_path->parent_path().string();
 
   CLOG("Loading json input file...");
 
@@ -640,16 +641,18 @@ int generateModuleTable(GenModtableCommand* comm, fs::path *full_path)
     inFile.close();
 
     Crypto * crypt = loadCrypto(&(comm->identity_), &(comm->identxor_));
-    unsigned char* out;
-    size_t outSize;
-    if(generateModuleTableFromJson(buffer.str().c_str(), &out, crypt, &outSize, full_path->string(), comm->sign_) != 0)
-    {
-      CERR("Unable to generate module table from json.");
-      return -1;
-    }
+    charlie::CModuleTable* tab = generateModuleTableFromJson2(buffer.str().c_str(), crypt, rootPath);
 
     if(crypt != NULL)
       delete crypt;
+
+    size_t outSize = tab->ByteSize();
+    unsigned char* out = (unsigned char*) malloc(sizeof(unsigned char) * tab->ByteSize());
+    if (!tab->SerializeToArray(out, outSize))
+    {
+      CERR("Unable to serialize table to array.");
+      return -1;
+    }
 
     if(comm->xorkey_.length()>0)
     {

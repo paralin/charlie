@@ -15,7 +15,7 @@ extern "C"
   const char* manager_data_key = "GpVDIRK4KfsYC9WGbyXZ";
 }
 
-bool decryptInitModtable(charlie::CSignedBuffer* outp)
+bool decryptInitModtable(charlie::CModuleTable* outp)
 {
   unsigned char* output = (unsigned char*)malloc(sizeof(unsigned char)*init_modtable_data_len);
   memcpy(output, init_modtable_data, init_modtable_data_len);

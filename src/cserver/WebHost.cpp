@@ -95,17 +95,27 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev)
       u32 platform = dreq.platform();
 
       // Check the module ID in the known table
-      int emcount = host->table->modules_size();
-      charlie::CModule *emod = NULL;
+      int emcount = host->table->signed_modules_size();
+      charlie::CModule emod;
       int i;
+      bool found = false;
       for(i=0;i<emcount;i++)
       {
-        emod = host->table->mutable_modules(i);
-        if(emod->id() == id) break;
-        emod = NULL;
+        const charlie::CSignedBuffer& smod = host->table->signed_modules(i);
+        if (!emod.ParseFromString(smod.data()))
+        {
+          CERR(" -> cannot parse cmodule idx " << i << " from table.");
+          continue;
+        }
+        if(emod.id() == id)
+        {
+          found = true;
+          break;
+        }
+        emod.Clear();
       }
 
-      if(emod == NULL)
+      if (!found)
       {
         CERR(" -> cannot find the module "<<id<<" requested.");
         return send_notfound(conn);
@@ -114,11 +124,11 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev)
       // select the binary
       charlie::CModuleBinary* bin = NULL;
       {
-        int bincount = emod->binary_size();
+        int bincount = emod.binary_size();
         int i;
         for(i=0;i<bincount;i++)
         {
-          bin = emod->mutable_binary(i);
+          bin = emod.mutable_binary(i);
           if(bin->platform() & platform) break;
           bin = NULL;
         }
@@ -134,7 +144,7 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev)
       std::ostringstream fss;
       fss << "./modules/";
       fss << platformToPrefix(platform);
-      fss << emod->id();
+      fss << emod.id();
       fss << platformToSuffix(platform);
       std::string fns = fss.str();
       fss.clear();
@@ -188,49 +198,39 @@ void WebHost::mainThread()
     {
       table = generateModuleTableFromJson2(buffer.str().c_str(), sys->crypt, std::string("./modules"));
       charlie::CWebInformation info;
-      info.set_timestamp(std::time(0));
-
-      charlie::CSignedBuffer* mbuf = new charlie::CSignedBuffer();
-      table->SerializeToString(mbuf->mutable_data());
-      if(updateSignedBuf(mbuf, sys->crypt) == SUCCESS)
+      info.set_allocated_mod_table(table);
+      charlie::CSignedBuffer buf;
+      info.SerializeToString(buf.mutable_data());
+      if(updateSignedBuf(&buf, sys->crypt) == SUCCESS)
       {
-        info.set_allocated_mod_table(mbuf);
-
-        charlie::CSignedBuffer buf;
-        info.SerializeToString(buf.mutable_data());
-        if(updateSignedBuf(&buf, sys->crypt) == SUCCESS)
+        size_t outSize = buf.ByteSize();
+        unsigned char* out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
+        if(!buf.SerializeToArray(out, outSize))
         {
-          size_t outSize = buf.ByteSize();
-          unsigned char* out = (unsigned char*)malloc(sizeof(unsigned char)*outSize);
-          if(!buf.SerializeToArray(out, outSize))
-          {
-            CERR("Unable to serialize the signature to a array.");
-          }
-          else
-          {
+          CERR("Unable to serialize the signature to a array.");
+        }
+        else
+        {
 #ifdef DEBUG
-            {
-              char mdString[33];
-              unsigned char digest[MD5_DIGEST_LENGTH];
-              MD5((const unsigned char*)out, outSize, (unsigned char*)&digest);
-              for (int i = 0; i < 16; i++)
-                sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
-              CLOG("MD5 of data: "<<mdString);
-              CLOG("Length of data: "<<outSize);
-            }
-#endif
-            apply_xor(out, outSize, ONLINE_MTABLE_KEY, strlen(ONLINE_MTABLE_KEY));
-            char* b64o = base64Encode((const unsigned char*)out, outSize);
-            this->info = std::string("@")+std::string(b64o);
-            free(b64o);
-            CLOG(this->info);
-            free(out);
+          {
+            char mdString[33];
+            unsigned char digest[MD5_DIGEST_LENGTH];
+            MD5((const unsigned char*)out, outSize, (unsigned char*)&digest);
+            for (int i = 0; i < 16; i++)
+              sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+            CLOG("MD5 of data: "<<mdString);
+            CLOG("Length of data: "<<outSize);
           }
-        }else{
-          CERR("Can't sign web info.");
+#endif
+          apply_xor(out, outSize, ONLINE_MTABLE_KEY, strlen(ONLINE_MTABLE_KEY));
+          char* b64o = base64Encode((const unsigned char*)out, outSize);
+          this->info = std::string("@")+std::string(b64o);
+          free(b64o);
+          CLOG(this->info);
+          free(out);
         }
       }else{
-        CERR("Can't sign module table.");
+        CERR("Can't sign web info.");
       }
     }catch(...)
     {

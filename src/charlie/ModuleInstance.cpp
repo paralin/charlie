@@ -11,7 +11,7 @@
 #endif
 #define EMPTYCATCH(sect) try{sect;}catch(...){}
 
-ModuleInstance::ModuleInstance(charlie::CModule* mod, std::string path, ModuleManager* man)
+ModuleInstance::ModuleInstance(std::shared_ptr<charlie::CModule> mod, std::string path, ModuleManager* man)
 {
   this->module = mod;
   this->libPath = path;

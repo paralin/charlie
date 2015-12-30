@@ -39,16 +39,15 @@ void ModuleInterImpl::requestModuleRecheck()
   mManager->deferRecheckModules();
 }
 
-charlie::CSignedBuffer* ModuleInterImpl::getModuleTable()
+charlie::CModuleTable* ModuleInterImpl::getModuleTable()
 {
   if(!mManager->sys->config.has_emodtable()) return NULL;
   return mManager->sys->config.mutable_emodtable();
 }
 
-bool ModuleInterImpl::processModuleTable(charlie::CSignedBuffer* buf)
+void ModuleInterImpl::processModuleTable(const charlie::CModuleTable& tab)
 {
-  if(buf == NULL) return false;
-  return mManager->loadIncomingModuleTable(buf);
+  mManager->loadIncomingModuleTable(tab);
 }
 
 Crypto* ModuleInterImpl::getCrypto()
@@ -100,7 +99,7 @@ std::string ModuleInterImpl::getModuleInfo()
   return inst->module->info();
 }
 
-std::string ModuleInterImpl::getModuleFilename(charlie::CModule* mod)
+std::string ModuleInterImpl::getModuleFilename(std::shared_ptr<charlie::CModule> mod)
 {
   char* fn = mManager->getModuleFilename(mod);
   std::string res(fn);
@@ -113,22 +112,22 @@ bool ModuleInterImpl::moduleLoadable(u32 id)
   return mManager->moduleLoadable(id, false);
 }
 
-charlie::CModuleBinary* ModuleInterImpl::selectBinary(charlie::CModule* mod)
+charlie::CModuleBinary* ModuleInterImpl::selectBinary(std::shared_ptr<charlie::CModule> mod)
 {
   return ModuleManager::selectBinary(mod);
 }
 
-std::set<charlie::CModule*> ModuleInterImpl::listModulesWithCap(u32 cap, bool filterHasBinary)
+std::vector<std::shared_ptr<charlie::CModule>> ModuleInterImpl::listModulesWithCap(u32 cap, bool filterHasBinary)
 {
   return mManager->listModulesWithCap(cap, filterHasBinary);
 }
 
-charlie::CModule* ModuleInterImpl::selectModule(std::set<charlie::CModule*>& mods, charlie::CModuleBinary** bin)
+std::shared_ptr<charlie::CModule> ModuleInterImpl::selectModule(std::vector<std::shared_ptr<charlie::CModule>>& mods, charlie::CModuleBinary** bin)
 {
   return mManager->selectModule(mods, bin);
 }
 
-charlie::CModule* ModuleInterImpl::selectModule(u32 cap, charlie::CModuleBinary** bin)
+std::shared_ptr<charlie::CModule> ModuleInterImpl::selectModule(u32 cap, charlie::CModuleBinary** bin)
 {
   return mManager->selectModule(cap, bin);
 }
