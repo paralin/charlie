@@ -6,7 +6,7 @@ include_directories(${TOR_ROOT_DIR}/src/or)
 include_directories(${TOR_ROOT_DIR}/src/ext)
 include_directories(${TOR_ROOT_DIR}/src/ext/trunnel)
 include_directories(${TOR_ROOT_DIR}/src/trunnel)
-include_directories(AFTER ${RT_INCLUDES} ${M_INCLUDES} ${EVENT2_INCLUDES})
+include_directories(AFTER ${M_INCLUDES} ${EVENT2_INCLUDES})
 
 add_library(tor STATIC IMPORTED)
 set_target_properties(tor PROPERTIES IMPORTED_LOCATION "${TOR_ROOT_DIR}/src/or/${CMAKE_STATIC_LIBRARY_PREFIX}tor${CMAKE_STATIC_LIBRARY_SUFFIX}")

@@ -154,7 +154,7 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
           }
           // Make a new scope
           {
-            const char* filename = fns.c_str();
+            const char* filename = fns.string().c_str();
             CLOG("filename: "<<filename);
             unsigned char* digest;
             if(sha256File(filename, &digest)!=0)

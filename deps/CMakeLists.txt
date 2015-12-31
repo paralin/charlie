@@ -8,6 +8,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules
 add_definitions("-Wno-deprecated-declarations")
 add_definitions("-DPTW32_STATIC_LIB -DWIN32_LEAN_AND_MEAN")
 add_definitions("-Wno-builtin-macro-redefined")
+if(WINCC)
+  #Undo override by the toolchain
+  MESSAGE( STATUS "Overriding build type ${CMAKE_BUILD_TYPE} with ${ACTUAL_BUILD_TYPE}...")
+  set(CMAKE_BUILD_TYPE ${ACTUAL_BUILD_TYPE})
+endif()
 
 set(THREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 
@@ -76,9 +81,10 @@ if(WINCC)
   find_package(Intl REQUIRED)
 endif()
 
-set(EVENT__DISABLE_SAMPLES ON)
-set(EVENT__DISABLE_TESTS ON)
-set(EVENT__DISABLE_REGRESS ON)
-set(EVENT__DISABLE_BENCHMARK ON)
+option(EVENT__DISABLE_SAMPLES ON)
+option(EVENT__DISABLE_TESTS ON)
+option(EVENT__DISABLE_REGRESS ON)
+option(EVENT__DISABLE_BENCHMARK ON)
+option(EVENT__DISABLE_REGRESS ON)
 add_subdirectory(libevent)
 set_target_properties(event PROPERTIES COMPILE_FLAGS "-fPIC")

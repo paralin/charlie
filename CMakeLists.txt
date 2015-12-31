@@ -38,7 +38,7 @@ endif()
 
 find_package(M REQUIRED)
 find_package(DL REQUIRED)
-find_package(RT REQUIRED)
+#find_package(RT REQUIRED)
 find_package(Threads REQUIRED)
 set(THREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
 
@@ -79,12 +79,19 @@ endif()
 
 set(PROCESS_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/deps/process/")
 
-if(WINCC)
+if (BUILDING_CUTILS_ONLY OR WINCC)
   find_package(ZLIB REQUIRED)
 else()
+  # windows and unix
+  set(ZLIB_STATIC_LIBRARY_PREFIX lib)
+  if (WINCC)
+    set(ZLIB_STATIC_LIBRARY_SUFFIX lib.dll.a)
+  else()
+    set(ZLIB_STATIC_LIBRARY_SUFFIX .a)
+  endif()
   add_library(zlibstatic STATIC IMPORTED)
   # Might not be necessary
-  set_target_properties(zlibstatic PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/deps/build/zlib/${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  set_target_properties(zlibstatic PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/deps/build/zlib/${ZLIB_STATIC_LIBRARY_PREFIX}z${ZLIB_STATIC_LIBRARY_SUFFIX}")
   set(ZLIB_LIBRARIES zlibstatic)
   set(ZLIB_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/deps/final/include)
 endif()
@@ -141,7 +148,8 @@ if (NOT WINCC)
   set(MODULE_FLAGS "${MODULE_FLAGS} -fPIC")
 endif()
 
-if(NO_TOOLS)
+if (NO_TOOLS)
+  MESSAGE( STATUS "Skipping cutils compilation." )
   add_custom_target(cutils COMMENT "Not compiling tools.")
 else()
   # Build compile tool

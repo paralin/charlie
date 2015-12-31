@@ -62,3 +62,6 @@ bin/
 .makedeps
 .torhost_image
 .charlie_image
+.makedepsmxe
+.makemxer
+.makelibeventmxe

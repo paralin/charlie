@@ -156,7 +156,7 @@ void PersistModule::startMigrateTo(boost::filesystem::path& path, std::string& t
   MLOG("Debug mode, not actually migrating to " << path.string() << "...");
 #else
   if (manager->prepareToRelocate()){
-    mInter->relocateEverything(path.c_str(), targetExecutableName.c_str());
+    mInter->relocateEverything(path.string().c_str(), (const char*) targetExecutableName.string().c_str());
   }
 #endif
 }

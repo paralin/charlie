@@ -27,7 +27,7 @@ finalize: compile
 	cp resources/docker/charlie/Dockerfile bin
 
 .setupmxe:
-	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf
+	cd deps/mxe && make gcc pthreads boost curl libffi libltdl zlib openssl glib protobuf libevent
 	sed -i '/set(CMAKE_BUILD_TYPE Release)/d' ./deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake
 	touch .setupmxe
 setupmxe: .setupmxe
@@ -52,6 +52,8 @@ makessl: .makessl
 
 .makedeps:
 	cd deps && mkdir -p build final
+	sed -i -e "s/\"Disable sample files\" OFF/\"\" ON/g" ./deps/libevent/CMakeLists.txt
+	sed -i -e "s/benchmark executables\" OFF/\" ON/g" ./deps/libevent/CMakeLists.txt
 	sed -i -e "s/ find_package/ #find_package/g" ./deps/libevent/CMakeLists.txt
 	sed -i -e '/-fPIE/d' ./deps/libevent/CMakeLists.txt
 	sed -i -e '/CURL_SOURCE_DIR}\/curl-config.in/,+7d' ./deps/curl/CMakeLists.txt
@@ -109,14 +111,15 @@ makerel: .makerel
 	touch .makemxe
 makemxe: .makemxe
 .makemxer: proto
-	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
+	-rm -rf build
+	-mkdir -p build
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILDING_CUTILS_ONLY=ON
 	cd build && make cutils
 	mv ./build/cutils cutils
 	-rm -rf build
-	-mkdir build
+	-mkdir -p build
 	mv ./cutils ./build/cutils
-	cd build && cmake .. -DACTUAL_BUILD_TYPE=Release -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes -DCNDEBUG
+	cd build && cmake .. -DACTUAL_BUILD_TYPE=Release -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch .makemxer
 makemxer: .makemxer
 compile:
