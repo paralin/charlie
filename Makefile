@@ -65,7 +65,7 @@ makessl: .makessl
 makedeps: .makedeps
 
 .maketor:
-	if [ ! -f ./deps/tor/.charlie_patch1_applied ]; then cd deps/tor/ && git am --no-signed < ../patch/charlie_tor_patch1.patch; fi
+	if [ ! -f ./deps/tor/.charlie_patch1_applied ]; then cd deps/tor/ && git am < ../patch/charlie_tor_patch1.patch; fi
 	cd deps/tor/ && export CFLAGS="-fPIC" && ./autogen.sh && ./configure --disable-asciidoc
 	cd deps/tor/ && sed -i -e "s/-fPIE //g" Makefile
 	cd deps/tor/ && make -j4
