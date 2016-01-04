@@ -411,6 +411,16 @@ ClientInter::~ClientInter()
 {
 }
 
+void ClientInter::send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target)
+{
+  mod->send(emsg, data, target);
+}
+
+void ClientInter::send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data)
+{
+  mod->send(targetModule, targetEmsg, jobid, data);
+}
+
 void ClientInter::retryConnectionsNow()
 {
   mod->retryConnectionsNow();

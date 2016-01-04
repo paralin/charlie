@@ -1,29 +1,53 @@
-From 492f878aa1a0ac2ee7c06ba755bd6633ccdccedf Mon Sep 17 00:00:00 2001
+From b510e2252a5eab997099d5f66a46a07d65d257fb Mon Sep 17 00:00:00 2001
 From: Christian Stewart <christian@paral.in>
 Date: Tue, 29 Dec 2015 16:48:50 -0800
 Subject: [PATCH] Patch tor to allow external file management
 
 ---
- .charlie_patch1_applied |   0
- src/common/compat.c     |   6 +
- src/common/log.c        |   5 +-
- src/common/util.c       | 146 ++-----------
- src/common/util.h       |   5 +-
- src/include.am          |   1 -
- src/or/config.c         | 554 ++----------------------------------------------
- src/or/control.c        |  20 --
- src/or/main.c           |   4 +
- src/or/microdesc.c      |   4 +-
- src/or/networkstatus.c  |   4 +-
- src/or/or.h             |   1 -
- src/or/router.c         |   4 -
- src/or/routerkeys.c     |   6 -
- 14 files changed, 51 insertions(+), 709 deletions(-)
+ .charlie_patch1_applied        |   0
+ .gitignore                     |   1 -
+ micro-revision.i               |   1 +
+ src/common/compat.c            |   6 +
+ src/common/log.c               |   5 +-
+ src/common/util.c              | 146 +----------
+ src/common/util.h              |   9 +-
+ src/ext/ed25519/ref10/ge_add.h |  97 --------
+ src/include.am                 |   1 -
+ src/or/config.c                | 554 ++---------------------------------------
+ src/or/control.c               |  20 --
+ src/or/main.c                  |   4 +
+ src/or/microdesc.c             |   4 +-
+ src/or/networkstatus.c         |   4 +-
+ src/or/ntmain.h                |   2 +
+ src/or/or.h                    |   1 -
+ src/or/router.c                |   4 -
+ src/or/routerkeys.c            |   6 -
+ 18 files changed, 58 insertions(+), 807 deletions(-)
  create mode 100644 .charlie_patch1_applied
+ create mode 100644 micro-revision.i
 
 diff --git a/.charlie_patch1_applied b/.charlie_patch1_applied
 new file mode 100644
 index 0000000..e69de29
+diff --git a/.gitignore b/.gitignore
+index 135df7b..033c9b1 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -45,7 +45,6 @@ cscope.*
+ /config.guess
+ /config.sub
+ /conftest*
+-/micro-revision.*
+ /patch-stamp
+ /stamp-h
+ /stamp-h.in
+diff --git a/micro-revision.i b/micro-revision.i
+new file mode 100644
+index 0000000..99f0f11
+--- /dev/null
++++ b/micro-revision.i
+@@ -0,0 +1 @@
++"79fdfd52313cfb40"
 diff --git a/src/common/compat.c b/src/common/compat.c
 index 7d72b4b..32a494a 100644
 --- a/src/common/compat.c
@@ -308,10 +332,21 @@ index b33c80f..be02a41 100644
  #define TOR_ISODIGIT(c) ('0' <= (c) && (c) <= '7')
  
 diff --git a/src/common/util.h b/src/common/util.h
-index 8bb4505..32be5b0 100644
+index 8bb4505..02d74ae 100644
 --- a/src/common/util.h
 +++ b/src/common/util.h
-@@ -42,7 +42,8 @@
+@@ -23,6 +23,10 @@
+ #include <sys/stat.h>
+ #endif
+ 
++#ifdef HAVE_FCNTL_H
++#include <fcntl.h>
++#endif
++
+ #ifndef O_BINARY
+ #define O_BINARY 0
+ #endif
+@@ -42,7 +46,8 @@
   * And I'm not just saying that because some of our asserts check
   * security-critical properties.
   */
@@ -321,12 +356,114 @@ index 8bb4505..32be5b0 100644
  #endif
  
  /* Don't use assertions during coverage. It leads to tons of unreached
-@@ -573,3 +574,5 @@ STATIC int format_helper_exit_status(unsigned char child_state,
+@@ -573,3 +578,5 @@ STATIC int format_helper_exit_status(unsigned char child_state,
  
  #endif
  
 +int write_bytes_to_file_impl(const char* fname, const char* str, size_t len, int flags);
 +int write_chunks_to_file_impl(const char* fname, const struct smartlist_t* chunks, int flags);
+diff --git a/src/ext/ed25519/ref10/ge_add.h b/src/ext/ed25519/ref10/ge_add.h
+index 7481f8f..e69de29 100644
+--- a/src/ext/ed25519/ref10/ge_add.h
++++ b/src/ext/ed25519/ref10/ge_add.h
+@@ -1,97 +0,0 @@
+-
+-/* qhasm: enter ge_add */
+-
+-/* qhasm: fe X1 */
+-
+-/* qhasm: fe Y1 */
+-
+-/* qhasm: fe Z1 */
+-
+-/* qhasm: fe Z2 */
+-
+-/* qhasm: fe T1 */
+-
+-/* qhasm: fe ZZ */
+-
+-/* qhasm: fe YpX2 */
+-
+-/* qhasm: fe YmX2 */
+-
+-/* qhasm: fe T2d2 */
+-
+-/* qhasm: fe X3 */
+-
+-/* qhasm: fe Y3 */
+-
+-/* qhasm: fe Z3 */
+-
+-/* qhasm: fe T3 */
+-
+-/* qhasm: fe YpX1 */
+-
+-/* qhasm: fe YmX1 */
+-
+-/* qhasm: fe A */
+-
+-/* qhasm: fe B */
+-
+-/* qhasm: fe C */
+-
+-/* qhasm: fe D */
+-
+-/* qhasm: YpX1 = Y1+X1 */
+-/* asm 1: fe_add(>YpX1=fe#1,<Y1=fe#12,<X1=fe#11); */
+-/* asm 2: fe_add(>YpX1=r->X,<Y1=p->Y,<X1=p->X); */
+-fe_add(r->X,p->Y,p->X);
+-
+-/* qhasm: YmX1 = Y1-X1 */
+-/* asm 1: fe_sub(>YmX1=fe#2,<Y1=fe#12,<X1=fe#11); */
+-/* asm 2: fe_sub(>YmX1=r->Y,<Y1=p->Y,<X1=p->X); */
+-fe_sub(r->Y,p->Y,p->X);
+-
+-/* qhasm: A = YpX1*YpX2 */
+-/* asm 1: fe_mul(>A=fe#3,<YpX1=fe#1,<YpX2=fe#15); */
+-/* asm 2: fe_mul(>A=r->Z,<YpX1=r->X,<YpX2=q->YplusX); */
+-fe_mul(r->Z,r->X,q->YplusX);
+-
+-/* qhasm: B = YmX1*YmX2 */
+-/* asm 1: fe_mul(>B=fe#2,<YmX1=fe#2,<YmX2=fe#16); */
+-/* asm 2: fe_mul(>B=r->Y,<YmX1=r->Y,<YmX2=q->YminusX); */
+-fe_mul(r->Y,r->Y,q->YminusX);
+-
+-/* qhasm: C = T2d2*T1 */
+-/* asm 1: fe_mul(>C=fe#4,<T2d2=fe#18,<T1=fe#14); */
+-/* asm 2: fe_mul(>C=r->T,<T2d2=q->T2d,<T1=p->T); */
+-fe_mul(r->T,q->T2d,p->T);
+-
+-/* qhasm: ZZ = Z1*Z2 */
+-/* asm 1: fe_mul(>ZZ=fe#1,<Z1=fe#13,<Z2=fe#17); */
+-/* asm 2: fe_mul(>ZZ=r->X,<Z1=p->Z,<Z2=q->Z); */
+-fe_mul(r->X,p->Z,q->Z);
+-
+-/* qhasm: D = 2*ZZ */
+-/* asm 1: fe_add(>D=fe#5,<ZZ=fe#1,<ZZ=fe#1); */
+-/* asm 2: fe_add(>D=t0,<ZZ=r->X,<ZZ=r->X); */
+-fe_add(t0,r->X,r->X);
+-
+-/* qhasm: X3 = A-B */
+-/* asm 1: fe_sub(>X3=fe#1,<A=fe#3,<B=fe#2); */
+-/* asm 2: fe_sub(>X3=r->X,<A=r->Z,<B=r->Y); */
+-fe_sub(r->X,r->Z,r->Y);
+-
+-/* qhasm: Y3 = A+B */
+-/* asm 1: fe_add(>Y3=fe#2,<A=fe#3,<B=fe#2); */
+-/* asm 2: fe_add(>Y3=r->Y,<A=r->Z,<B=r->Y); */
+-fe_add(r->Y,r->Z,r->Y);
+-
+-/* qhasm: Z3 = D+C */
+-/* asm 1: fe_add(>Z3=fe#3,<D=fe#5,<C=fe#4); */
+-/* asm 2: fe_add(>Z3=r->Z,<D=t0,<C=r->T); */
+-fe_add(r->Z,t0,r->T);
+-
+-/* qhasm: T3 = D-C */
+-/* asm 1: fe_sub(>T3=fe#4,<D=fe#5,<C=fe#4); */
+-/* asm 2: fe_sub(>T3=r->T,<D=t0,<C=r->T); */
+-fe_sub(r->T,t0,r->T);
+-
+-/* qhasm: return */
 diff --git a/src/include.am b/src/include.am
 index c468af3..e86e867 100644
 --- a/src/include.am
@@ -1153,6 +1290,22 @@ index 71a2c0f..68bb996 100644
    write_str_to_file(fname,published_thresholds_and_status,0);
    tor_free(thresholds);
    tor_free(published_thresholds_and_status);
+diff --git a/src/or/ntmain.h b/src/or/ntmain.h
+index eb55a29..180bc5b 100644
+--- a/src/or/ntmain.h
++++ b/src/or/ntmain.h
+@@ -12,9 +12,11 @@
+ #ifndef TOR_NTMAIN_H
+ #define TOR_NTMAIN_H
+ 
++/*
+ #ifdef _WIN32
+ #define NT_SERVICE
+ #endif
++*/
+ 
+ #ifdef NT_SERVICE
+ int nt_service_parse_options(int argc, char **argv, int *should_exit);
 diff --git a/src/or/or.h b/src/or/or.h
 index 4496cbc..f6e087f 100644
 --- a/src/or/or.h

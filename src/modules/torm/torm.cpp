@@ -207,9 +207,11 @@ bool TormModule::tryConnectAllEndpoints()
       session = std::make_shared<CharlieSession>(socket, this, ke);
       session->start();
       socket.reset();
+#ifndef _WIN32
       MLOG("Notifying client we're connected.");
       if (client)
         client->retryConnectionsNow();
+#endif
       return true;
     }
   }

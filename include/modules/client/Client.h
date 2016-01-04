@@ -46,6 +46,8 @@ namespace modules
       void sendSystemInfo();
       void retryConnectionsNow();
       void unexpectedDataReceived();
+      void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);
+      void send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data);
 
     private:
       ModuleInterface* mInter;
@@ -64,9 +66,6 @@ namespace modules
 
       void selectNetworkModule();
       void dependAllModules();
-
-      void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);
-      void send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data);
 
       bool tryConnectAllEndpoints();
       bool tryConnectNetModules();

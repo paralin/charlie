@@ -1,8 +1,8 @@
 all: debug
-debug: makessl makedeps maketor makeboost makeprotolib makedbg finalize
-release: makessl makedeps maketor makeboost makeprotolib makerel strip finalize
-mxe: setupmxe makemxe compile
-mxer: setupmxe makemxer compile
+debug: makessl makedeps makeboost makeprotolib makedbg finalize
+release: makessl makedeps makeboost makeprotolib makerel strip finalize
+mxe: setupmxe makedepsmxe makemxe compile
+mxer: setupmxe makedepsmxe makemxer compile
 
 .PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run server client
 BOOST_COMPILE_ARGS=--layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
@@ -50,8 +50,8 @@ dclean: clean
 	touch .makessl
 makessl: .makessl
 
-.makedeps:
-	cd deps && mkdir -p build final
+.patchdeps:
+	if [ ! -f ./deps/tor/.charlie_patch1_applied ]; then cd deps/tor/ && git am < ../patch/charlie_tor_patch1.patch; fi
 	sed -i -e "s/\"Disable sample files\" OFF/\"\" ON/g" ./deps/libevent/CMakeLists.txt
 	sed -i -e "s/benchmark executables\" OFF/\" ON/g" ./deps/libevent/CMakeLists.txt
 	sed -i -e "s/ find_package/ #find_package/g" ./deps/libevent/CMakeLists.txt
@@ -59,18 +59,20 @@ makessl: .makessl
 	sed -i -e '/CURL_SOURCE_DIR}\/curl-config.in/,+7d' ./deps/curl/CMakeLists.txt
 	sed -i -e '/CURL_SOURCE_DIR}\/libcurl.pc.in/,+4d' ./deps/curl/CMakeLists.txt
 	sed -i -e '/auth using \%s with user/,+4d' ./deps/curl/lib/http.c
+
+.makedeps: .patchdeps
+	cd deps && mkdir -p build final
 	cd deps/build && cmake .. -DCMAKE_BUILD_TYPE=Release
 	cd deps/build && make -j4 && make install
 	touch .makedeps
 makedeps: .makedeps
 
-.maketor:
-	if [ ! -f ./deps/tor/.charlie_patch1_applied ]; then cd deps/tor/ && git am < ../patch/charlie_tor_patch1.patch; fi
-	cd deps/tor/ && export CFLAGS="-fPIC" && ./autogen.sh && ./configure --disable-asciidoc
-	cd deps/tor/ && sed -i -e "s/-fPIE //g" Makefile
-	cd deps/tor/ && make -j4
-	touch .maketor
-maketor: .maketor
+.makedepsmxe: .patchdeps
+	cd deps && mkdir -p build final
+	cd deps/build && cmake .. -DACTUAL_BUILD_TYPE=Release -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
+	cd deps/build && make -j4 && make install
+	touch .makedepsmxe
+makedepsmxe: .makedepsmxe
 
 .makeboost:
 	# Hack to enable FPIC
@@ -101,7 +103,7 @@ makedbg: .makedbg
 makerel: .makerel
 .makemxe: proto
 	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug
+	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILDING_CUTILS_ONLY=ON
 	cd build && make cutils
 	mv ./build/cutils cutils
 	-rm -rf build
