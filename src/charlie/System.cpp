@@ -330,12 +330,13 @@ void System::dropDefaultManager()
   SHA256_Final(digest, &ctx);
 
   charlie::CModuleBinary* bin = ModuleManager::selectBinary(emod);
+  /*
   if (!bin)
   {
-    CERR("Unable to find the hardcoded module for this platform.");
+    CERR("Unable to find the hardcoded module for this platform (platform " << CHARLIE_PLATFORM << ").");
     return;
-  }
-  if(memcmp(digest, emod->binary(0).hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
+  }*/
+  if(!bin || memcmp(digest, emod->binary(0).hash().c_str(), SHA256_DIGEST_LENGTH)!=0)
   {
     CLOG("Default manager hash doesn't match default module table manager hash...");
 

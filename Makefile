@@ -1,8 +1,8 @@
 all: debug
 debug: makessl makedeps makeboost makeprotolib makedbg finalize
 release: makessl makedeps makeboost makeprotolib makerel strip finalize
-mxe: setupmxe makedepsmxe makemxe compile
-mxer: setupmxe makedepsmxe makemxer compile
+mxe: setupmxe makedepsmxe makemxe compile finalize
+mxer: setupmxe makedepsmxe makemxer compile finalize
 
 .PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run server client
 BOOST_COMPILE_ARGS=--layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
@@ -15,6 +15,7 @@ strip: compile
 finalize: compile
 	mkdir -p bin/client bin/server bin/server/modules bin/server/server_modules bin/utils
 	-cp build/charlie bin/client/charlie
+	-cp build/charlie.exe bin/client/charlie.exe
 	-cp build/*.so  bin/server/modules
 	-cp build/*.dll bin/server/modules
 	-cp build/cserver bin/server

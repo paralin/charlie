@@ -287,11 +287,13 @@ charlie::CModuleTable* generateModuleTableFromJson2(const char* json, Crypto* cr
   return table;
 }
 
-const char* platformToPrefix(u32 platform)
+inline const char* platformToPrefix(u32 platform)
 {
+  /*
   if (platform & charlie::LINUX || platform & charlie::MAC)
     return "lib";
-  return "";
+  */
+  return "lib";
 }
 
 const char* platformToSuffix(u32 platform)
