@@ -1,6 +1,3 @@
-#ifndef ORCONFIG_INCLUDED
-#define ORCONFIG_INCLUDED
-
 #define SHARE_DATADIR ""
 #define PATH_SEPARATOR "/"
 
@@ -26,10 +23,8 @@
 /* Define to the home page for this package. */
 #define PACKAGE_URL ""
 
-#ifdef CHARLIE_IS_WINDOWS
+#ifdef _WIN32
 #include <tor/orconfig.win.h>
 #else
 #include <tor/orconfig.lin.h>
-#endif
-
 #endif

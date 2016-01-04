@@ -24,7 +24,7 @@ set(CHARLIE_MODULE_LINK)
 
 add_definitions("-Wno-deprecated-declarations")
 add_definitions("-Wno-builtin-macro-redefined")
-if(WINCC)
+if (WINCC)
   #Undo override by the toolchain
   MESSAGE( STATUS "Overriding build type ${CMAKE_BUILD_TYPE} with ${ACTUAL_BUILD_TYPE}...")
   set(CMAKE_BUILD_TYPE ${ACTUAL_BUILD_TYPE})

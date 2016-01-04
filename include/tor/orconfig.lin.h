@@ -1,17 +1,6 @@
-/* orconfig.h.  Generated from orconfig.h.in by configure.  */
-/* orconfig.h.in.  Generated from configure.ac by autoheader.  */
-
-/* Define if building universal (internal helper macro) */
-/* #undef AC_APPLE_UNIVERSAL_BUILD */
-
+#define CHARLIE_ORCONFIG_LIN
 /* Define to 1 iff memset(0) sets doubles to 0.0 */
 #define DOUBLE_0_REP_IS_ZERO_BYTES 1
-
-/* Defined if we default to host local appdata paths on Windows */
-/* #undef ENABLE_LOCAL_APPDATA */
-
-/* Define if enum is always signed */
-/* #undef ENUM_VALS_ARE_SIGNED */
 
 /* Define to nothing if C supports flexible array members, and to 1 if it does
    not. That way, with a declaration like `struct s { int n; double
@@ -114,11 +103,11 @@
 /* Define to 1 if you have the `ftime' function. */
 #define HAVE_FTIME 1
 
-/* Define to 1 if you have the `getaddrinfo' function. */
-#define HAVE_GETADDRINFO 1
+#define HAVE_GETADDRINFO
 
 /* Define this if you have any gethostbyname_r() */
-#define HAVE_GETHOSTBYNAME_R 1
+// #define HAVE_GETHOSTBYNAME_R 1
+#ifdef HAVE_GETHOSTBYNAME_R
 
 /* Define this if gethostbyname_r takes 3 arguments */
 /* #undef HAVE_GETHOSTBYNAME_R_3_ARG */
@@ -128,6 +117,7 @@
 
 /* Define this if gethostbyname_r takes 6 arguments */
 #define HAVE_GETHOSTBYNAME_R_6_ARG 1
+#endif
 
 /* Define to 1 if you have the `getifaddrs' function. */
 #define HAVE_GETIFADDRS 1
@@ -282,7 +272,7 @@
 #define HAVE_SA_FAMILY_T 1
 
 /* Define to 1 if you have the <seccomp.h> header file. */
-/* #undef HAVE_SECCOMP_H */
+#undef HAVE_SECCOMP_H
 
 /* Define to 1 if you have the `sigaction' function. */
 #define HAVE_SIGACTION 1
@@ -337,9 +327,6 @@
 
 /* Define to 1 if you have the `strptime' function. */
 #define HAVE_STRPTIME 1
-
-/* Define to 1 if you have the `strtok_r' function. */
-#define HAVE_STRTOK_R 1
 
 /* Define to 1 if you have the `strtoull' function. */
 #define HAVE_STRTOULL 1
@@ -599,9 +586,6 @@
 /* Define to 1 iff we represent negative integers with two's complement */
 #define USING_TWOS_COMPLEMENT 1
 
-/* Version number of package */
-#define VERSION "0.2.7.6"
-
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
 #if defined AC_APPLE_UNIVERSAL_BUILD
@@ -618,31 +602,3 @@
 #ifndef _DARWIN_USE_64_BIT_INODE
 # define _DARWIN_USE_64_BIT_INODE 1
 #endif
-
-/* Number of bits in a file offset, on hosts where this is settable. */
-/* #undef _FILE_OFFSET_BITS */
-
-/* Define for large files, on AIX-style hosts. */
-/* #undef _LARGE_FILES */
-
-/* Define on some platforms to activate x_r() functions in time.h */
-/* #undef _REENTRANT */
-
-
-#ifdef _WIN32
-/* Defined to access windows functions and definitions for >=WinXP */
-# ifndef WINVER
-#  define WINVER 0x0501
-# endif
-
-/* Defined to access _other_ windows functions and definitions for >=WinXP */
-# ifndef _WIN32_WINNT
-#  define _WIN32_WINNT 0x0501
-# endif
-
-/* Defined to avoid including some windows headers as part of Windows.h */
-# ifndef WIN32_LEAN_AND_MEAN
-#  define WIN32_LEAN_AND_MEAN 1
-# endif
-#endif
-

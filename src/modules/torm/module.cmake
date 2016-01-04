@@ -80,7 +80,7 @@ add_library(torm SHARED ${torm_SRC} ${CHARLIE_MODULE_SRC}
   ${tor_all_SRC}
   "torm.pb.redacted.cc"
   )
-set_target_properties(torm PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -std=c99 -DCHARLIE_MODULE_NAME='\"tor\"' -DIS_CHARLIE -fPIC -DED25519_CUSTOMRANDOM -DED25519_SUFFIX=_donna -D_POSIX")
+set_target_properties(torm PROPERTIES COMPILE_FLAGS "${MODULE_FLAGS} -std=gnu99 -DCHARLIE_MODULE_NAME='\"tor\"' -DIS_CHARLIE -fPIC -DED25519_CUSTOMRANDOM -DED25519_SUFFIX=_donna -D_POSIX")
 set_target_properties(torm PROPERTIES CMAKE_BUILD_TYPE Debug)
 set_target_properties(torm PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(torm manager client ${CHARLIE_MODULE_LINK} ${PROTOBUF_LITE_LIBRARIES} ${OPENSSL_LIBRARIES} ${EVENT2_LIBRARIES} ${GLIB_LIBRARIES} ${M_LIBRARIES} ${RT_LIBRARIES} client)
