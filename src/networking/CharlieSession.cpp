@@ -462,6 +462,8 @@ void CharlieSession::handleIdentify()
     return;
   }
 
+  remotePubkey = ident.pubkey();
+
   if (!ident.has_challenge())
   {
     SERR("Identify doesn't have challenge.");

@@ -2,7 +2,7 @@ project(charlie)
 
 cmake_minimum_required(VERSION 3.1)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 set(CHARLIE_MODULE_PATH "${CMAKE_SOURCE_DIR}/src/modules/")
 set(CHARLIE_SERVER_MODULE_PATH "${CMAKE_SOURCE_DIR}/src/server_modules/")
@@ -101,6 +101,12 @@ endif()
 add_library(curl STATIC IMPORTED)
 set_target_properties(curl PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/deps/final/lib/${CMAKE_STATIC_LIBRARY_PREFIX}curl${CMAKE_STATIC_LIBRARY_SUFFIX}")
 set(CURL_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/deps/final/include)
+
+if (NOT WINCC)
+  add_library(mongo STATIC IMPORTED)
+  set_target_properties(mongo PROPERTIES IMPORTED_LOCATION "${PROJECT_SOURCE_DIR}/deps/final/lib/${CMAKE_STATIC_LIBRARY_PREFIX}mongoclient${CMAKE_STATIC_LIBRARY_SUFFIX}")
+  include_directories("${PROJECT_SOURCE_DIR}/deps/final/include/mongo")
+endif()
 
 #Remove pthread from the boost libraries
 list(REMOVE_AT Boost_LIBRARIES -1)
@@ -267,10 +273,16 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
 
+if (WINCC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # Makes the compiler set a flag for a GUI program
+  # But we make no windows :) this is to prevent the console from appearing.
+  set(CHARLIE_EXTRA_FLAGS "-mwindows -DCHARLIE_ENABLE_GUI")
+endif()
+
 # Build charlie
 file(GLOB charlie_SRC "src/charlie/*.cpp")
 add_executable(charlie manager_data.c server_pubkey_data.c init_modtable_data.c ${charlie_SRC} "charlie.pb.redacted.cc")
-set_target_properties(charlie PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS}")
+set_target_properties(charlie PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS} ${CHARLIE_EXTRA_FLAGS}")
 set_target_properties(charlie PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
 target_link_libraries(charlie ${LIBS})
 
@@ -295,7 +307,7 @@ if(NOT WINCC)
     "src/charlie/hash.cpp"
     "src/charlie/xor.cpp"
     )
-  target_link_libraries(cserver ${SERVER_LIBS})
+  target_link_libraries(cserver mongo ${SERVER_LIBS} ${Boost_REGEX_LIBRARY})
   set_target_properties(cserver PROPERTIES COMPILE_FLAGS "${STEALTH_FLAGS} -DDO_CHARLIE_LOG -DIS_CSERVER")
   set_target_properties(cserver PROPERTIES LINK_FLAGS     ${STATIC_LIBC_ARGS})
  endif()

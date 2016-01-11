@@ -12,7 +12,7 @@ void PersistModule::shutdown()
 {
 }
 
-void PersistModule::setModuleInterface(ServerModuleInterface* inter)
+void PersistModule::setModuleInterface(SModuleInterface* inter)
 {
   mInter = inter;
 }

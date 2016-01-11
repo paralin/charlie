@@ -11,7 +11,6 @@
 #include <charlie/CryptoBuf.h>
 
 #include <cserver/ServerModuleInstance.h>
-#include <cserver/ModuleInterface.h>
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
@@ -34,6 +33,7 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>, public
 
     void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);
     void send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data);
+    void disconnect();
 
     void handleMessage(charlie::CMessageHeader& head, std::string& data);
     void handleRoutedMessage(charlie::CMessageHeader& head, std::string& data);
@@ -45,6 +45,8 @@ class CharlieClient : public std::enable_shared_from_this<CharlieClient>, public
 
     void onDisconnected();
     void onHandshakeComplete();
+
+    void calcClientId();
 
     // Methods for the modules to call
     inline std::shared_ptr<Crypto> getSessionCrypto() { return session->sessionCrypto; }

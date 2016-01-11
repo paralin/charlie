@@ -9,10 +9,10 @@
 #include "channel.h"
 #include "channeltls.h"
 #include "circuitbuild.h"
-#include "circuitlist.h"
-#include "circuituse.h"
-#include "command.h"
-#include "config.h"
+#include <or/circuitlist.h>
+#include <or/circuituse.h>
+#include <or/command.h>
+#include <or/config.h>
 #include "confparse.h"
 #include "connection.h"
 #include "connection_edge.h"
@@ -851,7 +851,7 @@ conn_close_if_marked(int i)
       log_info(LD_NET,
                "Conn (addr %s, fd %d, type %s, state %d) marked, but wants "
                "to flush %d bytes. (Marked at %s:%d)",
-               escaped_safe_str_client(conn->address),
+               conn->address,
                (int)conn->s, conn_type_to_string(conn->type), conn->state,
                (int)conn->outbuf_flushlen,
                 conn->marked_for_close_file, conn->marked_for_close);
@@ -906,18 +906,7 @@ conn_close_if_marked(int i)
            * would make much more sense to react in
            * connection_handle_read_impl, or to just stop reading in
            * mark_and_flush */
-#if 0
-#define MARKED_READING_RATE 180
-          static ratelim_t marked_read_lim = RATELIM_INIT(MARKED_READING_RATE);
-          char *m;
-          if ((m = rate_limit_log(&marked_read_lim, now))) {
-            log_warn(LD_BUG, "Marked connection (fd %d, type %s, state %s) "
-                     "is still reading; that shouldn't happen.%s",
-                     (int)conn->s, conn_type_to_string(conn->type),
-                     conn_state_to_string(conn->type, conn->state), m);
-            tor_free(m);
-          }
-#endif
+
           conn->read_blocked_on_bw = 1;
           connection_stop_reading(conn);
         }
@@ -2606,7 +2595,7 @@ do_hash_password(void)
 static int
 do_dump_config(void)
 {
-  const or_options_t *options = get_options();
+  const or_options_t *options = (const or_options_t *) get_options();
   const char *arg = options->command_arg;
   int how;
   char *opts;

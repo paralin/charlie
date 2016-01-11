@@ -50,3 +50,6 @@
 	path = deps/libevent
 	url = https://github.com/libevent/libevent.git
   ignore = dirty
+[submodule "deps/mongo"]
+	path = deps/mongo
+	url = git@github.com:mongodb/mongo-cxx-driver.git

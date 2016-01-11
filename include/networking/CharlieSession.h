@@ -17,8 +17,6 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/thread.hpp>
 
-#include <cserver/ModuleInterface.h>
-
 #include <networking/EMsgSizes.h>
 #include <networking/ISessionController.h>
 
@@ -42,6 +40,8 @@ class CharlieSession
 
     void disconnect();
     std::shared_ptr<Crypto> sessionCrypto;
+
+    std::string remotePubkey;
 
   private:
     void doRead();

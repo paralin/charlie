@@ -8,26 +8,39 @@ using namespace modules::client;
 ClientModule::ClientModule() :
   sessionCrypto(NULL),
   systemCrypto(NULL),
-  mInter(NULL)
+  mInter(NULL),
+  clientInfoReceived(false),
+  isShutdown(false)
 {
   MLOG("Client module constructed...");
 }
 
 void ClientModule::shutdown()
 {
+  isShutdown = true;
 }
 
-void ClientModule::setModuleInterface(ServerModuleInterface* inter)
+void ClientModule::setModuleInterface(SModuleInterface* inter)
 {
   mInter = inter;
 }
 
 void ClientModule::inject(u32 id, void* dep)
 {
+  if (id == 210060544)
+  {
+    MLOG("Got mongo interface.");
+    mongoMod = (mongo::MongoModule*) dep;
+  }
 }
 
 void ClientModule::release(u32 id)
 {
+  if (id == 210060544)
+  {
+    MLOG("Lost mongo interface.");
+    mongoMod = NULL;
+  }
 }
 
 void ClientModule::handleEvent(u32 event, void* data)
@@ -42,6 +55,19 @@ void ClientModule::module_main()
   CClientRequestSystemInfo nfo;
   std::string data = nfo.SerializeAsString();
   mInter->send(getModuleId(), EClientEMsg_RequestSystemInfo, 0, data);
+  std::time_t clientInfoTimeout = std::time(NULL) + 30;
+  while (!clientInfoReceived)
+  {
+    std::time_t now = std::time(NULL);
+    if (isShutdown)
+      return;
+    if (now > clientInfoTimeout)
+    {
+      MERR("Client info timeout.");
+      mInter->disconnect();
+      return;
+    }
+  }
 }
 
 void ClientModule::handleMessage(charlie::CMessageTarget* target, std::string& data)
@@ -59,6 +85,10 @@ void ClientModule::handleMessage(charlie::CMessageTarget* target, std::string& d
     MLOG("SystemID: " << cinfo.system_id());
     MLOG("CPUHash:  " << cinfo.cpu_hash());
     MLOG("Hostname: " << cinfo.hostname());
+
+    if (mongoMod)
+      mongoMod->initWithInfo(cinfo);
+
     return;
   }
 

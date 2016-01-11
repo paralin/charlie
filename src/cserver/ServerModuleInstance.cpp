@@ -2,6 +2,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/chrono.hpp>
 #include <cserver/networking/CharlieClient.h>
+#include <SModuleInterface.h>
 
 #ifndef CHARLIE_MODULE
 #ifndef IS_YCM
@@ -140,7 +141,7 @@ bool ServerModuleInstance::load()
   setStatus(charlie::MODULE_LOADED);
   baseModule = ninst;
 
-  EMPTYCATCH(ninst->setModuleInterface((server_modules::ServerModuleInterface*) client););
+  EMPTYCATCH(ninst->setModuleInterface((server_modules::SModuleInterface*) client));
 
   MLOG("Loaded module successfully.");
   inst.set_id(ninst->getModuleId());

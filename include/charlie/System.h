@@ -1,24 +1,28 @@
 #pragma once
 #define PRINT_KEYS
 
+#include <Common.h>
+#include <Logging.h>
+
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
-#include <string.h>
+#include <string>
+
 #include <charlie/Crypto.h>
 #include <charlie/base64.h>
 #include <charlie/xor.h>
 #include <charlie/ModuleManager.h>
-#include <protogen/charlie.pb.h>
-#include <Logging.h>
-#include <Common.h>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/lexical_cast.hpp>
 #include <charlie/machine_id.h>
 #include <charlie/SystemInfo.h>
 #include <charlie/ModuleTable_Data.h>
 #include <charlie/ManagerModule_Data.h>
+
+#include <protogen/charlie.pb.h>
+
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/asio/ssl/detail/openssl_init.hpp>
 

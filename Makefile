@@ -1,11 +1,11 @@
 all: debug
-debug: makessl makedeps makeboost makeprotolib makedbg finalize
-release: makessl makedeps makeboost makeprotolib makerel strip finalize
+debug: makessl makeboost makedeps makeprotolib makedbg finalize
+release: makessl makeboost makedeps makeprotolib makerel strip finalize
 mxe: setupmxe makedepsmxe makemxe compile finalize
 mxer: setupmxe makedepsmxe makemxer compile finalize
 
 .PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run server client
-BOOST_COMPILE_ARGS=--layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
+BOOST_COMPILE_ARGS= --prefix="$$(pwd)/final/" --layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
 
 protoc="../../deps/protobuf/final/bin/protoc"
 
@@ -43,7 +43,7 @@ dclean: clean
 
 .makessl:
 	-cd ./deps/openssl && rm -rf ./final/ && make clean && make dclean && mkdir ./final/
-	cd ./deps/openssl && ./config --prefix="`pwd`/final/" --openssldir="`pwd`/final/" -fPIC -DOPENSSL_PIC -D__FILE__="\"\"" -D__DIR__="\"\"" -Wno-builtin-macro-redefined && make && make install
+	cd ./deps/openssl && ./config --prefix="$$(pwd)/final/" --openssldir="$$(pwd)/final/" -fPIC -DOPENSSL_PIC -D__FILE__="\"\"" -D__DIR__="\"\"" -Wno-builtin-macro-redefined && make && make install
 	sed -i -e "s/^my \$$dir.*$$/my \$$dir = \"\";/g" ./deps/openssl/final/bin/c_rehash
 	sed -i -e "s/^my \$$prefix.*$$/my \$$prefix = \"\";/g" ./deps/openssl/final/bin/c_rehash
 	# Small hack, just comment out all the find_package in curl
@@ -60,9 +60,16 @@ makessl: .makessl
 	sed -i -e '/CURL_SOURCE_DIR}\/curl-config.in/,+7d' ./deps/curl/CMakeLists.txt
 	sed -i -e '/CURL_SOURCE_DIR}\/libcurl.pc.in/,+4d' ./deps/curl/CMakeLists.txt
 	sed -i -e '/auth using \%s with user/,+4d' ./deps/curl/lib/http.c
+	touch .patchdeps
 
 .makedeps: .patchdeps
 	cd deps && mkdir -p build final
+	cd deps/mongo && \
+		export CFLAGS="-fPIC" && \
+		export CXXFLAGS="-fPIC" && \
+		export CPPPATH="$$(pwd)/../boost/final/" && \
+		export LIBPATH="$$(pwd)/../boost/final/" && \
+		scons --release --c++11 --extrapath="$$(pwd)/../boost/final" --dynamic-boost=off --prefix="$$(pwd)/../final/" --disable-warnings-as-errors -j4 install
 	cd deps/build && cmake .. -DCMAKE_BUILD_TYPE=Release
 	cd deps/build && make -j4 && make install
 	touch .makedeps
@@ -79,7 +86,8 @@ makedepsmxe: .makedepsmxe
 	# Hack to enable FPIC
 	sed -i -e "s# \= shared# \= static#g" ./deps/boost/tools/build/src/tools/gcc.jam
 	cd ./deps/boost/ && ./bootstrap.sh --prefix="`pwd`/final/"
-	cd ./deps/boost/ && ./b2 install $(BOOST_COMPILE_ARGS)
+	cd ./deps/boost/ && ./b2 headers $(BOOST_COMPILE_ARGS)
+	cd ./deps/boost/ && ./b2 $(BOOST_COMPILE_ARGS) install
 	cd ./deps/boost/final/include/boost/iostreams/ && sed '/typeid/d' -i detail/streambuf/indirect_streambuf.hpp && sed '/typeid/d' -i detail/streambuf/direct_streambuf.hpp
 	find ./deps/process/boost/process/ -type f -name '*.hpp' -exec sed -i -e "s/Windows.h/windows.h/g" -e "s/Shellapi.h/shellapi.h/g" {} \;
 	touch .makeboost

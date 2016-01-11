@@ -4,8 +4,9 @@
 #include <Logging.h>
 #include <IntTypes.h>
 
-#include <ServerModule.h>
+#include <SModuleInterface.h>
 #include <charlie/Crypto.h>
+#include <server_modules/mongo/Mongo.h>
 
 namespace server_modules
 {
@@ -18,7 +19,7 @@ namespace server_modules
       ~ClientModule();
 
       void shutdown();
-      void setModuleInterface(ServerModuleInterface* inter);
+      void setModuleInterface(SModuleInterface* inter);
       void inject(u32 id, void* dep);
       void release(u32 id);
       void handleEvent(u32 event, void* data);
@@ -27,9 +28,12 @@ namespace server_modules
       u32  getModuleId();
 
     private:
-      ServerModuleInterface* mInter;
+      SModuleInterface* mInter;
       Crypto* sessionCrypto;
       Crypto* systemCrypto;
+      bool clientInfoReceived;
+      bool isShutdown;
+      mongo::MongoModule* mongoMod;
     };
   };
 };

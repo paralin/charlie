@@ -35,6 +35,11 @@ void CharlieClient::send(charlie::EMsg emsg, std::string& data, charlie::CMessag
   session->send(emsg, data, target);
 }
 
+inline void CharlieClient::disconnect()
+{
+  session->disconnect();
+}
+
 void CharlieClient::handleMessage(charlie::CMessageHeader& head, std::string& data)
 {
   switch (head.emsg())
@@ -131,8 +136,22 @@ void CharlieClient::sendModuleTable()
   send(MANAGER_MODULE_ID, modules::manager::EManagerEMsg_ModuleTableUpdate, 0, data);
 }
 
+void CharlieClient::calcClientId()
+{
+  const std::string& remotePub = session->remotePubkey;
+  char mdString[33];
+  unsigned char digest[MD5_DIGEST_LENGTH];
+  MD5((const unsigned char*) remotePub.c_str(), remotePub.length(), (unsigned char*)&digest);
+  for (int i = 0; i < 16; i++)
+    sprintf(&mdString[i * 2], "%02x", (unsigned int) digest[i]);
+  clientId = mdString;
+  CLOG("Client identifier: " << clientId);
+}
+
 void CharlieClient::onHandshakeComplete()
 {
+  calcClientId();
+
   sendInitData();
 
   CLOG("Initializing server modules.");

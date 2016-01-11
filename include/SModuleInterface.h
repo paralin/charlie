@@ -19,5 +19,6 @@ namespace server_modules
       virtual std::string getClientPubkey() = 0;
       virtual void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL) = 0;
       virtual void send(u32 targetModule, u32 targetEmsg, u32 jobid, std::string& data) = 0;
+      virtual void disconnect() = 0;
   };
 };

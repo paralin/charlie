@@ -6,7 +6,7 @@
 #include <gmodule.h>
 #include <vector>
 
-#include <cserver/ModuleInterface.h>
+#include <SModuleInterface.h>
 #include <protogen/charlie.pb.h>
 #include <protogen/charlie_net.pb.h>
 
@@ -35,7 +35,7 @@ namespace server_modules
     // When a module is unloaded
     virtual void release(u32 id) = 0;
     // Provide a handle to the module interface
-    virtual void setModuleInterface(ServerModuleInterface* inter) = 0;
+    virtual void setModuleInterface(SModuleInterface* inter) = 0;
     // Get module id
     virtual u32  getModuleId() = 0;
     // Release everything and prepare to be deleted
