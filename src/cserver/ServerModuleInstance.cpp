@@ -39,11 +39,14 @@ void ServerModuleInstance::unload()
       EMPTYCATCH(baseModule->shutdown());
       wasShutdown = true;
       mainThread->interrupt();
-      if(mainThread->joinable()){
-        boost::chrono::seconds sec(5);
-        if(!mainThread->try_join_for(sec))
-          MERR("Waited for 5 seconds but it hasn't exited.");
-      }
+      EMPTYCATCH(
+      {
+        if(mainThread->joinable()){
+          boost::chrono::seconds sec(5);
+          if(!mainThread->try_join_for(sec))
+            MERR("Waited for 5 seconds but it hasn't exited.");
+        }
+      })
     }
     EMPTYCATCH(delete mainThread)
     mainThread = NULL;

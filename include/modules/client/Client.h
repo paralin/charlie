@@ -43,7 +43,10 @@ namespace modules
       void handleEvent(u32 event, void* data);
       void module_main();
 
+      // Note these are not visible, symbols will not be added
       void sendSystemInfo();
+      void sendModuleState();
+
       void retryConnectionsNow();
       void unexpectedDataReceived();
       void send(charlie::EMsg emsg, std::string& data, charlie::CMessageTarget* target = NULL);

@@ -143,9 +143,9 @@ static int ev_handler(struct mg_connection *conn, enum mg_event ev)
       // Build the filename
       std::ostringstream fss;
       fss << "./modules/";
-      fss << platformToPrefix(platform);
+      fss << platformToPrefix((u32) platform);
       fss << emod.id();
-      fss << platformToSuffix(platform);
+      fss << platformToSuffix((u32) platform);
       std::string fns = fss.str();
       fss.clear();
       fss.str("");

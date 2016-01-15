@@ -15,7 +15,7 @@ namespace modules
       ManagerInter(ManagerModule * mod);
       ~ManagerInter();
 
-      bool prepareToRelocate();
+      VISIBLE bool prepareToRelocate();
       CManagerInfo* getInfo();
 
       void fetchUrl(std::string& url, std::ostream& outp);

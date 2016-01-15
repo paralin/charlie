@@ -1,6 +1,10 @@
 project(charlie_deps)
 cmake_minimum_required(VERSION 3.1)
 
+add_definitions("-D__FILE__=NULL")
+add_definitions("-D__DIR__=NULL")
+add_definitions("-fno-rtti")
+
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/final/)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules/")

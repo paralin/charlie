@@ -1,4 +1,7 @@
+#undef SHARE_DATADIR
 #define SHARE_DATADIR ""
+
+#undef PATH_SEPARATOR
 #define PATH_SEPARATOR "/"
 
 #define DISABLE_SYSTEM_TORRC

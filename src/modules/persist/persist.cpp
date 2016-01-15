@@ -155,9 +155,13 @@ void PersistModule::startMigrateTo(boost::filesystem::path& path, std::string& t
 #ifdef NO_MIGRATE
   MLOG("Debug mode, not actually migrating to " << path.string() << "...");
 #else
+#ifdef __WIN32
+  MLOG("Unknown linkage error here on win32, not actually migrating.");
+#else
   if (manager->prepareToRelocate()){
-    mInter->relocateEverything(path.string().c_str(), (const char*) targetExecutableName.string().c_str());
+    mInter->relocateEverything(path.string().c_str(), (const char*) targetExecutableName.c_str());
   }
+#endif
 #endif
 }
 

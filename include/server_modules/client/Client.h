@@ -32,6 +32,7 @@ namespace server_modules
       Crypto* sessionCrypto;
       Crypto* systemCrypto;
       bool clientInfoReceived;
+      bool clientModulesReceived;
       bool isShutdown;
       mongo::MongoModule* mongoMod;
     };

@@ -13,6 +13,8 @@ enum EClientEMsg
 {
   EClientEMsg_RequestSystemInfo = 1;
   EClientEMsg_SystemInfo = 2;
+  EClientEMsg_RequestModuleState = 3;
+  EClientEMsg_ModuleState = 4;
 }
 
 message CClientRequestSystemInfo
@@ -24,4 +26,13 @@ message CClientSystemInfo
   optional string system_id = 1;
   optional uint32 cpu_hash = 2;
   optional string hostname = 3;
+}
+
+message CClientRequestModuleState
+{
+}
+
+message CClientModuleState
+{
+  repeated charlie.CModuleInstance modules = 1;
 }

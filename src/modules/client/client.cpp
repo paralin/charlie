@@ -162,6 +162,16 @@ void ClientModule::sendSystemInfo()
   send(MODULE_ID, EClientEMsg_SystemInfo, 0, data);
 }
 
+void ClientModule::sendModuleState()
+{
+  std::vector<charlie::CModuleInstance> insts = mInter->listModuleInstances();
+  CClientModuleState st;
+  for (auto& inst : insts)
+    st.add_modules()->CopyFrom(inst);
+  std::string data = st.SerializeAsString();
+  send(MODULE_ID, EClientEMsg_ModuleState, 0, data);
+}
+
 // Main function
 void ClientModule::module_main()
 {
@@ -432,6 +442,12 @@ void ClientInter::handleCommand(const charlie::CMessageTarget& targ, std::string
   {
     MLOG("Received request for system info.");
     mod->sendSystemInfo();
+    return;
+  }
+  if (targ.emsg() == EClientEMsg_RequestModuleState)
+  {
+    MLOG("Received request for module state.");
+    mod->sendModuleState();
     return;
   }
   MERR("Received command " << targ.emsg() << " for this module but no commands are defined.");

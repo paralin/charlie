@@ -1,8 +1,8 @@
 all: debug
 debug: makessl makeboost makedeps makeprotolib makedbg finalize
 release: makessl makeboost makedeps makeprotolib makerel strip finalize
-mxe: setupmxe makedepsmxe makemxe compile finalize
-mxer: setupmxe makedepsmxe makemxer compile finalize
+mxe: makessl setupmxe makedepsmxe makecutilso makemxe compile finalize
+mxer: makessl setupmxe makedepsmxe makecutilso makemxer compile finalize
 
 .PHONY: strip finalize clean dclean drun dbash dcleanall push compile valgrind run server client
 BOOST_COMPILE_ARGS= --prefix="$$(pwd)/final/" --layout=system cxxflags="-std=c++11" linkflags="-std=c++11" link=static threading=multi runtime-link=static --without-python -q --without-wave --without-container --without-graph --without-graph_parallel --without-locale --without-mpi --without-context --without-coroutine
@@ -46,8 +46,7 @@ dclean: clean
 	cd ./deps/openssl && ./config --prefix="$$(pwd)/final/" --openssldir="$$(pwd)/final/" -fPIC -DOPENSSL_PIC -D__FILE__="\"\"" -D__DIR__="\"\"" -Wno-builtin-macro-redefined && make && make install
 	sed -i -e "s/^my \$$dir.*$$/my \$$dir = \"\";/g" ./deps/openssl/final/bin/c_rehash
 	sed -i -e "s/^my \$$prefix.*$$/my \$$prefix = \"\";/g" ./deps/openssl/final/bin/c_rehash
-	# Small hack, just comment out all the find_package in curl
-	sed -i -e "s/ find_package/ #find_package/g" ./deps/curl/CMakeLists.txt
+	sed -i -e 's/^#define ENGINESDIR.*/#define ENGINESDIR \"\"/g' ./deps/openssl/final/include/openssl/*.h
 	touch .makessl
 makessl: .makessl
 
@@ -60,6 +59,7 @@ makessl: .makessl
 	sed -i -e '/CURL_SOURCE_DIR}\/curl-config.in/,+7d' ./deps/curl/CMakeLists.txt
 	sed -i -e '/CURL_SOURCE_DIR}\/libcurl.pc.in/,+4d' ./deps/curl/CMakeLists.txt
 	sed -i -e '/auth using \%s with user/,+4d' ./deps/curl/lib/http.c
+	sed -i -e "s/ find_package/ #find_package/g" ./deps/curl/CMakeLists.txt
 	touch .patchdeps
 
 .makedeps: .patchdeps
@@ -110,26 +110,27 @@ makedbg: .makedbg
 	cd build && cmake .. -DCMAKE_BUILD_TYPE=Release
 	touch .makerel
 makerel: .makerel
-.makemxe: proto
-	-mkdir build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILDING_CUTILS_ONLY=ON
-	cd build && make cutils
-	mv ./build/cutils cutils
-	-rm -rf build
-	-mkdir build
-	mv ./cutils ./build/cutils
+
+.makecutilso:
+	-mkdir -p bin/utils build
+	if [ ! -f ./bin/utils/cutils ]; then \
+		rm -rf build && \
+		mkdir -p build && \
+		cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILDING_CUTILS_ONLY=ON && make cutils && \
+		mv cutils ../bin/utils/cutils && cd .. && \
+		rm -rf build; fi
+	touch .makecutilso
+
+makecutilso: .makecutilso
+.makemxe: .makecutilso proto
+	mkdir -p build
+	cp ./bin/utils/cutils build/
 	cd build && cmake .. -DACTUAL_BUILD_TYPE=Debug -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch .makemxe
 makemxe: .makemxe
-.makemxer: proto
-	-rm -rf build
-	-mkdir -p build
-	cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILDING_CUTILS_ONLY=ON
-	cd build && make cutils
-	mv ./build/cutils cutils
-	-rm -rf build
-	-mkdir -p build
-	mv ./cutils ./build/cutils
+.makemxer: .makecutilso proto
+	mkdir -p build
+	cp ./bin/utils/cutils ./build/cutils
 	cd build && cmake .. -DACTUAL_BUILD_TYPE=Release -DNO_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=`pwd`/../deps/mxe/usr/i686-w64-mingw32.static/share/cmake/mxe-conf.cmake -DWINCC=yes
 	touch .makemxer
 makemxer: .makemxer

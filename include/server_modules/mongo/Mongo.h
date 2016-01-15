@@ -26,6 +26,7 @@ namespace server_modules
       void shutdown();
       void setModuleInterface(SModuleInterface* inter);
       void inject(u32 id, void* dep);
+
       void release(u32 id);
       void handleEvent(u32 event, void* data);
       void module_main();
@@ -33,17 +34,23 @@ namespace server_modules
       u32  getModuleId();
 
       VISIBLE void initWithInfo(modules::client::CClientSystemInfo& info);
+      VISIBLE void updateModuleStates(modules::client::CClientModuleState& info);
+      void setOnlineState();
+      void setOfflineState();
 
     private:
       SModuleInterface* mInter;
 
       bool connected;
-      ::mongo::DBClientConnection conn;
+      std::shared_ptr<::mongo::DBClientBase> conn;
       static bool mongoInited;
       boost::mutex connMtx;
+      boost::mutex clientMtx;
 
       std::string dbname;
       std::string clientsNs;
+      bool inited;
+      bool isShutdown;
     };
   };
 };

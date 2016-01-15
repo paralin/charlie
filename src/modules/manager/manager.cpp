@@ -585,7 +585,7 @@ ManagerInter::~ManagerInter()
 {
 }
 
-bool ManagerInter::prepareToRelocate()
+VISIBLE bool ManagerInter::prepareToRelocate()
 {
   return mod->prepareToRelocate();
 }

@@ -49,6 +49,13 @@ namespace server_modules
   };
 };
 
+#define SEND_EMPTYMSG(CLSS, EMSG) \
+  { \
+    CLSS nfo; \
+    std::string dt = nfo.SerializeAsString(); \
+    mInter->send(getModuleId(), EMSG, 0, dt); \
+  }
+
 #define CHARLIE_CONSTRUCT(CLASS) \
   extern "C"\
   {\

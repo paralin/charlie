@@ -13,7 +13,7 @@
 
 typedef std::chrono::high_resolution_clock Clock;
 
-#define DEBUGGING_TORC
+// #define DEBUGGING_TORC
 
 using namespace modules::torm;
 
